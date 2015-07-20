@@ -1,29 +1,15 @@
-#ifndef NETWORKMEDIUM_H
-#define NETWORKMEDIUM_H
+/*
+ * WiFiNetworkMgr.h
+ *
+ *  Created on: Jul 17, 2015
+ *      Author: rdey
+ */
 
-/* Base class abstracting different network mediums such as Wifi, Bluetooth etc.,*/
-class NetworkMedium
-{
-public:
-    enum NetworkType
-    {
-        WIFI=0,
-        BLUETOOTH,
-        MOCA
-    };
+#ifndef GENERIC_SRC_INCLUDE_WIFINETWORKMGR_H_
+#define GENERIC_SRC_INCLUDE_WIFINETWORKMGR_H_
 
-    virtual int Start();
-    virtual int Stop();
-    NetworkType getType() {return m_type;}
-protected:
-    NetworkMedium(NetworkMedium::NetworkType _type);
-    virtual ~NetworkMedium();
-    NetworkType m_type;
-private:
-    
-}
 
-class WiFiNetworkMedium: public NetworkMedium
+class WiFiNetworkMgr: public NetworkMedium
 {
 public:
     enum ConnectionState {
@@ -44,6 +30,13 @@ public:
         NO_SSID,
         UNKNOWN
     };
+
+    static WiFiNetworkManager* getInstance();
+    static bool isReady();
+
+//    int Start();
+//    int Stop();
+
     static IARM_Result_t getAvailableSSIDs(void *arg);
     static IARM_Result_t getCurrentState(void *arg);
     static IARM_Result_t setEnabled(void *arg);
@@ -53,14 +46,16 @@ public:
     static IARM_Result_t getPairedSSID(void *arg);
     static IARM_Result_t isPaired(void *arg);
 
-    int Start();
-    int Stop();
 
 private:
 
-    WiFiNetworkMedium(NetworkMedium::NetworkType _type);
-    ~WiFiNetworkMedium();
-    static bool m_isenabled;
-}
-#endif
+    WiFiNetworkMgr(NetworkMedium::NetworkType _type);
+    ~WiFiNetworkMgr();
 
+    static bool m_isenabled;
+    static WiFiNetworkMgr* instance;
+    static bool instanceIsReady;
+}
+
+
+#endif /* GENERIC_SRC_INCLUDE_WIFINETWORKMGR_H_ */

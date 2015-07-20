@@ -1,0 +1,12 @@
+[Unit]
+Description= Network Manager Services (wifi, moca and bluetooth) Daemon
+After= iarmbusd.service
+Requires=iarmbusd.service
+
+[Service]
+ExecStart=/usr/bin/networkmanager 
+ExecStop=/bin/kill -15 $MAINPID
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

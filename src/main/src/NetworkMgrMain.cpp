@@ -1,17 +1,6 @@
-#include "NetworkMedium.h"
-#include "libIARM.h"
-#include "iarmUtil.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <stdio.h>
-#include <sys/types.h>
-#include <signal.h>
-#include <unistd.h>
-#ifdef __cplusplus
-}
-#endif
+#include "NetworkMgrMain.h"
+#include "WiFiNetworkMgr.h"
 
 char networkMgr_ConfigProp_FilePath[100] = {'\0'};
 
@@ -31,6 +20,7 @@ void NetworkMgr_SignalHandler (int sigNum)
     printf("[%s:%s]\n NetworkMgr signal handler with sigNum : %d \r\n",__FILE__, __FUNCTION__, sigNum);
     signal(sigNum, SIG_DFL );
     kill(getpid(), sigNum );
+    exit(0);
 }
 
 int main(int argc, char *argv[])
@@ -43,11 +33,8 @@ int main(int argc, char *argv[])
     signal (SIGHUP, NetworkMgr_SignalHandler);
     signal (SIGINT, NetworkMgr_SignalHandler);
     signal (SIGQUIT, NetworkMgr_SignalHandler);
-    signal (SIGILL, NetworkMgr_SignalHandler);
-    signal (SIGABRT, NetworkMgr_SignalHandler);
-    signal (SIGFPE, NetworkMgr_SignalHandler);
-    signal (SIGSEGV , NetworkMgr_SignalHandler);
     signal (SIGTERM, NetworkMgr_SignalHandler);
+
     signal (SIGPIPE, SIG_IGN);
 
 
@@ -90,7 +77,7 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterForLog(logCallback);
 #endif
 
-    WiFiNetworkMedium* WiFiNetwork = createNetworkMedium(NetworkMedium::WIFI);
+    WiFiNetworkMgr* WiFiNetwork = createNetworkMedium(NetworkMedium::WIFI);
 
     WiFiNetwork->Start();
 
@@ -106,6 +93,6 @@ NetworkMedium* createNetworkMedium(NetworkMedium::NetworkType _type)
 
     if(_type==NetworkMedium::WIFI)
     {
-        mMedium = new WiFiNetworkMedium(_type);
+        mMedium = new WiFiNetworkMgr(_type);
     }
 }
