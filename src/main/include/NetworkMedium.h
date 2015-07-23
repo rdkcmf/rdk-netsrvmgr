@@ -23,7 +23,7 @@ protected:
     NetworkType m_type;
 
 
-}
+};
 
 #endif
 

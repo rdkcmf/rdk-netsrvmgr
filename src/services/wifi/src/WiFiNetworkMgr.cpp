@@ -1,14 +1,18 @@
-using namespace std;
-
+//using namespace std;
+#include "NetworkMgrMain.h"
 #include "WiFiNetworkMgr.h"
 #include "NetworkMedium.h"
 
-
-WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
-
-bool WiFiNetworkMgr::instanceIsReady = false;
+#if 0 
+//WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
 
 
+//bool WiFiNetworkMgr::instanceIsReady = false;
+
+
+//WiFiNetworkMgr::WiFiNetworkMgr()
+//{
+//}
 WiFiNetworkMgr::WiFiNetworkMgr(NetworkMedium::NetworkType _type)
 {
 }
@@ -31,7 +35,8 @@ WiFiNetworkMgr* WiFiNetworkMgr::getInstance()
 
 int  WiFiNetworkMgr::Start()
 {
- /*   IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
+/*
+    IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
     err = IARM_Bus_Init(IARM_BUS_NM_MGR_NAME);
 
     if(IARM_RESULT_SUCCESS != err)
@@ -63,6 +68,7 @@ int  WiFiNetworkMgr::Stop()
 
 }
 
+#if 0
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 {
  /*   IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
@@ -88,7 +94,7 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 
     return ret;
 }
-#if 0
+
 IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
@@ -161,5 +167,6 @@ int getParamInfoFromHostIf ()
     }
 #endif
     printf("[%s:%s:%d] Exiting..\n", __FILE__, __FUNCTION__, __LINE__);
-    return OK;
+    return WiFiResult_ok;
 }
+#endif

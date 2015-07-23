@@ -1,6 +1,7 @@
-using namespace std;
+//using namespace std;
 #include "NetworkMedium.h"
 
+#if 0
 NetworkMedium::NetworkMedium(NetworkMedium::NetworkType _type);
 {
 }
@@ -29,4 +30,4 @@ IARM_Result_t NetworkMedium::setEnabled()
     return 0;
 }
 
-
+#endif

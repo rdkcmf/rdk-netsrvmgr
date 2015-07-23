@@ -1,6 +1,6 @@
 
 #include "NetworkMgrMain.h"
-#include "WiFiNetworkMgr.h"
+//#include "WiFiNetworkMgr.h"
 
 char networkMgr_ConfigProp_FilePath[100] = {'\0'};
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     }
     IARM_Bus_RegisterForLog(logCallback);
 #endif
-
+#if 0
     WiFiNetworkMgr* WiFiNetwork = createNetworkMedium(NetworkMedium::WIFI);
 
     WiFiNetwork->Start();
@@ -85,8 +85,10 @@ int main(int argc, char *argv[])
     {
         sleep(300);
     }
+#endif
 }
 
+#if 0
 NetworkMedium* createNetworkMedium(NetworkMedium::NetworkType _type)
 {
     NetworkMedium* mMedium=NULL;
@@ -96,3 +98,4 @@ NetworkMedium* createNetworkMedium(NetworkMedium::NetworkType _type)
         mMedium = new WiFiNetworkMgr(_type);
     }
 }
+#endif

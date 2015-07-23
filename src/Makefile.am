@@ -19,5 +19,5 @@ AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 
 bin_PROGRAMS = networkmgr
 networkmgr_SOURCES = $(top_srcdir)/src/main/src/NetworkMgrMain.cpp $(top_srcdir)/src/main/src/NetworkMedium.cpp
-networkmgr_LDADD = $(top_builddir)/src/services/libnmservices.la
+networkmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la
 

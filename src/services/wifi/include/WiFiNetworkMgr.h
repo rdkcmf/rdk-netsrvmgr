@@ -5,10 +5,11 @@
  *      Author: rdey
  */
 
-#ifndef GENERIC_SRC_INCLUDE_WIFINETWORKMGR_H_
-#define GENERIC_SRC_INCLUDE_WIFINETWORKMGR_H_
+#ifndef _WIFINETWORKMGR_H_
+#define _WIFINETWORKMGR_H_
 
 
+#if 0
 class WiFiNetworkMgr: public NetworkMedium
 {
 public:
@@ -31,12 +32,12 @@ public:
         UNKNOWN
     };
 
-    static WiFiNetworkManager* getInstance();
+    static WiFiNetworkMgr* getInstance();
     static bool isReady();
 
-//    int Start();
-//    int Stop();
-
+    int Start();
+    int Stop();
+#if 0
     static IARM_Result_t getAvailableSSIDs(void *arg);
     static IARM_Result_t getCurrentState(void *arg);
     static IARM_Result_t setEnabled(void *arg);
@@ -45,10 +46,12 @@ public:
     static IARM_Result_t clearSSID(void* arg);
     static IARM_Result_t getPairedSSID(void *arg);
     static IARM_Result_t isPaired(void *arg);
-
+#endif
 
 private:
 
+//    WiFiNetworkMgr() {};
+//    WiFiNetworkMgr(WiFiNetworkMgr const&){};
     WiFiNetworkMgr(NetworkMedium::NetworkType _type);
     ~WiFiNetworkMgr();
 
@@ -56,6 +59,6 @@ private:
     static WiFiNetworkMgr* instance;
     static bool instanceIsReady;
 }
+#endif
 
-
-#endif /* GENERIC_SRC_INCLUDE_WIFINETWORKMGR_H_ */
+#endif /* _WIFINETWORKMGR_H_ */
