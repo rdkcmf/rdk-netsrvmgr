@@ -5,17 +5,19 @@ DIST_SUBDIRS = services
 
 AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) \
 	-I$(top_srcdir)/src/main/include \
-	-I$(top_srcdir)/src/services/include 
+	-I$(top_srcdir)/src/services/wifi/include
 
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
-	$(G_THREAD_LIBS) -ldbus-1 -ldirect \
-	-lfusion ${DIRECTFB_LIBS} -lIARMBus 
+	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \
+	-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus -lpthread
 
 
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 
+# the list of header files that belong to the library (to be installed later)
+include_HEADERS =    $(top_srcdir)/src/services/wifi/include/NetworkMgrWiFiIarmIf.h
 
 bin_PROGRAMS = networkmgr
 networkmgr_SOURCES = $(top_srcdir)/src/main/src/NetworkMgrMain.cpp $(top_srcdir)/src/main/src/NetworkMedium.cpp

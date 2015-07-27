@@ -1,6 +1,17 @@
+/*
+ * ============================================================================
+ * COMCAST C O N F I D E N T I A L AND PROPRIETARY
+ * ============================================================================
+ * This file (and its contents) are the intellectual property of Comcast.  It may
+ * not be used, copied, distributed or otherwise  disclosed in whole or in part
+ * without the express written permission of Comcast.
+ * ============================================================================
+ * Copyright (c) 2015 Comcast. All rights reserved.
+ * ============================================================================
+ */
 
 #include "NetworkMgrMain.h"
-//#include "WiFiNetworkMgr.h"
+#include "WiFiNetworkMgr.h"
 
 char networkMgr_ConfigProp_FilePath[100] = {'\0'};
 
@@ -17,7 +28,7 @@ static void NetworkMgr_SignalHandler (int sigNum);
 
 void NetworkMgr_SignalHandler (int sigNum)
 {
-    printf("[%s:%s]\n NetworkMgr signal handler with sigNum : %d \r\n",__FILE__, __FUNCTION__, sigNum);
+    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): Received signal %d \n",__FUNCTION__, sigNum);
     signal(sigNum, SIG_DFL );
     kill(getpid(), sigNum );
     exit(0);
@@ -76,16 +87,13 @@ int main(int argc, char *argv[])
     }
     IARM_Bus_RegisterForLog(logCallback);
 #endif
-#if 0
-    WiFiNetworkMgr* WiFiNetwork = createNetworkMedium(NetworkMedium::WIFI);
 
-    WiFiNetwork->Start();
+    WiFiNetworkMgr::getInstance()->Start();
 
     while(true)
     {
         sleep(300);
     }
-#endif
 }
 
 #if 0
