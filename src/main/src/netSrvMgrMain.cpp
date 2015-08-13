@@ -11,7 +11,7 @@
  */
 
 #include "NetworkMgrMain.h"
-#include "WiFiNetworkMgr.h"
+#include "wifiSrvMgr.h"
 
 char networkMgr_ConfigProp_FilePath[100] = {'\0'};
 

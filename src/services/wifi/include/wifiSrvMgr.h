@@ -21,24 +21,6 @@
 class WiFiNetworkMgr/*: public NetworkMedium*/
 {
 public:
-    enum ConnectionState {
-        UNINSTALLED=0,
-        DISABLED,
-        DISCONNECTED,
-        PAIRING,
-        CONNECTING,
-        CONNECTED,
-        FAILED
-    };
-    enum ErrorCode {
-        SSID_CHANGED=0,
-        CONNECTION_LOST,
-        CONNECTION_FAILED,
-        CONNECTION_INTERRUPTED,
-        INVALID_CREDENTIALS,
-        NO_SSID,
-        UNKNOWN
-    };
 
     static WiFiNetworkMgr* getInstance();
     static bool isReady();
