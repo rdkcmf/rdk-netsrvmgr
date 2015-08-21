@@ -15,6 +15,9 @@
 
 char networkMgr_ConfigProp_FilePath[100] = {'\0'};
 
+static void netSrvMgr_start();
+static void netSrvMgr_Loop();
+
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
 
@@ -86,15 +89,32 @@ int main(int argc, char *argv[])
         memcpy(strMgr_ConfigProp_FilePath, configFilePath, strlen(configFilePath))
     }
     IARM_Bus_RegisterForLog(logCallback);
+#else
+    rdk_logger_init(debugConfigFile);
 #endif
 
-    WiFiNetworkMgr::getInstance()->Start();
+    netSrvMgr_start();
+    netSrvMgr_Loop();
 
-    while(true)
+}
+
+void netSrvMgr_start()
+{
+    WiFiNetworkMgr::getInstance()->Start();
+}
+
+void netSrvMgr_Loop()
+{
+    time_t curr = 0;
+    while(1)
     {
-        sleep(300);
+        time(&curr);
+        printf("I-ARM NET-SRV-MGR: HeartBeat at %s\r\n", ctime(&curr));
+        sleep(60);
     }
 }
+
+
 
 #if 0
 NetworkMedium* createNetworkMedium(NetworkMedium::NetworkType _type)

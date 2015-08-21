@@ -21,22 +21,24 @@
 
 #define NM_MGR_WIFI_CLIENT "NetworkMgrWiFiClientApps"
 
+
+
 static void WIFI_MGR_API_getAvailableSSIDs()
 {
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
-#if 0
-    NM_WiFi_getAvailableSSID_Args param;
-    printf("[%s] Entering...\r\n", __FUNCTION__);
+    IARM_Bus_WiFiSrvMgr_Param_t param;
 
+    printf("[%s] Entering...\r\n", __FUNCTION__);
     memset(&param, 0, sizeof(param));
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, (void *)&param, sizeof(IARM_Bus_WiFiSrvMgr_Param_t));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
-        printf("[%s] : \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDs);
+        printf("[%s] Status %d \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, param.status);
+        printf("[%s:%d] SSIDList: %s with length :%d. \n", __FUNCTION__, __LINE__ , param.data.curSsids.jdata, param.data.curSsids.jdataLen);
+
     }
-#endif
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 }
 
@@ -50,7 +52,7 @@ static void WIFI_MGR_API_getCurrentState()
 
     memset(&param, 0, sizeof(param));
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_getCurrentState, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getCurrentState, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -72,7 +74,7 @@ static void WIFI_MGR_API_setEnabled()
 
     param.data.setwifiadapter.enable = true;
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_setEnabled, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_setEnabled, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -91,7 +93,7 @@ static void WIFI_MGR_API_getPairedSSID()
 
     memset(&param, 0, sizeof(param));
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_getPairedSSID, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getPairedSSID, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -115,7 +117,7 @@ static void WIFI_MGR_API_connect()
     strcpy (param.data.connect.ssid, "HOME-E137-5");
     strcpy (param.data.connect.passphrase, "JCHNANCAANJ773CP");
 
-    retVal = IARM_Bus_Call( IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_connect, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call( IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_connect, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -137,7 +139,7 @@ static void WIFI_MGR_API_saveSSID()
     strcpy (param.data.connect.ssid, "HOME-E137-5");
     strcpy (param.data.connect.passphrase, "JCHNANCAANJ773CP");
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_saveSSID, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_saveSSID, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -159,7 +161,7 @@ static void WIFI_MGR_API_clearSSID()
     strcpy (param.data.connect.ssid, "HOME-E137-5");
     strcpy (param.data.connect.passphrase, "JCHNANCAANJ773CP");
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_clearSSID, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_clearSSID, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -178,7 +180,7 @@ static void WIFI_MGR_API_isPaired()
 
     memset(&param, 0, sizeof(param));
 
-    retVal = IARM_Bus_Call(IARM_BUS_NM_MGR_NAME, IARM_BUS_WIFI_MGR_API_isPaired, (void *)&param, sizeof(param));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_isPaired, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)
     {
@@ -196,7 +198,7 @@ int main()
 
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
 
-    printf("[%s] Starting \'%s\' Client.\r\n", __FUNCTION__, IARM_BUS_NM_MGR_NAME);
+    printf("[%s] Starting \'%s\' Client.\r\n", __FUNCTION__, IARM_BUS_NM_SRV_MGR_NAME);
     IARM_Bus_Init(NM_MGR_WIFI_CLIENT);
     IARM_Bus_Connect();
 
@@ -221,7 +223,7 @@ int main()
 
     IARM_Bus_Disconnect();
     IARM_Bus_Term();
-    printf("[%s] Exiting... \'%s\' Client Exiting\r\n", __FUNCTION__, IARM_BUS_NM_MGR_NAME );
+    printf("[%s] Exiting... \'%s\' Client Exiting\r\n", __FUNCTION__, IARM_BUS_NM_SRV_MGR_NAME );
 
 }
 

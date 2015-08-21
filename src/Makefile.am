@@ -19,7 +19,7 @@ AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 # the list of header files that belong to the library (to be installed later)
 include_HEADERS =    $(top_srcdir)/src/services/wifi/include/wifiSrvMgrIarmIf.h
 
-bin_PROGRAMS = networkmgr
-networkmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp $(top_srcdir)/src/main/src/NetworkMedium.cpp
-networkmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la
+bin_PROGRAMS = netsrvmgr
+netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp $(top_srcdir)/src/main/src/NetworkMedium.cpp
+netsrvmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la
 

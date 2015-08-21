@@ -29,7 +29,7 @@ extern "C" {
 #include "rdk_debug.h"
 #include "NetworkMedium.h"
 
-#define LOG_NMGR "LOG.RDK.NMGR"
+#define LOG_NMGR "LOG.RDK.NETSRVMGR"
 
 typedef enum _WiFiResult
 {

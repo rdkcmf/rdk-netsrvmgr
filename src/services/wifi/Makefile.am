@@ -9,4 +9,4 @@ AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -ldbus-1  -lIARMBus 
 
 noinst_LTLIBRARIES = libwifiservices.la
-libwifiservices_la_SOURCES =	src/wifiSrvMgr.cpp
+libwifiservices_la_SOURCES =	src/wifiSrvMgr.cpp src/wifiHalUtiles.cpp

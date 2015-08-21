@@ -9,13 +9,18 @@
  * Copyright (c) 2015 Comcast. All rights reserved.
  * ============================================================================
  */
+//#include <stdio.h>
+//#include <time.h>
+//#include <iwlib.h>
 
 #include "wifiSrvMgr.h"
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgrIarmIf.h"
 #include "NetworkMedium.h"
+#include "wifiHalUtiles.h"
 #include "hostIf_tr69ReqHandler.h"
 
+ssidList gSsidList;
 
 WiFiConnectionStatus gCurWiFiConnStatus;
 
@@ -43,7 +48,7 @@ int  WiFiNetworkMgr::Start()
     IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
-    err = IARM_Bus_Init(IARM_BUS_NM_MGR_NAME);
+    err = IARM_Bus_Init(IARM_BUS_NM_SRV_MGR_NAME);
 
     if(IARM_RESULT_SUCCESS != err)
     {
@@ -70,6 +75,9 @@ int  WiFiNetworkMgr::Start()
 
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+
+    memset(&gSsidList, '\0', sizeof(ssidList));
+
 }
 
 int  WiFiNetworkMgr::Stop()
@@ -80,47 +88,56 @@ int  WiFiNetworkMgr::Stop()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 
+
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
+    bool status = false;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
-//    NM_WiFi_getAvailableSSID_Args *param = (NM_WiFi_getAvailableSSID_Args *)arg;
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
 
-    /* Query from hostif */
-//    unsigned int num_ssids = 0;
-//    strcpy(param->ssid, "HOME-E137-2.4");
-//    param->security = 1;
-//    param->signalstrength = 100;;
-//    param->frequency = 150;
+    param->status = false;
 
-    /*    HOSTIF_MsgData_t param = {0};
-        strncpy(param.paramName, "Device.WiFi.SSIDNumberOfEntries", strlen("Device.WiFi.SSIDNumberOfEntries")+1)
-        param.reqType = HOSTIF_GET;
-        param.paramtype = hostIf_UnsignedIntType;
-    */
-//    getParamInfoFromHostIf();
+    //const char jsonBuff[] = "\{\"getAvailableSSIDs\"\:\[\{\"ssid\"\:\"xxx\",\"security\"\:1,\"signalStrength\":123,\"frequency\":250\},\{\"ssid\"\:\"xxx\",\"security\":1,\"signalStrength\":123,\"frequency\":250\},\{\"ssid\":\"xxx\",\"security\":1,\"signalStrength\":123,\"frequency\":250\}\]\}";
+    char jbuff[MAX_SSIDLIST_BUF] = {'\0'};
+    int jBuffLen;
 
-    /*
-     * retCode = IARM_Bus_Call(IARM_BUS_TR69HOSTIFMGR_NAME,
-                            IARM_BUS_TR69HOSTIFMGR_API_GetParams,
-                            (void *)&param,
-                            sizeof(HOSTIF_MsgData_t));
-     */
-//    num_ssids = (unsigned int) param.paramvalue;
+    /* Calling update Wifi list*/
+    status = updateWiFiList();
 
+    if(status == false)
+    {
+    	param->status = false;
+    	RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No SSID connected or SSID available.\n", __FUNCTION__, __LINE__);
+    	return ret;
+    }
+
+    sprintf(jbuff, (const char*)"\{\"getAvailableSSIDs\"\:\[\{\"ssid\"\:\"%s\", \"security\"\:%d,\"signalStrength\":%d,\"frequency\":%f\}\]\}", \
+            gSsidList.ssid, gSsidList.security, gSsidList.signalstrength, gSsidList.frequency );
+
+    jBuffLen = strlen(jbuff) +1;
+
+    memcpy(param->data.curSsids.jdata, jbuff, jBuffLen);
+    param->data.curSsids.jdataLen = jBuffLen;
+    param->status = true;
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID List : [%s].\n", __FUNCTION__, __LINE__, param->data.curSsids.jdata);
+
+    ret = IARM_RESULT_SUCCESS;
+    //ssidlist();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
 
 IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
 {
-    IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
-    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
-
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
-    param->data.wifiStatus = WIFI_UNINSTALLED;
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+    param->status = true;
+
+    param->data.wifiStatus = get_WifiRadioStatus();
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
@@ -128,7 +145,7 @@ IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
 
 IARM_Result_t WiFiNetworkMgr::setEnabled(void *arg)
 {
-    IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     bool wifiadapterEnableState = false;
 
@@ -343,3 +360,39 @@ int getParamInfoFromHostIf ()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return WiFiResult_ok;
 }
+
+
+
+
+#if 0
+int ssidlist(void) {
+    wireless_scan_head head;
+    wireless_scan *result;
+    iwrange range;
+    int sock;
+
+    /* Open socket to kernel */
+    sock = iw_sockets_open();
+
+    /* Get some metadata to use for scanning */
+    if (iw_get_range_info(sock, "wlan0", &range) < 0) {
+        printf("Error during iw_get_range_info. Aborting.\n");
+        exit(2);
+    }
+
+    /* Perform the scan */
+    if (iw_scan(sock, "wlan0", range.we_version_compiled, &head) < 0) {
+        printf("Error during iw_scan. Aborting.\n");
+        exit(2);
+    }
+
+    /* Traverse the results */
+    result = head.result;
+    while (NULL != result) {
+        printf("%s\n", result->b.essid);
+        result = result->next;
+    }
+
+    exit(0);
+}
+#endif

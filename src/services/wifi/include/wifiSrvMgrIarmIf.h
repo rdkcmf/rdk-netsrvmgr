@@ -16,11 +16,12 @@
 //#include "libIBus.h"
 #include "libIARM.h"
 
-#define IARM_BUS_NM_MGR_NAME "NETWORK_MGR"
+#define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
 #define SSID_SIZE 	24
 #define BSSID_BUFF 	20
 #define PSK_BUFF	24
+#define MAX_SSIDLIST_BUF 4096
 
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
@@ -72,6 +73,13 @@ typedef struct _ssidList
     double frequency;
 } ssidList;
 
+
+typedef struct _wifiSsidData_t {
+    char jdata[MAX_SSIDLIST_BUF];                    		/**< Buffer containing the serialized data.                      */
+    size_t jdataLen;                      	/**< Length of the data buffer.                                  */
+} wifiSsidData_t;
+
+
 typedef struct _setWiFiAdapter
 {
     bool enable;
@@ -93,6 +101,7 @@ typedef struct _WiFiConnectionStatus
 /*! Get/Set Data associated with WiFi Service Manager */
 typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     union {
+	wifiSsidData_t curSsids;
     	WiFiStatusCode_t wifiStatus;
         setWiFiAdapter setwifiadapter;
         WiFiConnection connect;

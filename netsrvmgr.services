@@ -4,9 +4,9 @@ After= iarmbusd.service
 Requires=iarmbusd.service
 
 [Service]
-ExecStart=/usr/bin/networkmanager 
+ExecStart=/usr/bin/netsrvmgr --debugconfig /etc/debug.ini --configFilePath /etc/netsrvmgr.conf 
 ExecStop=/bin/kill -15 $MAINPID
-RemainAfterExit=yes
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
