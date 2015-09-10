@@ -23,6 +23,9 @@ extern "C" {
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef ENABLE_SD_NOTIFY
+#include <systemd/sd-daemon.h>
+#endif
 #ifdef __cplusplus
 }
 #endif

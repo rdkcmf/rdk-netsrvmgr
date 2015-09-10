@@ -93,6 +93,13 @@ int main(int argc, char *argv[])
     rdk_logger_init(debugConfigFile);
 #endif
 
+#ifdef ENABLE_SD_NOTIFY
+    sd_notifyf(0, "READY=1\n"
+              "STATUS=netsrvmgr is Successfully Initialized\n"
+              "MAINPID=%lu",
+              (unsigned long) getpid());
+#endif
+
     netSrvMgr_start();
     netSrvMgr_Loop();
 
