@@ -20,6 +20,12 @@ int get_int(const char* ptr)
     return *ret;
 }
 
+bool get_boolean(const char *ptr)
+{
+    bool *ret = (bool *)ptr;
+    return *ret;
+}
+
 
 WiFiStatusCode_t get_WifiRadioStatus()
 {
@@ -33,15 +39,15 @@ WiFiStatusCode_t get_WifiRadioStatus()
 
     strncpy(wifiParam.paramName, WIFI_ADAPTER_ENABLE_PARAM, strlen(WIFI_ADAPTER_ENABLE_PARAM) +1);
     wifiParam.instanceNum = 1;
-    wifiParam.paramtype = hostIf_StringType;
+    wifiParam.paramtype = hostIf_BooleanType;
     wifiParam.reqType = HOSTIF_GET;
 
-    ret = gpvFromTR069hostif(wifiParam);
+    ret = gpvFromTR069hostif(&wifiParam);
     if(ret)
     {
-        bool radioStatus = get_int(wifiParam.paramValue);
+        bool radioStatus = get_boolean(wifiParam.paramValue);
 
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Retived values from tr69hostif as \'%s\':\'%d\'.\n", __FUNCTION__, __LINE__, WIFI_ADAPTER_STATUS_PARAM, radioStatus);
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Retrieved values from tr69hostif as \'%s\':\'%d\'.\n", __FUNCTION__, __LINE__, WIFI_ADAPTER_ENABLE_PARAM, radioStatus);
         if(true == radioStatus)
         {
             gWifiAdopterStatus = WIFI_CONNECTED;
@@ -68,14 +74,14 @@ bool updateWiFiList()
     memset(&wifiParam, '\0', sizeof(HOSTIF_MsgData_t));
     strncpy(wifiParam.paramName, WIFI_SSID_ENABLE_PARAM, strlen(WIFI_SSID_ENABLE_PARAM) +1);
     wifiParam.instanceNum = 0;
-    wifiParam.paramtype = hostIf_StringType;
+    wifiParam.paramtype = hostIf_BooleanType;
 
 
-    ret = gpvFromTR069hostif(wifiParam);
+    ret = gpvFromTR069hostif(&wifiParam);
 
     if(ret)
     {
-        bool ssidStatus = get_int(wifiParam.paramValue);
+        bool ssidStatus = get_boolean(wifiParam.paramValue);
 
         if(ssidStatus)
         {
@@ -84,7 +90,7 @@ bool updateWiFiList()
             strncpy(wifiParam.paramName, WIFI_SSID_NAME_PARAM, strlen(WIFI_SSID_NAME_PARAM) +1);
             wifiParam.paramtype = hostIf_StringType;
             wifiParam.instanceNum = 0;
-            ret = gpvFromTR069hostif(wifiParam);
+            ret = gpvFromTR069hostif(&wifiParam);
 
             if(ret)
             {
@@ -96,7 +102,7 @@ bool updateWiFiList()
             strncpy(wifiParam.paramName, WIFI_SSID_BSSID_PARAM, strlen(WIFI_SSID_BSSID_PARAM) +1);
             wifiParam.paramtype = hostIf_StringType;
             wifiParam.instanceNum = 0;
-            ret = gpvFromTR069hostif(wifiParam);
+            ret = gpvFromTR069hostif(&wifiParam);
 
             if(ret)
             {
@@ -127,28 +133,28 @@ bool updateWiFiList()
 // generic Api for get HostIf parameters through IARM_TR69Bus
 // --------------------------------------------------------
 
-bool gpvFromTR069hostif( HOSTIF_MsgData_t param)
+bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
 
-    param.reqType = HOSTIF_GET;
+    param->reqType = HOSTIF_GET;
 //    HOSTIF_MsgData_t param = &wifiParam;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
     /* IARM get Call*/
-    ret = IARM_Bus_Call(IARM_BUS_TR69HOSTIFMGR_NAME, IARM_BUS_TR69HOSTIFMGR_API_GetParams, (void *)&param, sizeof(HOSTIF_MsgData_t));
+    ret = IARM_Bus_Call(IARM_BUS_TR69HOSTIFMGR_NAME, IARM_BUS_TR69HOSTIFMGR_API_GetParams, (void *)param, sizeof(HOSTIF_MsgData_t));
 
     if(ret != IARM_RESULT_SUCCESS)
     {
-        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d] Failed with returned \'%d\' for '\%s\''. \n",  __FUNCTION__, __LINE__, ret, param.paramName);
+        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d] Failed with returned \'%d\' for '\%s\''. \n",  __FUNCTION__, __LINE__, ret, param->paramName);
         //ret = ERR_REQUEST_DENIED;
         return false;
     }
     else
     {
         ret = IARM_RESULT_SUCCESS;
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Successfully returned the value of \'%s\.'\n",  __FUNCTION__, __LINE__, param.paramName);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Successfully returned the value of \'%s\'.\n",  __FUNCTION__, __LINE__, param->paramName);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return true;

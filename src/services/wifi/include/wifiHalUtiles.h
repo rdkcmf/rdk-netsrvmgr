@@ -27,7 +27,7 @@
 #define	WIFI_SSID_BSSID_PARAM 		"Device.WiFi.SSID.1.BSSID"
 #define WIFI_SSID_MACADDR_PARAM		"Device.WiFi.SSID.1.MACAddress"
 
-bool gpvFromTR069hostif( HOSTIF_MsgData_t param);
+bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 WiFiStatusCode_t get_WifiRadioStatus();
 
 extern bool updateWiFiList();
