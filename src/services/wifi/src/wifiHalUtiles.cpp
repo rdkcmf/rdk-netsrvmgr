@@ -11,6 +11,7 @@
 #include "wifiHalUtiles.h"
 
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_DISABLED;
+static WiFiStatusCode_t getWpaStatus();
 
 WiFiStatusCode_t get_WifiRadioStatus();
 
@@ -51,6 +52,8 @@ WiFiStatusCode_t get_WifiRadioStatus()
         if(true == radioStatus)
         {
             gWifiAdopterStatus = WIFI_CONNECTED;
+            /*Check for Wpa status */
+            gWifiAdopterStatus = getWpaStatus();
         }
         else
         {
@@ -76,12 +79,14 @@ bool updateWiFiList()
     wifiParam.instanceNum = 0;
     wifiParam.paramtype = hostIf_BooleanType;
 
-
+    memset(&gSsidList, '\0', sizeof(ssidList));
     ret = gpvFromTR069hostif(&wifiParam);
 
     if(ret)
     {
         bool ssidStatus = get_boolean(wifiParam.paramValue);
+
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Retrieved values from tr69hostif as \'%s\':\'%d\'.\n", __FUNCTION__, __LINE__, WIFI_SSID_ENABLE_PARAM, ssidStatus);
 
         if(ssidStatus)
         {
@@ -118,12 +123,13 @@ bool updateWiFiList()
         else
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] WiFi is disabled. [\'%s\':%d] \n", __FUNCTION__, __LINE__, WIFI_SSID_ENABLE_PARAM, ssidStatus);
+            ret = false;
         }
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 
-
+    return ret;
 }
 
 
@@ -160,3 +166,58 @@ bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
     return true;
 }
 
+static WiFiStatusCode_t getWpaStatus()
+{
+	WiFiStatusCode_t ret = WIFI_UNINSTALLED;
+	FILE *in = NULL;
+	char buff[512] = {'\0'};
+
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+	if(!(in = popen("wpa_cli status | grep -i wpa_state | cut -d = -f 2", "r")))
+	{
+		RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d] Failed to read wpa_cli status.\n", __FUNCTION__, __LINE__ );
+		return ret;
+	}
+
+	if(fgets(buff, sizeof(buff), in)!=NULL)
+	{
+		RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d]  State: %s\n", __FUNCTION__, __LINE__, buff);
+//		printf("%s", buff);
+	}
+	else{
+		RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d]  Failed to get State.\n", __FUNCTION__, __LINE__);
+		pclose(in);
+		return ret;
+	}
+
+	if(0 == strncasecmp(buff, "DISCONNECTED", strlen("DISCONNECTED")))
+	{
+		ret = WIFI_DISCONNECTED;
+	}
+	else if (0 == strncasecmp(buff, "SCANNING", strlen("SCANNING")))
+	{
+		ret = WIFI_PAIRING;
+	}
+	else if (0 == strncasecmp(buff, "ASSOCIATED", strlen("ASSOCIATED")))
+	{
+		ret = WIFI_CONNECTING;
+	}
+	else if (0 == strncasecmp(buff, "COMPLETED", strlen("COMPLETED")))
+	{
+		ret = WIFI_CONNECTED;
+	}
+	else if (0 == strncasecmp(buff, "INTERFACE_DISABLED", strlen("INTERFACE_DISABLED")))
+	{
+		ret = WIFI_UNINSTALLED;
+	}
+	else
+	{
+		ret = WIFI_FAILED;
+	}
+
+	pclose(in);
+
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+	return ret;
+}
