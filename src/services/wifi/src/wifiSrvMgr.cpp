@@ -20,6 +20,10 @@
 #include "wifiHalUtiles.h"
 #include "hostIf_tr69ReqHandler.h"
 
+#ifdef USE_RDK_WIFI_HAL
+static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif /* USE_RDK_WIFI_HAL */
+
 ssidList gSsidList;
 
 WiFiConnectionStatus gCurWiFiConnStatus;
@@ -73,6 +77,10 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
 
+#ifdef USE_RDK_WIFI_HAL
+    /* Front Panel Event Listner  */
+    IARM_Bus_RegisterEventHandler(IARM_BUS_IRMGR_NAME, IARM_BUS_IRMGR_EVENT_IRKEY, _irEventHandler);
+#endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 
@@ -108,9 +116,9 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 
     if(status == false)
     {
-    	param->status = false;
-    	RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No SSID connected or SSID available.\n", __FUNCTION__, __LINE__);
-    	return ret;
+        param->status = false;
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No SSID connected or SSID available.\n", __FUNCTION__, __LINE__);
+        return ret;
     }
 
     sprintf(jbuff, (const char*)"\{\"getAvailableSSIDs\"\:\[\{\"ssid\"\:\"%s\", \"security\"\:%d,\"signalStrength\":%d,\"frequency\":%f\}\]\}", \
@@ -330,69 +338,24 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
     return ret;
 }
 
-//---------------------------------------------------------
-// generic Api for get HostIf parameters through IARM_TR69Bus
-// --------------------------------------------------------
-int getParamInfoFromHostIf ()
+#ifdef USE_RDK_WIFI_HAL
+static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
-//    IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-#if 0
-    HOSTIF_MsgData_t param = {0};
+    IARM_Bus_IRMgr_EventData_t *irEventData = (IARM_Bus_IRMgr_EventData_t*)data;
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    int keyCode = irEventData->data.irkey.keyCode;
+    int keyType = irEventData->data.irkey.keyType;
+    int isFP = irEventData->data.irkey.isFP;
 
-    /* Initialize hostIf get structure */
-    strncpy(param.paramName, name, strlen(name)+1);
-    param.reqType = HOSTIF_GET;
+    int resetState = 0;
 
-    /* IARM get Call*/
-    ret = IARM_Bus_Call(IARM_BUS_TR69HOSTIFMGR_NAME, IARM_BUS_TR69HOSTIFMGR_API_GetParams, (void *)&param, sizeof(HOSTIF_MsgData_t));
-
-    if(ret != IARM_RESULT_SUCCESS)
     {
-        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s():%d] Failed in IARM_Bus_Call(), with return value: %d\n", __FILE__, __FUNCTION__, __LINE__, ret);
-        return ERR_REQUEST_DENIED;
+        if (keyCode == KED_WPS)
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received Key info [Type : %d; Code : %d; isFP : %d ] \n", __FUNCTION__, __LINE__,
+                     keyType, keyCode, isFP );
+        }
     }
-    else
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] The value of param: %s paramLen : %d\n", __FILE__, __FUNCTION__, __LINE__, name, param.paramLen);
-    }
-#endif
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
-    return WiFiResult_ok;
-}
-
-
-
-
-#if 0
-int ssidlist(void) {
-    wireless_scan_head head;
-    wireless_scan *result;
-    iwrange range;
-    int sock;
-
-    /* Open socket to kernel */
-    sock = iw_sockets_open();
-
-    /* Get some metadata to use for scanning */
-    if (iw_get_range_info(sock, "wlan0", &range) < 0) {
-        printf("Error during iw_get_range_info. Aborting.\n");
-        exit(2);
-    }
-
-    /* Perform the scan */
-    if (iw_scan(sock, "wlan0", range.we_version_compiled, &head) < 0) {
-        printf("Error during iw_scan. Aborting.\n");
-        exit(2);
-    }
-
-    /* Traverse the results */
-    result = head.result;
-    while (NULL != result) {
-        printf("%s\n", result->b.essid);
-        result = result->next;
-    }
-
-    exit(0);
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 #endif
