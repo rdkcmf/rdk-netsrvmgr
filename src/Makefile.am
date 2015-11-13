@@ -7,6 +7,9 @@ AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) \
 	-I$(top_srcdir)/src/main/include \
 	-I$(top_srcdir)/src/services/wifi/include
 
+if RDKWIFIHAL
+AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
+endif
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \

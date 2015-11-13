@@ -29,6 +29,20 @@ AC_CHECK_HEADERS([stdlib.h unistd.h])
 #PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
 #PKG_CHECK_MODULES([GTHREAD], [gthread-2.0 >= 2.24.0])
 
+
+AC_ARG_ENABLE([rdk-wifi-hal],
+        AS_HELP_STRING([--enable-rdk-wifi-hal],[This will enable/disable rdk wifi hal.]),
+        [
+          case "${enableval}" in
+           yes) RDKWIFIHAL=true ;;
+           no) RDKWIFIHAL=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-rdk-wifi-hal ]) ;;
+           esac
+           ],
+         [echo " rdk-wifi-hal is enable"])
+AM_CONDITIONAL([RDKWIFIHAL], [test x$RDKWIFIHAL = xtrue])
+
+
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 
 # Checks for typedefs, structures, and compiler characteristics.

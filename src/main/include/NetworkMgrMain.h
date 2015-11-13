@@ -31,6 +31,8 @@ extern "C" {
 #endif
 #include "rdk_debug.h"
 #include "NetworkMedium.h"
+#include "irMgr.h"
+#include "comcastIrKeyCodes.h"
 
 #define LOG_NMGR "LOG.RDK.NETSRVMGR"
 
