@@ -13,7 +13,7 @@ endif
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \
-	-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus -lpthread
+	-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus -lpthread -lcjson
 
 
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)

@@ -23,6 +23,7 @@ extern "C" {
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cJSON.h"
 #ifdef ENABLE_SD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
