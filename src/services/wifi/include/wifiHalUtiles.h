@@ -19,6 +19,11 @@
 
 #include "hostIf_tr69ReqHandler.h"
 
+extern "C" {
+#include "wifi_client_hal.h"
+}
+
+
 #define WIFI_ADAPTER_STATUS_PARAM 	"Device.WiFi.Radio.1.Status"
 #define WIFI_ADAPTER_ENABLE_PARAM	"Device.WiFi.Radio.1.Enable"
 #define WIFI_SSID_ENABLE_PARAM		"Device.WiFi.SSID.1.Enable"
@@ -32,5 +37,12 @@ WiFiStatusCode_t get_WifiRadioStatus();
 
 extern bool updateWiFiList();
 extern ssidList gSsidList;
+
+extern pthread_mutex_t wpsMutex;
+
+#ifdef USE_RDK_WIFI_HAL
+bool connect_WpsPush();
+INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
+#endif
 
 #endif /* WIFIHALUTILES_H_ */

@@ -15,6 +15,8 @@ static WiFiStatusCode_t getWpaStatus();
 
 WiFiStatusCode_t get_WifiRadioStatus();
 
+pthread_mutex_t wpsMutex = PTHREAD_MUTEX_INITIALIZER;
+
 int get_int(const char* ptr)
 {
     int *ret = (int *)ptr;
@@ -221,3 +223,78 @@ static WiFiStatusCode_t getWpaStatus()
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 	return ret;
 }
+
+
+#ifdef  USE_RDK_WIFI_HAL
+
+/*Connect using WPS Push */
+bool connect_WpsPush()
+{
+    bool ret = false;
+    INT ssidIndex = 1;
+    INT wpsStatus = RETURN_OK;
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    pthread_mutex_lock(&wpsMutex);
+
+    wpsStatus = wifi_setCliWpsButtonPush(ssidIndex);
+
+    if(RETURN_OK == wpsStatus)
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Successfully called \"wifi_setCliWpsButtonPush(%d)\"; WPS Push button Success. \n",\
+                 __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+	ret = true;
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_setCliWpsButtonPush(%d)\", WPS Push button press failed with status code (%d) \n",
+                 __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+    }
+    pthread_mutex_unlock(&wpsMutex);
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+
+    return ret;
+}
+
+
+
+INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
+{
+    int ret = RETURN_OK;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    wifiStatusCode_t connCode = *connStatus;
+
+    switch(connCode) {
+    case WIFI_HAL_SUCCESS:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully Connection. \n", __FUNCTION__, __LINE__ );
+        break;
+    case WIFI_HAL_ERROR_NOT_FOUND:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., AP not found. \n", __FUNCTION__, __LINE__ , connCode);
+        break;
+    case WIFI_HAL_ERROR_NOT_IN_RANGE:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., AP not in Range. \n", __FUNCTION__, __LINE__ , connCode);
+        break;
+    case WIFI_HAL_ERROR_TIMEOUT_EXPIRED:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Timeout expired. \n", __FUNCTION__, __LINE__ , connCode);
+        break;
+    case WIFI_HAL_ERROR_CON_ACTIVATION:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Fail in connection Activation. \n", __FUNCTION__, __LINE__ , connCode);
+        break;
+    case WIFI_HAL_ERROR_CON_DEACTIVATION:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Fail in connection Deactivation. \n", __FUNCTION__, __LINE__ , connCode);
+        break;
+    case WIFI_HAL_ERROR_DEV_DISCONNECT:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Fail in Device/AP Disconnect. \n", __FUNCTION__, __LINE__ , connCode);
+        break;
+    case WIFI_HAL_ERROR_UNKNOWN:
+    default:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed to connect or disconnect with error status (%d). \n", __FUNCTION__, __LINE__, *connStatus );
+        break;
+    }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return ret;
+}
+#endif

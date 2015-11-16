@@ -14,22 +14,20 @@
 #define _NETWORKMGRMAIN_H_
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include <stdio.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+
+extern "C" {
 #include "cJSON.h"
 #ifdef ENABLE_SD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
-#ifdef __cplusplus
 }
-#endif
+
 #include "rdk_debug.h"
 #include "NetworkMedium.h"
 #include "irMgr.h"

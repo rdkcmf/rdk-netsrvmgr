@@ -86,6 +86,16 @@ int  WiFiNetworkMgr::Start()
 
     memset(&gSsidList, '\0', sizeof(ssidList));
 
+#ifdef USE_RDK_WIFI_HAL
+    if(wifi_init() == RETURN_OK) {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully wifi_init() done. \n", __FUNCTION__, __LINE__ );
+    } else  {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in wifi_init(). \n", __FUNCTION__, __LINE__ );
+    }
+
+    wifi_connectEndpoint_callback_register(wifi_connect_callback);
+#endif
+
 }
 
 int  WiFiNetworkMgr::Stop()
@@ -347,13 +357,11 @@ static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *dat
     int keyType = irEventData->data.irkey.keyType;
     int isFP = irEventData->data.irkey.isFP;
 
-    int resetState = 0;
-
     {
         if (keyCode == KED_WPS)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received Key info [Type : %d; Code : %d; isFP : %d ] \n", __FUNCTION__, __LINE__,
-                     keyType, keyCode, isFP );
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received Key info [Type : %d; Code : %d; isFP : %d ] \n", __FUNCTION__, __LINE__, keyType, keyCode, isFP );
+            connect_WpsPush();
         }
     }
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
