@@ -9,16 +9,16 @@
  * Copyright (c) 2015 Comcast. All rights reserved.
  * ============================================================================
  */
-//#include <stdio.h>
-//#include <time.h>
-//#include <iwlib.h>
 
 #include "wifiSrvMgr.h"
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgrIarmIf.h"
 #include "NetworkMedium.h"
 #include "wifiHalUtiles.h"
+
+#ifdef USE_HOSTIF_WIFI_HAL
 #include "hostIf_tr69ReqHandler.h"
+#endif
 
 #ifdef USE_RDK_WIFI_HAL
 static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
@@ -32,7 +32,6 @@ WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
 bool WiFiNetworkMgr::instanceIsReady = false;
 
 WiFiNetworkMgr::WiFiNetworkMgr() {}
-
 WiFiNetworkMgr::~WiFiNetworkMgr() { }
 
 WiFiNetworkMgr* WiFiNetworkMgr::getInstance()
@@ -123,9 +122,10 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
     char jbuff[MAX_SSIDLIST_BUF] = {'\0'};
     int jBuffLen;
 
+#ifdef USE_HOSTIF_WIFI_HAL
     /* Calling update Wifi list*/
     status = updateWiFiList();
-
+#endif
     if(status == false)
     {
         param->status = false;
@@ -312,20 +312,25 @@ IARM_Result_t WiFiNetworkMgr::clearSSID(void* arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
-
+/* returns the SSID if one was previously saved through saveSSID,
+ * otherwise returns NULL.*/
 IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    WiFiConnectionStatus currSsidInfo;
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
+    memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
 
-    /* returns the SSID if one was previously saved through saveSSID, otherwise returns NULL.*/
-    if (gCurWiFiConnStatus.ssidSession.ssid[0] != '\0')
+    get_CurrentSsidInfo(&currSsidInfo);
+
+    if (currSsidInfo.ssidSession.ssid[0] != '\0')
     {
-        memcpy(param->data.getPairedSSID.ssid, gCurWiFiConnStatus.ssidSession.ssid, SSID_SIZE);
+        memcpy(param->data.getPairedSSID.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] getPairedSSID SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__,
-                 gCurWiFiConnStatus.ssidSession.ssid, gCurWiFiConnStatus.ssidSession.passphrase);
+                 currSsidInfo.ssidSession.ssid, currSsidInfo.ssidSession.passphrase);
         param->status = true;
     }
     else
@@ -337,14 +342,23 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
     return ret;
 }
 
+/*returns true if this device has been previously paired
+ * ( calling saveSSID marks this device as paired )*/
 IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    WiFiConnectionStatus currSsidInfo;
+    memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
 
-    /*returns true if this device has been previously paired ( calling saveSSID marks this device as paired )*/
-    param->status = gCurWiFiConnStatus.isConnected;
+    get_CurrentSsidInfo(&currSsidInfo);
+    param->status = currSsidInfo.isConnected;
+
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] This is \"%s\" with \" %s \" .\'\'\n", __FUNCTION__, __LINE__,\
+             ((param->status)?"Paired":"Not Paired"), currSsidInfo.ssidSession.ssid );
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;

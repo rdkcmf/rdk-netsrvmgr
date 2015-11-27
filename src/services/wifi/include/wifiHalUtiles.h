@@ -48,6 +48,7 @@ extern pthread_mutex_t wpsMutex;
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
+void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 #endif
 
 #endif /* WIFIHALUTILES_H_ */

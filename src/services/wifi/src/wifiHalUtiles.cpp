@@ -11,7 +11,9 @@
 #include "wifiHalUtiles.h"
 
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_DISABLED;
+#ifdef USE_HOSTIF_WIFI_HAL
 static WiFiStatusCode_t getWpaStatus();
+#endif
 static WiFiConnection wifiConnData;
 
 pthread_mutex_t wifiStatusLock = PTHREAD_MUTEX_INITIALIZER;
@@ -35,25 +37,31 @@ bool get_boolean(const char *ptr)
 
 static void set_WiFiStatusCode( WiFiStatusCode_t status)
 {
-   pthread_mutex_lock(&wifiStatusLock);
-   gWifiAdopterStatus = status;
-   pthread_mutex_unlock(&wifiStatusLock);
+    pthread_mutex_lock(&wifiStatusLock);
+    gWifiAdopterStatus = status;
+    pthread_mutex_unlock(&wifiStatusLock);
 }
 
 static WiFiStatusCode_t get_WiFiStatusCode()
 {
-   return gWifiAdopterStatus;
+    return gWifiAdopterStatus;
 }
 
+void get_CurrentSsidInfo(WiFiConnectionStatus *curSSIDConnInfo)
+{
+    strncpy(curSSIDConnInfo->ssidSession.ssid, wifiConnData.ssid, strlen(wifiConnData.ssid)+1);
+    curSSIDConnInfo->isConnected = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
+}
 
 WiFiStatusCode_t get_WifiRadioStatus()
 {
     bool ret = false;
     WiFiStatusCode_t status = WIFI_UNINSTALLED;
-    HOSTIF_MsgData_t wifiParam = {0};
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
+#ifdef USE_HOSTIF_WIFI_HAL
+    HOSTIF_MsgData_t wifiParam = {0};
     memset(&wifiParam, '\0', sizeof(HOSTIF_MsgData_t));
 
     strncpy(wifiParam.paramName, WIFI_ADAPTER_ENABLE_PARAM, strlen(WIFI_ADAPTER_ENABLE_PARAM) +1);
@@ -80,11 +88,15 @@ WiFiStatusCode_t get_WifiRadioStatus()
     }
 
     status = gWifiAdopterStatus;
+#else
+    status = get_WiFiStatusCode();
+#endif
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 
     return status;
 }
 
+#ifdef USE_HOSTIF_WIFI_HAL
 bool updateWiFiList()
 {
     bool ret = false;
@@ -186,60 +198,60 @@ bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
 
 static WiFiStatusCode_t getWpaStatus()
 {
-	WiFiStatusCode_t ret = WIFI_UNINSTALLED;
-	FILE *in = NULL;
-	char buff[512] = {'\0'};
+    WiFiStatusCode_t ret = WIFI_UNINSTALLED;
+    FILE *in = NULL;
+    char buff[512] = {'\0'};
 
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
-	if(!(in = popen("wpa_cli status | grep -i wpa_state | cut -d = -f 2", "r")))
-	{
-		RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d] Failed to read wpa_cli status.\n", __FUNCTION__, __LINE__ );
-		return ret;
-	}
+    if(!(in = popen("wpa_cli status | grep -i wpa_state | cut -d = -f 2", "r")))
+    {
+        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d] Failed to read wpa_cli status.\n", __FUNCTION__, __LINE__ );
+        return ret;
+    }
 
-	if(fgets(buff, sizeof(buff), in)!=NULL)
-	{
-		RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d]  State: %s\n", __FUNCTION__, __LINE__, buff);
+    if(fgets(buff, sizeof(buff), in)!=NULL)
+    {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d]  State: %s\n", __FUNCTION__, __LINE__, buff);
 //		printf("%s", buff);
-	}
-	else{
-		RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d]  Failed to get State.\n", __FUNCTION__, __LINE__);
-		pclose(in);
-		return ret;
-	}
+    }
+    else {
+        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%d]  Failed to get State.\n", __FUNCTION__, __LINE__);
+        pclose(in);
+        return ret;
+    }
 
-	if(0 == strncasecmp(buff, "DISCONNECTED", strlen("DISCONNECTED")))
-	{
-		ret = WIFI_DISCONNECTED;
-	}
-	else if (0 == strncasecmp(buff, "SCANNING", strlen("SCANNING")))
-	{
-		ret = WIFI_PAIRING;
-	}
-	else if (0 == strncasecmp(buff, "ASSOCIATED", strlen("ASSOCIATED")))
-	{
-		ret = WIFI_CONNECTING;
-	}
-	else if (0 == strncasecmp(buff, "COMPLETED", strlen("COMPLETED")))
-	{
-		ret = WIFI_CONNECTED;
-	}
-	else if (0 == strncasecmp(buff, "INTERFACE_DISABLED", strlen("INTERFACE_DISABLED")))
-	{
-		ret = WIFI_UNINSTALLED;
-	}
-	else
-	{
-		ret = WIFI_FAILED;
-	}
+    if(0 == strncasecmp(buff, "DISCONNECTED", strlen("DISCONNECTED")))
+    {
+        ret = WIFI_DISCONNECTED;
+    }
+    else if (0 == strncasecmp(buff, "SCANNING", strlen("SCANNING")))
+    {
+        ret = WIFI_PAIRING;
+    }
+    else if (0 == strncasecmp(buff, "ASSOCIATED", strlen("ASSOCIATED")))
+    {
+        ret = WIFI_CONNECTING;
+    }
+    else if (0 == strncasecmp(buff, "COMPLETED", strlen("COMPLETED")))
+    {
+        ret = WIFI_CONNECTED;
+    }
+    else if (0 == strncasecmp(buff, "INTERFACE_DISABLED", strlen("INTERFACE_DISABLED")))
+    {
+        ret = WIFI_UNINSTALLED;
+    }
+    else
+    {
+        ret = WIFI_FAILED;
+    }
 
-	pclose(in);
+    pclose(in);
 
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
-	return ret;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return ret;
 }
-
+#endif /* #ifdef USE_HOSTIF_WIFI_HAL */
 
 #ifdef  USE_RDK_WIFI_HAL
 
@@ -301,11 +313,11 @@ bool connect_WpsPush()
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_disconnectEndpointd(%d)\", WPS Push button press failed with status code (%d) \n",
                      __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
         }
-	if(false == ret)
-	{
-             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Since failed to disconnect, so reconnecintg again. \"%d\". \n", __FUNCTION__, __LINE__);
-             ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
-	}
+        if(false == ret)
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Since failed to disconnect, so reconnecintg again. \"%d\". \n", __FUNCTION__, __LINE__);
+            ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
+        }
     }
 
 
@@ -345,11 +357,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] %s Successfully to AP %s. \n", __FUNCTION__, __LINE__ , connStr, ap_SSID);
         /*TODO : Action on connect and Disconnect */
         if (ACTION_ON_CONNECT == action) {
-	    set_WiFiStatusCode(WIFI_CONNECTED);
+            set_WiFiStatusCode(WIFI_CONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
         } else if (ACTION_ON_DISCONNECT == action) {
-	    set_WiFiStatusCode(WIFI_DISCONNECTED);
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
         }
