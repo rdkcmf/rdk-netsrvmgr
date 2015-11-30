@@ -76,12 +76,14 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
 
+
 #ifdef USE_RDK_WIFI_HAL
     /* Front Panel Event Listner  */
     IARM_Bus_RegisterEventHandler(IARM_BUS_IRMGR_NAME, IARM_BUS_IRMGR_EVENT_IRKEY, _irEventHandler);
 #endif
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    /* Notification RPC:*/
+    IARM_Bus_RegisterEvent(IARM_BUS_WIFI_MGR_EVENT_MAX);
 
     memset(&gSsidList, '\0', sizeof(ssidList));
 
@@ -97,6 +99,7 @@ int  WiFiNetworkMgr::Start()
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
 #endif
 
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 
 int  WiFiNetworkMgr::Stop()

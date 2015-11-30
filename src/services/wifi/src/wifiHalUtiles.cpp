@@ -261,8 +261,12 @@ bool connect_WpsPush()
     bool ret = false;
     INT ssidIndex = 1;
     INT wpsStatus = RETURN_OK;
+    IARM_BUS_WiFiSrvMgr_EventData_t eventData;
+    IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    memset(&eventData, 0, sizeof(eventData));
 
     if (WIFI_CONNECTED != get_WiFiStatusCode()) {
 
@@ -273,12 +277,19 @@ bool connect_WpsPush()
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Successfully called \"wifi_setCliWpsButtonPush(%d)\"; WPS Push button Success. \n",\
                      __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
             ret = true;
+
+            /*Generate Event for Connect State*/
+            eventData.data.wifiStateChange.state = WIFI_CONNECTING;
+            set_WiFiStatusCode(WIFI_CONNECTING);
         }
         else
         {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_setCliWpsButtonPush(%d)\", WPS Push button press failed with status code (%d) \n",
                      __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+
+            eventData.data.wifiStateChange.state = WIFI_FAILED;
         }
+        IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
     }
     else if (WIFI_CONNECTED == get_WiFiStatusCode())
     {
@@ -297,9 +308,13 @@ bool connect_WpsPush()
             while (start_time < timeout_period)
             {
                 if(WIFI_DISCONNECTED == gWifiAdopterStatus)  {
-
-                    ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully received Disconnect state \"%d\". \n", __FUNCTION__, __LINE__, gWifiAdopterStatus);
+                    ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
+                    eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
+                    set_WiFiStatusCode(eventData.data.wifiStateChange.state);
+                    IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'%s\'(%d).\n", __FUNCTION__, __LINE__,
+                             (ret?"CONNECTING": "FAILED"), eventData.data.wifiStateChange.state);
                     break;
                 }
                 else {
@@ -313,16 +328,18 @@ bool connect_WpsPush()
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_disconnectEndpointd(%d)\", WPS Push button press failed with status code (%d) \n",
                      __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
         }
+
         if(false == ret)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Since failed to disconnect, so reconnecintg again. \"%d\". \n", __FUNCTION__, __LINE__);
             ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
+            eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
+            set_WiFiStatusCode(eventData.data.wifiStateChange.state);
+            IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
         }
     }
 
-
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
-
     return ret;
 }
 
@@ -349,45 +366,77 @@ INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *con
 
 void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned short action)
 {
+    IARM_BUS_WiFiSrvMgr_EventData_t eventData;
+    IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
+
     const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
+    memset(&eventData, 0, sizeof(eventData));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] %s Successfully to AP %s. \n", __FUNCTION__, __LINE__ , connStr, ap_SSID);
-        /*TODO : Action on connect and Disconnect */
+
+    	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] %s Successfully to AP %s. \n", __FUNCTION__, __LINE__ , connStr, ap_SSID);
+
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+
+            /*Generate Event for Connect State*/
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
+            eventData.data.wifiStateChange.state = WIFI_CONNECTED;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_CONNECTED);
         } else if (ACTION_ON_DISCONNECT == action) {
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+
+            /*Generate Event for Disconnect State*/
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
+            eventData.data.wifiStateChange.state = WIFI_DISCONNECTED;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_DISCONNECTED);
         }
         break;
+
     case WIFI_HAL_ERROR_NOT_FOUND:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", __FUNCTION__, __LINE__ , connStr, connCode);
+    	RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", __FUNCTION__, __LINE__ , connStr, connCode);
+    	/* Event Id & Code */
+        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+        eventData.data.wifiError.code = WIFI_NO_SSID;
+        set_WiFiStatusCode(WIFI_FAILED);
         break;
-    case WIFI_HAL_ERROR_NOT_IN_RANGE:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not in Range). \n", __FUNCTION__, __LINE__ , connStr, connCode);
-        break;
+
     case WIFI_HAL_ERROR_TIMEOUT_EXPIRED:
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Timeout expired). \n", __FUNCTION__, __LINE__ , connStr, connCode);
+        /* Event Id & Code */
+        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+        eventData.data.wifiError.code = WIFI_UNKNOWN;
+        set_WiFiStatusCode(WIFI_FAILED);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'FAILED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_FAILED);
         break;
-    case WIFI_HAL_ERROR_CON_ACTIVATION:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in connection Activation). \n", __FUNCTION__, __LINE__ , connStr, connCode);
-        break;
-    case WIFI_HAL_ERROR_CON_DEACTIVATION:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in connection Deactivation). \n", __FUNCTION__, __LINE__ , connStr, connCode);
-        break;
+
     case WIFI_HAL_ERROR_DEV_DISCONNECT:
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
+
     case WIFI_HAL_ERROR_UNKNOWN:
     default:
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Error Unknown). \n", __FUNCTION__, __LINE__, connStr, connCode );
+        /* Event Id & Code */
+        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+        eventData.data.wifiError.code = WIFI_UNKNOWN;
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'FAILED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_FAILED);
         break;
+    }
+
+    if((eventId >= IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged) && (eventId < IARM_BUS_WIFI_MGR_EVENT_MAX))
+    {
+        IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
+                                (IARM_EventId_t) eventId,
+                                (void *)&eventData, sizeof(eventData));
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Broadcast Event id \'%d\'. \n", __FUNCTION__, __LINE__, eventId);
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
