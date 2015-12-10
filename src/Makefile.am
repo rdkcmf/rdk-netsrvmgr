@@ -15,6 +15,9 @@ AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \
 	-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus -lpthread -lcjson
 
+if RDKWIFIHAL
+AM_LDFLAGS += -lwifihal
+endif
 
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
