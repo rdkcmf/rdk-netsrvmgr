@@ -93,7 +93,9 @@ int  WiFiNetworkMgr::Start()
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in wifi_init(). \n", __FUNCTION__, __LINE__ );
     }
 
+    /*Register connect and disconnect call back */
     wifi_connectEndpoint_callback_register(wifi_connect_callback);
+    wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
 #endif
 
 }
@@ -358,7 +360,7 @@ static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *dat
     int isFP = irEventData->data.irkey.isFP;
 
     {
-        if (keyCode == KED_WPS)
+        if (keyType == KET_KEYDOWN && keyCode == KED_WPS)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received Key info [Type : %d; Code : %d; isFP : %d ] \n", __FUNCTION__, __LINE__, keyType, keyCode, isFP );
             connect_WpsPush();

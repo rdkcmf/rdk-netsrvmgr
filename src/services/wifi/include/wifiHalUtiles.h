@@ -23,6 +23,8 @@ extern "C" {
 #include "wifi_client_hal.h"
 }
 
+#define ACTION_ON_CONNECT 	1
+#define ACTION_ON_DISCONNECT 	0
 
 #define WIFI_ADAPTER_STATUS_PARAM 	"Device.WiFi.Radio.1.Status"
 #define WIFI_ADAPTER_ENABLE_PARAM	"Device.WiFi.Radio.1.Enable"
@@ -43,6 +45,7 @@ extern pthread_mutex_t wpsMutex;
 #ifdef USE_RDK_WIFI_HAL
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
+INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 #endif
 
 #endif /* WIFIHALUTILES_H_ */

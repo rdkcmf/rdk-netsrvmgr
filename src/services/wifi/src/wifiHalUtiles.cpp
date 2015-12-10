@@ -16,6 +16,7 @@ static WiFiStatusCode_t getWpaStatus();
 WiFiStatusCode_t get_WifiRadioStatus();
 
 pthread_mutex_t wpsMutex = PTHREAD_MUTEX_INITIALIZER;
+static void wifi_status_action (wifiStatusCode_t , char *, unsigned short );
 
 int get_int(const char* ptr)
 {
@@ -265,36 +266,148 @@ INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connSt
     int ret = RETURN_OK;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     wifiStatusCode_t connCode = *connStatus;
+    pthread_mutex_lock(&wpsMutex);
+    wifi_status_action (connCode, AP_SSID, (unsigned short) ACTION_ON_CONNECT);
+    pthread_mutex_unlock(&wpsMutex);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}
 
+INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
+{
+    int ret = RETURN_OK;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    wifiStatusCode_t connCode = *connStatus;
+    pthread_mutex_lock(&wpsMutex);
+    wifi_status_action (connCode, AP_SSID, (unsigned short)ACTION_ON_DISCONNECT);
+    pthread_mutex_unlock(&wpsMutex);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return ret;
+}
+
+void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned short action)
+{
+    const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully Connection. \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] %s Successfully to AP %s. \n", __FUNCTION__, __LINE__ , connStr, ap_SSID);
+	/*TODO : Action on connect and Disconnect */
+	if (ACTION_ON_CONNECT == action) {
+		gWifiAdopterStatus = WIFI_CONNECTED;
+	} else { /* if (ACTION_ON_DISCONNECT == action) */
+		gWifiAdopterStatus = WIFI_DISCONNECTED;
+	}
         break;
     case WIFI_HAL_ERROR_NOT_FOUND:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., AP not found. \n", __FUNCTION__, __LINE__ , connCode);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
     case WIFI_HAL_ERROR_NOT_IN_RANGE:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., AP not in Range. \n", __FUNCTION__, __LINE__ , connCode);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not in Range). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
     case WIFI_HAL_ERROR_TIMEOUT_EXPIRED:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Timeout expired. \n", __FUNCTION__, __LINE__ , connCode);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Timeout expired). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
     case WIFI_HAL_ERROR_CON_ACTIVATION:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Fail in connection Activation. \n", __FUNCTION__, __LINE__ , connCode);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in connection Activation). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
     case WIFI_HAL_ERROR_CON_DEACTIVATION:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Fail in connection Deactivation. \n", __FUNCTION__, __LINE__ , connCode);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in connection Deactivation). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
     case WIFI_HAL_ERROR_DEV_DISCONNECT:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed with status %d i.e., Fail in Device/AP Disconnect. \n", __FUNCTION__, __LINE__ , connCode);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         break;
     case WIFI_HAL_ERROR_UNKNOWN:
     default:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Failed to connect or disconnect with error status (%d). \n", __FUNCTION__, __LINE__, *connStatus );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Error Unknown). \n", __FUNCTION__, __LINE__, connStr, connCode );
         break;
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
-    return ret;
 }
+
+
+#endif
+
+#ifdef WIFI_COMMON_API
+int scan_Neighboring_WifiAP(char *buffer)
+{
+    int ret = 0, i;
+    INT radioIndex = 0;
+    UINT output_array_size = 0;
+    wifi_neighbor_ap_t *neighbor_ap_array = NULL;
+    char *ssid = NULL;
+    int security = 0;
+    int signalStrength = 0;
+    double frequency = 0;
+    SsidSecurity encrptType = NONE;
+
+    cJSON *rootObj = NULL, *array_element = NULL, *array_obj = NULL;
+    char *out = NULL;
+    char *pFreq = NULL;
+
+
+
+    ret = wifi_getNeighboringWiFiDiagnosticResult(radioIndex, &neighbor_ap_array, &output_array_size);
+
+    if(NULL == neighbor_ap_array || output_array_size)
+    {
+        return -1;
+    }
+
+    rootObj = cJSON_CreateObject();
+
+    cJSON_AddItemToObject(rootObj, "getAvailableSSIDs", array_obj=cJSON_CreateArray());
+
+    for (i = 0; i < output_array_size; i++ )
+    {
+        ssid = neighbor_ap_array[i].ap_SSID;
+        signalStrength = neighbor_ap_array[i].ap_SignalStrength;
+        frequency = strtod(neighbor_ap_array[i].ap_OperatingFrequencyBand, &pFreq);
+
+        /* The type of encryption the neighboring WiFi SSID advertises.*/
+        if(0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WEP")) {
+            encrptType = WEP;
+        }
+        else if (0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WPA")) {
+            encrptType = WEP;
+        }
+        else if (0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WPA2")) {
+            encrptType = WPA2;
+        }
+        else if (0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WPA-WPA2")) {
+            encrptType = WPA_WPA2;
+        }
+        else if (0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WPA-Enterprise")) {
+            encrptType = WPA_Enterprise;
+        }
+        else if (0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WPA2-Enterprise")) {
+            encrptType = WPA2_Enterprise;
+        }
+        else if (0 == strcasecmp(neighbor_ap_array[i].ap_SecurityModeEnabled, "WPA-WPA2-Enterprise")) {
+            encrptType = WPA_WPA2_Enterprise;
+        }
+        else {
+            encrptType = NONE;
+        }
+
+        cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
+        cJSON_AddStringToObject(array_element, "ssid", ssid);
+        cJSON_AddNumberToObject(array_element, "security", encrptType);
+        cJSON_AddNumberToObject(array_element, "signalStrength", signalStrength);
+        cJSON_AddNumberToObject(array_element, "frequency", frequency);
+    }
+
+    out = cJSON_PrintUnformatted(rootObj);
+
+    strncpy(buffer, out, strlen(out)+1);
+
+    cJSON_Delete(rootObj);
+    free(out);
+
+
+    return ret;
+
+}
+
 #endif
