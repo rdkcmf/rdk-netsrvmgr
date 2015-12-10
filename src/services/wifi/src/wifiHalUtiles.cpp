@@ -12,10 +12,12 @@
 
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_DISABLED;
 static WiFiStatusCode_t getWpaStatus();
+static WiFiConnection wifiConnData;
+
+pthread_mutex_t wifiStatusLock = PTHREAD_MUTEX_INITIALIZER;
 
 WiFiStatusCode_t get_WifiRadioStatus();
 
-pthread_mutex_t wpsMutex = PTHREAD_MUTEX_INITIALIZER;
 static void wifi_status_action (wifiStatusCode_t , char *, unsigned short );
 
 int get_int(const char* ptr)
@@ -28,6 +30,19 @@ bool get_boolean(const char *ptr)
 {
     bool *ret = (bool *)ptr;
     return *ret;
+}
+
+
+static void set_WiFiStatusCode( WiFiStatusCode_t status)
+{
+   pthread_mutex_lock(&wifiStatusLock);
+   gWifiAdopterStatus = status;
+   pthread_mutex_unlock(&wifiStatusLock);
+}
+
+static WiFiStatusCode_t get_WiFiStatusCode()
+{
+   return gWifiAdopterStatus;
 }
 
 
@@ -237,22 +252,62 @@ bool connect_WpsPush()
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
-    pthread_mutex_lock(&wpsMutex);
+    if (WIFI_CONNECTED != get_WiFiStatusCode()) {
 
-    wpsStatus = wifi_setCliWpsButtonPush(ssidIndex);
+        wpsStatus = wifi_setCliWpsButtonPush(ssidIndex);
 
-    if(RETURN_OK == wpsStatus)
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Successfully called \"wifi_setCliWpsButtonPush(%d)\"; WPS Push button Success. \n",\
-                 __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
-	ret = true;
+        if(RETURN_OK == wpsStatus)
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Successfully called \"wifi_setCliWpsButtonPush(%d)\"; WPS Push button Success. \n",\
+                     __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+            ret = true;
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_setCliWpsButtonPush(%d)\", WPS Push button press failed with status code (%d) \n",
+                     __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+        }
     }
-    else
+    else if (WIFI_CONNECTED == get_WiFiStatusCode())
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_setCliWpsButtonPush(%d)\", WPS Push button press failed with status code (%d) \n",
-                 __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+        /*If connected, do Disconnect first, the again re-connect to same or different AP.
+         * Wait for 60 Sec timeout period if fails to disconnect, then show error.
+             * If successfully disconncted, then go ahead and so call connect WpsPush. */
+        if(RETURN_OK == wifi_disconnectEndpoint(1, wifiConnData.ssid))
+        {
+            time_t start_time = time(NULL);
+            time_t timeout_period = start_time + MAX_TIME_OUT_PERIOD;
+
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\"; Already Connected to \"%s\" AP. \"wifi_disconnectEndpointd)\" Successfully on WPS Push. \n",\
+                     __FUNCTION__, __LINE__, ssidIndex, wifiConnData.ssid, wpsStatus);
+
+            /* Check for status change from Callback function */
+            while (start_time < timeout_period)
+            {
+                if(WIFI_DISCONNECTED == gWifiAdopterStatus)  {
+
+                    ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully received Disconnect state \"%d\". \n", __FUNCTION__, __LINE__, gWifiAdopterStatus);
+                    break;
+                }
+                else {
+                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to Disconnect \"%s\";  wait for %d sec (i.e., loop time : %s) to update disconnect state by wifi_disconnect_callback. (%d) \n",
+                             __FUNCTION__, __LINE__, wifiConnData.ssid, MAX_TIME_OUT_PERIOD, ctime(&start_time), gWifiAdopterStatus);
+                    sleep(RETRY_TIME_INTERVAL);
+                    start_time = time(NULL);
+                }
+            }
+        } else {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_disconnectEndpointd(%d)\", WPS Push button press failed with status code (%d) \n",
+                     __FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+        }
+	if(false == ret)
+	{
+             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Since failed to disconnect, so reconnecintg again. \"%d\". \n", __FUNCTION__, __LINE__);
+             ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
+	}
     }
-    pthread_mutex_unlock(&wpsMutex);
+
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 
@@ -266,9 +321,7 @@ INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connSt
     int ret = RETURN_OK;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     wifiStatusCode_t connCode = *connStatus;
-    pthread_mutex_lock(&wpsMutex);
     wifi_status_action (connCode, AP_SSID, (unsigned short) ACTION_ON_CONNECT);
-    pthread_mutex_unlock(&wpsMutex);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 
@@ -277,9 +330,7 @@ INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *con
     int ret = RETURN_OK;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     wifiStatusCode_t connCode = *connStatus;
-    pthread_mutex_lock(&wpsMutex);
     wifi_status_action (connCode, AP_SSID, (unsigned short)ACTION_ON_DISCONNECT);
-    pthread_mutex_unlock(&wpsMutex);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
@@ -292,12 +343,16 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] %s Successfully to AP %s. \n", __FUNCTION__, __LINE__ , connStr, ap_SSID);
-	/*TODO : Action on connect and Disconnect */
-	if (ACTION_ON_CONNECT == action) {
-		gWifiAdopterStatus = WIFI_CONNECTED;
-	} else { /* if (ACTION_ON_DISCONNECT == action) */
-		gWifiAdopterStatus = WIFI_DISCONNECTED;
-	}
+        /*TODO : Action on connect and Disconnect */
+        if (ACTION_ON_CONNECT == action) {
+	    set_WiFiStatusCode(WIFI_CONNECTED);
+            memset(&wifiConnData, '\0', sizeof(wifiConnData));
+            strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+        } else if (ACTION_ON_DISCONNECT == action) {
+	    set_WiFiStatusCode(WIFI_DISCONNECTED);
+            memset(&wifiConnData, '\0', sizeof(wifiConnData));
+            strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+        }
         break;
     case WIFI_HAL_ERROR_NOT_FOUND:
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", __FUNCTION__, __LINE__ , connStr, connCode);
