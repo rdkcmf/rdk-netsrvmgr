@@ -60,7 +60,12 @@ typedef enum _WiFiErrorCode_t {
 typedef enum _SsidSecurity {
     NONE = 0,
     WPA,
-    WEP
+    WEP,
+    WPA2,
+    WPA_WPA2,
+    WPA_Enterprise,
+    WPA2_Enterprise,
+    WPA_WPA2_Enterprise
 } SsidSecurity;
 
 
@@ -101,8 +106,8 @@ typedef struct _WiFiConnectionStatus
 /*! Get/Set Data associated with WiFi Service Manager */
 typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     union {
-	wifiSsidData_t curSsids;
-    	WiFiStatusCode_t wifiStatus;
+        wifiSsidData_t curSsids;
+        WiFiStatusCode_t wifiStatus;
         setWiFiAdapter setwifiadapter;
         WiFiConnection connect;
         WiFiConnection saveSSID;
