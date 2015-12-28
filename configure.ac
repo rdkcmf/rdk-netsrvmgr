@@ -28,7 +28,7 @@ AC_PROG_CC
 AC_CHECK_HEADERS([stdlib.h unistd.h])
 #PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
 #PKG_CHECK_MODULES([GTHREAD], [gthread-2.0 >= 2.24.0])
-
+RDKWIFIHAL=" "
 
 AC_ARG_ENABLE([rdk-wifi-hal],
         AS_HELP_STRING([--enable-rdk-wifi-hal],[This will enable/disable rdk wifi hal.]),
@@ -41,6 +41,8 @@ AC_ARG_ENABLE([rdk-wifi-hal],
            ],
          [echo " rdk-wifi-hal is enable"])
 AM_CONDITIONAL([RDKWIFIHAL], [test x$RDKWIFIHAL = xtrue])
+
+AC_SUBST(RDKWIFIHAL)
 
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
