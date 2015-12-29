@@ -137,7 +137,8 @@ typedef struct _IARM_BUS_WiFiSrvMgr_EventData_t {
 typedef enum _IARM_Bus_NMgr_WiFi_EventId_t {
     IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged = 1,
     IARM_BUS_WIFI_MGR_EVENT_onError,
-    IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged
+    IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged,
+    IARM_BUS_WIFI_MGR_EVENT_MAX,           		/*!< Maximum event id*/
 } IARM_Bus_NMgr_WiFi_EventId_t;
 
 
