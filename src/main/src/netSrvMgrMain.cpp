@@ -13,7 +13,8 @@
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
 
-char networkMgr_ConfigProp_FilePath[100] = {'\0'};
+char configProp_FilePath[100] = {'\0'};;
+netMgrConfigProps confProp;
 
 static void netSrvMgr_start();
 static void netSrvMgr_Loop();
@@ -28,6 +29,7 @@ void logCallback(const char *buff)
 #endif
 
 static void NetworkMgr_SignalHandler (int sigNum);
+static bool read_ConfigProps();
 
 void NetworkMgr_SignalHandler (int sigNum)
 {
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
             if (itr < argc)
             {
                 configFilePath = argv[itr];
-                memcpy(networkMgr_ConfigProp_FilePath, configFilePath, strlen(configFilePath));
+                memcpy(configProp_FilePath, configFilePath, strlen(configFilePath));
             }
             else
             {
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
 #ifdef RDK_LOGGER_ENABLED
     if(rdk_logger_init(debugConfigFile) == 0) b_rdk_logger_enabled = 1;
     if(configFilePath) {
-        memcpy(strMgr_ConfigProp_FilePath, configFilePath, strlen(configFilePath))
+        memcpy(configProp_FilePath, configFilePath, strlen(configFilePath))
     }
     IARM_Bus_RegisterForLog(logCallback);
 #else
@@ -95,11 +97,14 @@ int main(int argc, char *argv[])
 
 #ifdef ENABLE_SD_NOTIFY
     sd_notifyf(0, "READY=1\n"
-              "STATUS=netsrvmgr is Successfully Initialized\n"
-              "MAINPID=%lu",
-              (unsigned long) getpid());
+               "STATUS=netsrvmgr is Successfully Initialized\n"
+               "MAINPID=%lu",
+               (unsigned long) getpid());
 #endif
-
+    if(false == read_ConfigProps()) {
+        confProp.wifiProps.max_timeout = MAX_TIME_OUT_PERIOD;
+        confProp.wifiProps.statsParam_PollInterval = MAX_TIME_OUT_PERIOD;
+    }
     netSrvMgr_start();
     netSrvMgr_Loop();
 
@@ -134,3 +139,73 @@ NetworkMedium* createNetworkMedium(NetworkMedium::NetworkType _type)
     }
 }
 #endif
+
+
+static bool read_ConfigProps()
+{
+    bool status = false;
+    GKeyFile *key_file = NULL;
+    GError *error = NULL;
+    gsize length = 0;
+    gdouble double_value = 0;
+    guint group = 0, key = 0;
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+
+    if(configProp_FilePath[0] == '\0')
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed to read NETSRVMGR Configuration file \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+
+    key_file = g_key_file_new();
+
+    if(!key_file) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed to g_key_file_new() \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+
+    if(!g_key_file_load_from_file(key_file, configProp_FilePath, G_KEY_FILE_KEEP_COMMENTS, &error))
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed with \"%s\"", __FUNCTION__, __LINE__, error->message);
+        return false;
+    }
+    else
+    {
+        gsize groups_id, num_keys;
+        gchar **groups = NULL, **keys = NULL, *value = NULL;
+
+        groups = g_key_file_get_groups(key_file, &groups_id);
+
+        for(group = 0; group < groups_id; group++)
+        {
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d]Group %u/%u: \t%s\n", __FUNCTION__, __LINE__, group, groups_id - 1, groups[group]);
+            if(0 == strncasecmp(WIFI_CONFIG, groups[group], strlen(groups[group])))
+            {
+                keys = g_key_file_get_keys(key_file, groups[group], &num_keys, &error);
+                for(key = 0; key < num_keys; key++)
+                {
+                    value = g_key_file_get_value(key_file,	groups[group],	keys[key],	&error);
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[ \t\tkey %u/%u: \t%s => %s]\n", key, num_keys - 1, keys[key], value);
+                    if(0 == strncasecmp(MAX_TIMEOUT_ON_DISCONNECT, keys[key], strlen(keys[key])))
+                    {
+                        confProp.wifiProps.max_timeout = atoi(value);
+                    }
+                    if(0 == strncasecmp(STATS_POLL_INTERVAL, keys[key], strlen(keys[key])))
+                    {
+                        confProp.wifiProps.statsParam_PollInterval = atoi(value);
+                    }
+                    if(value) g_free(value);
+                }
+                if(keys) g_strfreev(keys);
+            }
+        }
+        if(groups) g_strfreev(groups);
+    }
+    if(key_file) g_key_file_free(key_file);
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+    return true;
+}
+
+
