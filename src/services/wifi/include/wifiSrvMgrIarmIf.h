@@ -163,7 +163,7 @@ typedef enum _IARM_Bus_NMgr_WiFi_EventId_t {
 
 typedef struct _WiFi_Radio_Diag_Params {
     bool enable;
-    char status[12];
+    char status[BUFF_MIN];
     char alias[64];
     char name[20];
     unsigned int lastChange;
