@@ -18,7 +18,13 @@
 
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
-#define SSID_SIZE 	24
+#define BUFF_LENGTH_64  64
+#define BUFF_LENGTH_256 256
+#define BUFF_MAX    	1024
+#define BUFF_MAC 	18
+#define BUFF_MIN 	16
+#define BUFF_LENGTH_32  32
+#define SSID_SIZE 	32
 #define BSSID_BUFF 	20
 #define PSK_BUFF	24
 #define MAX_SSIDLIST_BUF 4096
@@ -28,10 +34,17 @@
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Returns the paired ssid as a string*/
 #define IARM_BUS_WIFI_MGR_API_setEnabled            "setEnabled"             /*!< Enable the wifi adapter on the box*/
 #define IARM_BUS_WIFI_MGR_API_connect               "connect"                /*!< Connect with given or saved ssid and passphrase */
+#define IARM_BUS_WIFI_MGR_API_initiateWPSPairing    "initiateWPSPairing"     /*!< Initiates the connection via WPS*/
 #define IARM_BUS_WIFI_MGR_API_saveSSID              "saveSSID"               /*!< Save the ssid and passphrase */
 #define IARM_BUS_WIFI_MGR_API_clearSSID             "clearSSID"              /*!< Clear the given ssid*/
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Get the paired SSID */
 #define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /*!< Retrieve the paired status*/
+
+/*Diagnostic Apis */
+#define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /*!< Retrieve the get radio status properties*/
+#define IARM_BUS_WIFI_MGR_API_getRadioStatsProps    "getRadioStatsProps"      /*!< Retrieve the get radio stats properties*/
+#define IARM_BUS_WIFI_MGR_API_setRadioProps         "setRadioProps"           /*!< Set radio properties*/
+#define IARM_BUS_WIFI_MGR_API_getSSIDProps          "getSSIDProps"            /*!< Retrieve the ssid properties*/
 
 /*! Event states associated with WiFi connection  */
 typedef enum _WiFiStatusCode_t {
@@ -68,6 +81,11 @@ typedef enum _SsidSecurity {
     WPA_WPA2_Enterprise
 } SsidSecurity;
 
+typedef enum _eConnectionMethodType {
+    WPS_PUSH_CONNECT,
+    SSID_SECLECTION_CONNECT
+} eConnMethodType;
+
 
 typedef struct _ssidList
 {
@@ -100,6 +118,7 @@ typedef struct _WiFiConnectionStatus
 {
     WiFiConnection ssidSession;
     bool isConnected;
+    eConnMethodType conn_type;
 } WiFiConnectionStatus;
 
 
@@ -140,6 +159,93 @@ typedef enum _IARM_Bus_NMgr_WiFi_EventId_t {
     IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged,
     IARM_BUS_WIFI_MGR_EVENT_MAX,           		/*!< Maximum event id*/
 } IARM_Bus_NMgr_WiFi_EventId_t;
+
+
+typedef struct _WiFi_Radio_Diag_Params {
+    bool enable;
+    char status[12];
+    char alias[64];
+    char name[20];
+    unsigned int lastChange;
+    char lowerLayers[64];
+    bool upstream;
+    unsigned int maxBitRate;
+    char supportedFrequencyBands[8];
+    char operatingFrequencyBand[24];
+    char supportedStandards[20];
+    char operatingStandards[24];
+    char possibleChannels[24];
+    char channelsInUse[24];
+    unsigned int channel;
+    bool autoChannelSupported;
+    bool autoChannelEnable;
+    unsigned int autoChannelRefreshPeriod;
+    char operatingChannelBandwidth[24];
+    char extensionChannel[24];
+    char guardInterval[24];
+    int mcs;
+    char transmitPowerSupported[64];
+    int transmitPower;
+    bool ieee80211hSupported;
+    bool ieeee80211hEnabled;
+    char regulatoryDomain[4];
+} WiFi_Radio_DiagParams;
+
+
+typedef struct _WiFi_SSID_Diag_Params {
+    bool enable;
+    char status[BUFF_MIN];
+    char name[BUFF_LENGTH_32];
+    char bssid[BUFF_MAC];
+    char macaddr[BUFF_MAC];
+    char ssid[BUFF_LENGTH_32];
+} WiFi_SSID_Diag_Params;
+
+
+typedef struct _WiFi_Radio_Stats_Diag_Params {
+    unsigned long	bytesSent;
+    unsigned long	bytesReceived;
+    unsigned long	packetsSent;
+    unsigned long	packetsReceived;
+    unsigned int	errorsSent;
+    unsigned int	errorsReceived;
+    unsigned int	discardPacketsSent;
+    unsigned int	discardPacketsReceived;
+    unsigned int	plcErrorCount;
+    unsigned int	fcsErrorCount;
+    unsigned int	invalidMACCount;
+    unsigned int	packetsOtherReceived;
+    unsigned int 	noiseFloor;
+} WiFi_Radio_Stats_Diag_Params;
+
+typedef enum _IARM_Bus_WiFiSrvMgr_NumEntry_t {
+    IARM_BUS_WIFI_MGR_SSIDEntry,
+    IARM_BUS_WIFI_MGR_RadioEntry,
+} IARM_Bus_WiFiSrvMgr_NumEntry_t;
+
+
+typedef struct _IARM_BUS_WiFi_DiagsPropParam_t {
+    union {
+        unsigned int radioNumberOfEntries;
+        struct _Radio_Data {
+            short radioIndex;
+            WiFi_Radio_DiagParams params;
+        } radio;
+        struct _Radio_Stats_Data {
+            short radioIndex;
+            WiFi_Radio_Stats_Diag_Params params;
+        } radio_stats;
+        unsigned int ssidNumberOfEntries;
+        struct _Ssid_Data {
+            short ssidIndex;
+            WiFi_SSID_Diag_Params params;
+        } ssid;
+    } data;
+    bool status;
+    IARM_Bus_WiFiSrvMgr_NumEntry_t numEntry;
+} IARM_BUS_WiFi_DiagsPropParam_t;
+
+
 
 
 #endif

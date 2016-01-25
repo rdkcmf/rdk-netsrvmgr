@@ -23,6 +23,7 @@ AC_PROG_CXX
 AC_PROG_CC
 
 # Checks for libraries.
+PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h unistd.h])

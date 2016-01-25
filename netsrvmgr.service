@@ -4,7 +4,7 @@ After= iarmbusd.service
 Requires=iarmbusd.service
 
 [Service]
-ExecStart=/usr/bin/netsrvmgr --debugconfig /etc/debug.ini --configFilePath /etc/netsrvmgr.conf 
+ExecStart=/bin/sh -c 'source /lib/rdk/opt-override.sh;/usr/bin/netsrvmgr --debugconfig $DEBUGINIFILE --configFilePath $NETSRVMGRINIFILE'
 ExecStop=/bin/kill -15 $MAINPID
 Restart=always
 

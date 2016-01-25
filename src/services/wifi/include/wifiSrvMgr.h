@@ -33,10 +33,16 @@ public:
     static IARM_Result_t getCurrentState(void *arg);
     static IARM_Result_t setEnabled(void *arg);
     static IARM_Result_t connect(void *arg);
+    static IARM_Result_t initiateWPSPairing(void *arg);
     static IARM_Result_t saveSSID(void* arg);
     static IARM_Result_t clearSSID(void* arg);
     static IARM_Result_t getPairedSSID(void *arg);
     static IARM_Result_t isPaired(void *arg);
+
+    static IARM_Result_t getRadioProps(void *arg);
+    static IARM_Result_t setRadioProps(void *arg);
+    static IARM_Result_t getRadioStatsProps(void *arg);
+    static IARM_Result_t getSSIDProps(void *arg);
 
 private:
 

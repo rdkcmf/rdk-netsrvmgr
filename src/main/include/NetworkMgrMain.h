@@ -20,6 +20,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <glib.h>
+
 
 extern "C" {
 #include "cJSON.h"
@@ -34,6 +40,18 @@ extern "C" {
 #include "comcastIrKeyCodes.h"
 
 #define LOG_NMGR "LOG.RDK.NETSRVMGR"
+#define WIFI_CONFIG "WiFiMgr_Config"
+
+#define MAX_TIMEOUT_ON_DISCONNECT       "MAX_TIMEOUT_ON_DISCONNECT"
+#define STATS_POLL_INTERVAL          	"STATS_POLL_INTERVAL"
+
+#define WIFI_BCK_PATHNAME				"/opt/persistent/wifi"
+#define WIFI_BCK_FILENAME				"/opt/persistent/wifi/wifiConnectionInfo.json"
+#define WIFI_CONN_DETAILS				"wifi_conn_details"
+#define SSID_STR 			"ssid"
+#define PSK_STR 			"psk"
+#define CONN_TYPE			"conn_type"
+#define MAX_TIME_OUT_PERIOD     60
 
 typedef enum _WiFiResult
 {
@@ -45,5 +63,17 @@ typedef enum _WiFiResult
     WiFiResult_invalidParameter,
     WiFiResult_fail
 } WiFiResult;
+
+typedef struct  _wifiMgrConfigProps
+{
+    unsigned short max_timeout;
+    unsigned short statsParam_PollInterval;
+
+} wifiMgrConfigProps;
+
+typedef struct  _netMgrConfigProps
+{
+    wifiMgrConfigProps wifiProps;
+} netMgrConfigProps;
 
 #endif /* _NETWORKMGRMAIN_H_ */

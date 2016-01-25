@@ -19,9 +19,11 @@
 
 #include "hostIf_tr69ReqHandler.h"
 
+#ifdef USE_RDK_WIFI_HAL
 extern "C" {
 #include "wifi_client_hal.h"
 }
+#endif
 
 #define ACTION_ON_CONNECT 	1
 #define ACTION_ON_DISCONNECT 	0
@@ -42,13 +44,18 @@ WiFiStatusCode_t get_WifiRadioStatus();
 extern bool updateWiFiList();
 extern ssidList gSsidList;
 
-extern pthread_mutex_t wpsMutex;
 
 #ifdef USE_RDK_WIFI_HAL
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
-void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
+bool connect_withSSID(int, char *, char *, char *, char *, char *);
+bool scan_Neighboring_WifiAP(char *);
+bool write_WiFiConnStatusInfo_To_File(WiFiConnectionStatus *);
+bool read_WiFiConnStatusInfo_From_File(WiFiConnectionStatus *);
+void monitor_WiFiStatus();
 #endif
 
+bool isWiFiCapable();
+void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 #endif /* WIFIHALUTILES_H_ */

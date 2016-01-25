@@ -3,7 +3,7 @@
 SUBDIRS =
 DIST_SUBDIRS =
 
-AM_CXXFLAGS = -I$(top_srcdir)/src/main/include -I$(top_srcdir)/src/services/wifi/include $(GLIB_CFLAGS) $(G_THREAD_CFLAGS)
+AM_CXXFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)  -I$(top_srcdir)/src/main/include -I$(top_srcdir)/src/services/wifi/include $(GLIB_CFLAGS) $(G_THREAD_CFLAGS)
 
 if RDKWIFIHAL
 AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
