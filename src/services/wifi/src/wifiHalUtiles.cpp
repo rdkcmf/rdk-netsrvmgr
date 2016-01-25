@@ -823,9 +823,9 @@ void *wifiConnStatusThread(void* arg)
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%d] ***** Monitor activated by signal ***** \n", __FUNCTION__, __LINE__ );
 
             while(WIFI_CONNECTED == get_WiFiStatusCode()) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
+                //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
                 wifi_getStats();
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+                //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
         }

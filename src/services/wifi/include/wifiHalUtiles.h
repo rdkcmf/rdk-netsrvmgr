@@ -27,7 +27,6 @@ extern "C" {
 
 #define ACTION_ON_CONNECT 	1
 #define ACTION_ON_DISCONNECT 	0
-#define MAX_TIME_OUT_PERIOD     60
 #define RETRY_TIME_INTERVAL     5
 
 #define WIFI_ADAPTER_STATUS_PARAM 	"Device.WiFi.Radio.1.Status"
