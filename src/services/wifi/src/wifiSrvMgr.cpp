@@ -450,7 +450,6 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
 
     IARM_BUS_WiFi_DiagsPropParam_t *param = (IARM_BUS_WiFi_DiagsPropParam_t *)arg;
 
-    memset(output_string,0,BUFF_MAX);
     memset(output_bool,0,BUFF_MIN);
     if (wifi_getRadioEnable(radioIndex,  output_bool) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio enable is %s .\n", __FUNCTION__, __LINE__, output_bool);
@@ -461,10 +460,10 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioEnable FAILURE \n", __FUNCTION__, __LINE__);
     }
-    memset(output_bool,0,BUFF_MIN);
-    if (wifi_getRadioStatus( radioIndex,  output_bool) == RETURN_OK) {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio status is %s .\n", __FUNCTION__, __LINE__, output_bool);
-        snprintf(param->data.radio.params.status,BUFF_MIN,(char *)output_bool);
+    memset(output_string,0,BUFF_MAX);
+    if (wifi_getRadioStatus( radioIndex,  output_string) == RETURN_OK) {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio status is %s .\n", __FUNCTION__, __LINE__, output_string);
+        snprintf(param->data.radio.params.status,BUFF_MIN,output_string);
     }
     else
     {
