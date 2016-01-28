@@ -25,10 +25,12 @@ extern netMgrConfigProps confProp;
 
 WiFiStatusCode_t get_WifiRadioStatus();
 
+
 extern WiFiConnectionStatus savedWiFiConnList;
 
 #ifdef USE_RDK_WIFI_HAL
 static void wifi_status_action (wifiStatusCode_t , char *, unsigned short );
+static wifiStatusCode_t connCode_prev_state;
 #endif
 
 int get_int(const char* ptr)
@@ -393,7 +395,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 {
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
-
+    bool notify = false;
     const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
     memset(&eventData, 0, sizeof(eventData));
 
@@ -406,7 +408,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
-
+            notify = true;
             /* one condition variable is signaled */
             pthread_mutex_lock(&mutexGo);
             if(0 == pthread_cond_signal(&condGo))
@@ -429,6 +431,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventData.data.wifiStateChange.state = WIFI_CONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_CONNECTED);
         } else if (ACTION_ON_DISCONNECT == action) {
+            notify = true;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
@@ -440,95 +443,129 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         }
         break;
     case WIFI_HAL_CONNECTING:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting to AP in Progress... \n", __FUNCTION__, __LINE__ );
-        set_WiFiStatusCode(WIFI_CONNECTING);
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
-        eventData.data.wifiStateChange.state = WIFI_CONNECTING;
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTING\'(%d).\n", __FUNCTION__, __LINE__, WIFI_CONNECTING);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting to AP in Progress... \n", __FUNCTION__, __LINE__ );
+            set_WiFiStatusCode(WIFI_CONNECTING);
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
+            eventData.data.wifiStateChange.state = WIFI_CONNECTING;
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTING\'(%d).\n", __FUNCTION__, __LINE__, WIFI_CONNECTING);
+        }
         break;
 
     case WIFI_HAL_DISCONNECTING:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Disconnecting from AP in Progress... \n", __FUNCTION__, __LINE__ );
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Disconnecting from AP in Progress... \n", __FUNCTION__, __LINE__ );
+        }
         break;
-
     case WIFI_HAL_ERROR_NOT_FOUND:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", __FUNCTION__, __LINE__ , connStr, connCode);
-        /* Event Id & Code */
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_NO_SSID;
-        set_WiFiStatusCode(WIFI_FAILED);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", __FUNCTION__, __LINE__ , connStr, connCode);
+            /* Event Id & Code */
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_NO_SSID;
+            set_WiFiStatusCode(WIFI_FAILED);
+        }
         break;
 
     case WIFI_HAL_ERROR_TIMEOUT_EXPIRED:
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Timeout expired). \n", __FUNCTION__, __LINE__ , connStr, connCode);
         /* Event Id & Code */
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_UNKNOWN;
-        set_WiFiStatusCode(WIFI_FAILED);
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'FAILED\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_UNKNOWN;
+            set_WiFiStatusCode(WIFI_FAILED);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'FAILED\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
 
     case WIFI_HAL_ERROR_DEV_DISCONNECT:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect). \n", __FUNCTION__, __LINE__ , connStr, connCode);
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect). \n", __FUNCTION__, __LINE__ , connStr, connCode);
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
         /* the SSID of the network changed */
     case WIFI_HAL_ERROR_SSID_CHANGED:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to SSID Change (%d) . %s. \n", __FUNCTION__, __LINE__ , connCode);
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_SSID_CHANGED;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to SSID Change (%d) . %s. \n", __FUNCTION__, __LINE__ , connCode);
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_SSID_CHANGED;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
         /* the connection to the network was lost */
     case WIFI_HAL_ERROR_CONNECTION_LOST:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to  CONNECTION LOST (%d) from %s. \n", __FUNCTION__, __LINE__ , connCode, ap_SSID);
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to  CONNECTION LOST (%d) from %s. \n", __FUNCTION__, __LINE__ , connCode, ap_SSID);
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
         /* the connection failed for an unknown reason */
     case WIFI_HAL_ERROR_CONNECTION_FAILED:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Connection Failed (%d) due to unknown reason. %s. \n", __FUNCTION__, __LINE__ , connCode );
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_CONNECTION_FAILED;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_FAILED\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode)
+        {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Connection Failed (%d) due to unknown reason. %s. \n", __FUNCTION__, __LINE__ , connCode );
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_CONNECTION_FAILED;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_FAILED\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
         /* the connection was interrupted */
     case WIFI_HAL_ERROR_CONNECTION_INTERRUPTED:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to Connection Interrupted (%d). \n", __FUNCTION__, __LINE__ , connCode );
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_CONNECTION_INTERRUPTED;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_INTERRUPTED\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to Connection Interrupted (%d). \n", __FUNCTION__, __LINE__ , connCode );
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_CONNECTION_INTERRUPTED;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_INTERRUPTED\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
         /* the connection failed due to invalid credentials */
     case WIFI_HAL_ERROR_INVALID_CREDENTIALS:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to Invalid Credentials. (%d). \n", __FUNCTION__, __LINE__ , connCode );
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_INVALID_CREDENTIALS;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'INVALID_CREDENTIALS\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to Invalid Credentials. (%d). \n", __FUNCTION__, __LINE__ , connCode );
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_INVALID_CREDENTIALS;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'INVALID_CREDENTIALS\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
 
     case WIFI_HAL_ERROR_UNKNOWN:
     default:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with WiFi Error Code %d (i.e., WIFI_HAL_ERROR_UNKNOWN). \n", __FUNCTION__, __LINE__, connStr, connCode );
-        /* Event Id & Code */
-        eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-        eventData.data.wifiError.code = WIFI_UNKNOWN;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'UNKNOWN\'(%d).\n", \
-                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in %s with WiFi Error Code %d (i.e., WIFI_HAL_ERROR_UNKNOWN). \n", __FUNCTION__, __LINE__, connStr, connCode );
+            /* Event Id & Code */
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_UNKNOWN;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'UNKNOWN\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+        }
         break;
     }
 
-    if((eventId >= IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged) && (eventId < IARM_BUS_WIFI_MGR_EVENT_MAX))
+    connCode_prev_state = connCode;
+    if(notify && ((eventId >= IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged) && (eventId < IARM_BUS_WIFI_MGR_EVENT_MAX)))
     {
         IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
                                 (IARM_EventId_t) eventId,
