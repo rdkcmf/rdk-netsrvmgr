@@ -763,9 +763,9 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
         }
         memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
         get_CurrentSsidInfo(&currSsidInfo);
+        memcpy(param->data.ssid.params.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
         if(currSsidInfo.ssidSession.ssid[0] != '\0')
         {
-            memcpy(param->data.ssid.params.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] get current SSID (%s).\n", __FUNCTION__, __LINE__,
                      currSsidInfo.ssidSession.ssid);
         }
