@@ -715,6 +715,19 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getSSIDEntries FAILURE \n", __FUNCTION__, __LINE__);
         }
     }
+    else if(param->numEntry == IARM_BUS_WIFI_MGR_RadioEntry)
+    {
+        if(wifi_getRadioNumberOfEntries(&output_ulong) == RETURN_OK) {
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Radio Entries is %lu .\n", __FUNCTION__, __LINE__, output_ulong);
+            param->data.radioNumberOfEntries=(unsigned int)output_ulong;
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Radio Entries param->data.radioNumberOfEntries is %d .\n", __FUNCTION__, __LINE__, param->data.ssidNumberOfEntries);
+
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioNumberOfEntries FAILURE \n", __FUNCTION__, __LINE__);
+        }
+    }
     else
     {
         if(wifi_getSSIDName(ssidIndex,output_string) == RETURN_OK) {
