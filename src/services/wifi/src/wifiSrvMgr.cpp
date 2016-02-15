@@ -222,6 +222,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
     char *psk = param->data.connect.passphrase;
     short psk_len = strlen (param->data.connect.passphrase);
 
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Connect with SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
     /* If param data receives as Empty, then use the saved SSIDConnection */
     if (!ssid_len)
     {
@@ -245,36 +246,25 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         if(ssid_len & psk_len)
         {
             /*Connect with Saved SSID */
-            if ((0 == strncmp(ssid, savedWiFiConnList.ssidSession.ssid, ssid_len)) &&
-                    (0 == strncmp(psk, savedWiFiConnList.ssidSession.passphrase, psk_len)))
-            {
-                RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
 #ifdef USE_RDK_WIFI_HAL
-                connect_withSSID(ssidIndex, ssid, NULL, NULL, NULL, psk);
+            connect_withSSID(ssidIndex, ssid, NULL, NULL, NULL, psk);
 #endif
-                param->status = true;
-            }
-            else {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to set due to Invalid SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
-            }
+            param->status = true;
         }
         /* Passphrase can be null when the network security is NONE. */
         else if (ssid_len && (0 == psk_len))
         {
-            if ((0 == strncmp(ssid, savedWiFiConnList.ssidSession.ssid, ssid_len)))
-            {
-                RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) with Empty Passphrase.\n", __FUNCTION__, __LINE__, ssid);
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) with Empty Passphrase.\n", __FUNCTION__, __LINE__, ssid);
 #ifdef USE_RDK_WIFI_HAL
-                connect_withSSID(ssidIndex, ssid, NULL, NULL, NULL, savedWiFiConnList.ssidSession.passphrase);
+            connect_withSSID(ssidIndex, ssid, NULL, NULL, NULL, savedWiFiConnList.ssidSession.passphrase);
 #endif
-                param->status = true;
-            }
+            param->status = true;
         }
         else {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Invalid SSID & Passphrase.\n", __FUNCTION__, __LINE__);
         }
     }
-
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
