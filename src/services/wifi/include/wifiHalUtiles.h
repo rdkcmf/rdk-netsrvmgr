@@ -53,6 +53,7 @@ bool scan_Neighboring_WifiAP(char *);
 bool write_WiFiConnStatusInfo_To_File(WiFiConnectionStatus *);
 bool read_WiFiConnStatusInfo_From_File(WiFiConnectionStatus *);
 void monitor_WiFiStatus();
+bool clearSSID_On_Disconnect_AP();
 #endif
 
 bool isWiFiCapable();

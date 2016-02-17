@@ -337,19 +337,13 @@ IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
 IARM_Result_t WiFiNetworkMgr::clearSSID(void* arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    int status = 0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
-
     param->status = false;
 
-    memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
-    status = remove(WIFI_BCK_FILENAME);
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] File \'%s\' %s with (%d) \'%s\'.\n",\
-             __FUNCTION__, __LINE__, WIFI_BCK_FILENAME, ((status == 0)?"Successfully Deleted": "Failed to Delete."), errno, strerror(errno) );
-
-    param->status = true;
+#ifdef USE_RDK_WIFI_HAL
+    param->status = clearSSID_On_Disconnect_AP();
+#endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
