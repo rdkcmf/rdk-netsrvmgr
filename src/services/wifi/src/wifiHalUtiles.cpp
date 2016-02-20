@@ -895,5 +895,28 @@ void monitor_WiFiStatus()
 }
 
 
+bool clearSSID_On_Disconnect_AP()
+{
+  bool ret = true;
+  int status = 0;
+  char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
+  if(RETURN_OK != wifi_disconnectEndpoint(1, ap_ssid))
+  {
+	RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".\n",\
+	               __FUNCTION__, __LINE__, ap_ssid);
+	ret = false;
+  }
+  else
+  {
+     RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'. Deleting \"%s\" file. \n",\
+               __FUNCTION__, __LINE__, ap_ssid, WIFI_BCK_FILENAME);
+     remove(WIFI_BCK_FILENAME);
+     status = remove(WIFI_BCK_FILENAME);
+     memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
+     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] File \'%s\' %s with (%d) \'%s\'.\n",\
+              __FUNCTION__, __LINE__, WIFI_BCK_FILENAME, ((status == 0)?"Successfully Deleted": "Failed to Delete."), errno, strerror(errno) );
+  }
+  return ret;
+}
 #endif
 
