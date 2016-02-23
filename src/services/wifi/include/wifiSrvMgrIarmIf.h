@@ -18,16 +18,16 @@
 
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
-#define BUFF_LENGTH_64  64
-#define BUFF_LENGTH_256 256
-#define BUFF_MAX    	1024
+#define BUFF_LENGTH_64  65
+#define BUFF_LENGTH_256 257
+#define BUFF_MAX    	1025
 #define BUFF_MAC 	18
-#define BUFF_MIN 	16
-#define BUFF_LENGTH_32  32
-#define SSID_SIZE 	32
+#define BUFF_MIN 	17
+#define BUFF_LENGTH_32  33
+#define SSID_SIZE 	BUFF_LENGTH_32
 #define BSSID_BUFF 	20
-#define PSK_BUFF	24
-#define MAX_SSIDLIST_BUF 4096
+#define PASSPHRASE_BUFF BUFF_LENGTH_64
+#define MAX_SSIDLIST_BUF 4097
 
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
@@ -111,7 +111,10 @@ typedef struct _setWiFiAdapter
 typedef struct _WiFiConnection
 {
     char ssid[SSID_SIZE];
-    char passphrase[PSK_BUFF];
+    char passphrase[PASSPHRASE_BUFF];
+    char security_mode[BUFF_MIN];
+    char security_WEPKey[PASSPHRASE_BUFF];
+    char security_PSK[PASSPHRASE_BUFF];
 } WiFiConnection;
 
 typedef struct _WiFiConnectionStatus

@@ -298,7 +298,6 @@ bool connect_WpsPush()
             /*Generate Event for Connect State*/
             eventData.data.wifiStateChange.state = WIFI_CONNECTING;
             set_WiFiStatusCode(WIFI_CONNECTING);
-            remove(WIFI_BCK_FILENAME);
             wifi_conn_type = WPS_PUSH_CONNECT;
         }
         else
@@ -322,7 +321,6 @@ bool connect_WpsPush()
 
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received WPS KeyCode \"%d\"; Already Connected to \"%s\" AP. \"wifi_disconnectEndpointd)\" Successfully on WPS Push. \n",\
                      __FUNCTION__, __LINE__, ssidIndex, wifiConnData.ssid, wpsStatus);
-
             /* Check for status change from Callback function */
             while (start_time < timeout_period)
             {
@@ -360,7 +358,6 @@ bool connect_WpsPush()
             set_WiFiStatusCode(eventData.data.wifiStateChange.state);
             IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
             if(ret) {
-                remove(WIFI_BCK_FILENAME);
                 wifi_conn_type = WPS_PUSH_CONNECT;
             }
         }
@@ -424,7 +421,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
             strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
             savedWiFiConnList.conn_type = wifi_conn_type;
-            write_WiFiConnStatusInfo_To_File(&savedWiFiConnList);
 
             /*Generate Event for Connect State*/
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
@@ -468,7 +464,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventData.data.wifiError.code = WIFI_NO_SSID;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
-                                 __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
         }
         break;
 
@@ -706,148 +702,27 @@ bool scan_Neighboring_WifiAP(char *buffer)
 
 }
 
-
-bool write_WiFiConnStatusInfo_To_File(WiFiConnectionStatus *ConnParams)
+bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
-    FILE *wifiFile = NULL;
-    cJSON *rootObj = NULL, *childObj = NULL;
-    char *outBuffer = NULL;
-    int prebuf = 0;
+    char ap_ssid[SSID_SIZE];
     bool ret = true;
-    int jbuffLen = 0;
+    int retVal;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-
-    rootObj = cJSON_CreateObject();
-
-    if(rootObj) {
-        cJSON_AddItemToObject(rootObj, WIFI_CONN_DETAILS, childObj=cJSON_CreateObject());
-        cJSON_AddStringToObject(childObj, SSID_STR, ConnParams->ssidSession.ssid);
-        cJSON_AddStringToObject(childObj, PSK_STR, ConnParams->ssidSession.passphrase);
-        cJSON_AddNumberToObject(childObj, CONN_TYPE, ConnParams->conn_type);
-
-        outBuffer = cJSON_PrintBuffered(rootObj, prebuf, 1);
-        jbuffLen = (int)strlen(outBuffer);
-        if(outBuffer) {
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Json Buffer: [\n%s].\n", __FUNCTION__, __LINE__, outBuffer);
-
-            if(0 != mkdir (WIFI_BCK_PATHNAME, 0777))	{
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in mkdir with [%d (%s)].\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-                ret = false;
-            }
-            wifiFile = fopen (WIFI_BCK_FILENAME, "w");
-            if(wifiFile) {
-                fwrite (outBuffer , sizeof(char), jbuffLen, wifiFile);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Write into file [%d (%s)].\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-                fclose (wifiFile);
-            }
-            else {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed [%d (%s)] to open file.\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-            }
-            free(outBuffer);
-        }
-        cJSON_Delete(rootObj);
+    retVal=wifi_lastConnected_Endpoint(ap_ssid);
+    if(retVal != RETURN_OK )
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Error in getting lost connected SSID \n", __FUNCTION__, __LINE__);
+        ret = false;
     }
-
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
-    return ret;
-}
-
-bool read_WiFiConnStatusInfo_From_File(WiFiConnectionStatus *ConnParams)
-{
-    char *readBuff = NULL;
-    FILE *wifiFile = NULL;
-    cJSON *request_msg = NULL;
-    bool ret = true;
-    char filePath[100] = {'\0'};
-
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-
-    wifiFile = fopen(WIFI_BCK_FILENAME, "r");
-
-    if (NULL == wifiFile) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed [%d (%s)] to open file.\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-        return false;
-    }
-    else {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Successfully to open file.\n", __FUNCTION__, __LINE__);
-    }
-
-    if (fseek(wifiFile, 0L, SEEK_END) == 0) {
-        long jbuffsize = ftell(wifiFile);
-        if (jbuffsize == -1) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed with error code : %d (%s) to get the size of the file.\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-            ret = false;
-        }
-        else {
-            readBuff = (char *)malloc(sizeof(char) * (jbuffsize + 1));
-            if(NULL == readBuff) {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed with error code : %d (%s) to allocate.\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-                ret = false;
-            }
-        }
-
-        if (ret) {
-            if (fseek(wifiFile, 0L, SEEK_SET) == 0) {
-                size_t buffLen = fread(readBuff, sizeof(char), jbuffsize, wifiFile);
-
-                if (buffLen == 0) {
-                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed with errno : %d (%s).\n", __FUNCTION__, __LINE__, errno, strerror(errno));
-                    ret = false;
-                } else {
-                    readBuff[++buffLen] = '\0';
-                }
-            }
-        }
-    }
-    fclose(wifiFile);
-
-    if(ret) {
-        request_msg = cJSON_Parse(readBuff);
-
-        if (!request_msg) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed on cJSON_Parse with cJSON_GetErrorPtr: %s\n", __FUNCTION__, __LINE__, cJSON_GetErrorPtr());
-            ret = false;
-        }
-        else
-        {
-            char *ssid = NULL;
-            char *psk = NULL;
-            cJSON *param = NULL;
-
-            param = cJSON_GetObjectItem(request_msg, WIFI_CONN_DETAILS);
-
-            if(param)
-            {
-                /* Get SSID */
-                ssid = cJSON_GetObjectItem(request_msg->child, SSID_STR)->valuestring;
-                if(ssid) strncpy(ConnParams->ssidSession.ssid, ssid, strlen(ssid));
-
-                /* Get Password para phrase */
-                psk = cJSON_GetObjectItem(request_msg->child, PSK_STR)->valuestring;
-                if(psk)	strncpy(ConnParams->ssidSession.passphrase, psk, strlen(psk));
-
-                /* Get connection type as WPS or SSID selection. */
-                ConnParams->conn_type = (eConnMethodType)cJSON_GetObjectItem(request_msg->child, CONN_TYPE)->valueint;
-
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully reading wifi properties from %s file.\n \
-                		\'%s\': %s \n \'%s\' : %s\n \'%s\' : %d\n", __FUNCTION__, __LINE__, WIFI_BCK_FILENAME,
-                         SSID_STR, ConnParams->ssidSession.ssid,\
-                         PSK_STR, ConnParams->ssidSession.passphrase,\
-                         CONN_TYPE, ConnParams->conn_type);
-            }
-            cJSON_Delete(request_msg);
-        }
-    }
-
-    if(readBuff) {
-        free(readBuff);
-        readBuff = NULL;
+    else
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__, ap_ssid);
+        strncpy(ConnParams->ssidSession.ssid, ap_ssid, strlen(ap_ssid));
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
-
 #endif
 
 bool isWiFiCapable()
@@ -905,26 +780,22 @@ void monitor_WiFiStatus()
 
 bool clearSSID_On_Disconnect_AP()
 {
-  bool ret = true;
-  int status = 0;
-  char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
-  if(RETURN_OK != wifi_disconnectEndpoint(1, ap_ssid))
-  {
-	RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".\n",\
-	               __FUNCTION__, __LINE__, ap_ssid);
-	ret = false;
-  }
-  else
-  {
-     RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'. Deleting \"%s\" file. \n",\
-               __FUNCTION__, __LINE__, ap_ssid, WIFI_BCK_FILENAME);
-     remove(WIFI_BCK_FILENAME);
-     status = remove(WIFI_BCK_FILENAME);
-     memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
-     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] File \'%s\' %s with (%d) \'%s\'.\n",\
-              __FUNCTION__, __LINE__, WIFI_BCK_FILENAME, ((status == 0)?"Successfully Deleted": "Failed to Delete."), errno, strerror(errno) );
-  }
-  return ret;
+    bool ret = true;
+    int status = 0;
+    char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
+    if(RETURN_OK != wifi_disconnectEndpoint(1, ap_ssid))
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".\n",\
+                 __FUNCTION__, __LINE__, ap_ssid);
+        ret = false;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
+                __FUNCTION__, __LINE__, ap_ssid);
+        memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
+    }
+    return ret;
 }
 #endif
 
