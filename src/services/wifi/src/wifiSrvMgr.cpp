@@ -106,9 +106,6 @@ int  WiFiNetworkMgr::Start()
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
 
 
-    /* Read config file */
-    read_WiFiConnStatusInfo_From_File(&savedWiFiConnList);
-
     monitor_WiFiStatus();
 #endif
 
@@ -309,9 +306,6 @@ IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
         strncpy(savedWiFiConnList.ssidSession.ssid, ssid, ssid_len+1);
         strncpy(savedWiFiConnList.ssidSession.passphrase, psk, psk_len+1);
         savedWiFiConnList.conn_type = SSID_SECLECTION_CONNECT;
-#ifdef USE_RDK_WIFI_HAL
-        retval = write_WiFiConnStatusInfo_To_File(&savedWiFiConnList);
-#endif
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] %s to file, SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, retval? "Successfully Saved": "Failed to Save", ssid, psk);
         param->status = true;
     }
@@ -343,6 +337,7 @@ IARM_Result_t WiFiNetworkMgr::clearSSID(void* arg)
 IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal = false;
 //    WiFiConnectionStatus currSsidInfo;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -353,17 +348,20 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 //    get_CurrentSsidInfo(&currSsidInfo);
 
 //    if (currSsidInfo.ssidSession.ssid[0] != '\0')
-    if( savedWiFiConnList.ssidSession.ssid[0] != '\0')
+#ifdef USE_RDK_WIFI_HAL
+    retVal=lastConnectedSSID(&savedWiFiConnList);
+#endif
+    if( retVal == true )
     {
         char *ssid = savedWiFiConnList.ssidSession.ssid;
 //        memcpy(param->data.getPairedSSID.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
         memcpy(param->data.getPairedSSID.ssid, ssid, strlen(ssid));
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] getPairedSSID SSID (%s).\n", __FUNCTION__, __LINE__, ssid);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] getPairedSSID SSID (%s).\n", __FUNCTION__, __LINE__, ssid);
         param->status = true;
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Empty SSID & Passphrase.\n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error in getting last ssid .\n", __FUNCTION__, __LINE__);
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );

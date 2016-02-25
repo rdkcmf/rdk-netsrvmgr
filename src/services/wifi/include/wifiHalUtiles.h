@@ -50,8 +50,7 @@ INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 bool connect_withSSID(int, char *, char *, char *, char *, char *);
 bool scan_Neighboring_WifiAP(char *);
-bool write_WiFiConnStatusInfo_To_File(WiFiConnectionStatus *);
-bool read_WiFiConnStatusInfo_From_File(WiFiConnectionStatus *);
+bool lastConnectedSSID(WiFiConnectionStatus *ConnParams);
 void monitor_WiFiStatus();
 bool clearSSID_On_Disconnect_AP();
 #endif
