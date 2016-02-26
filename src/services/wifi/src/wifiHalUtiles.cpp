@@ -755,6 +755,8 @@ void *wifiConnStatusThread(void* arg)
         if(ret = pthread_cond_wait(&condGo, &mutexGo) == 0) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%d] ***** Monitor activated by signal ***** \n", __FUNCTION__, __LINE__ );
 
+            pthread_mutex_unlock(&mutexGo);
+
             while(WIFI_CONNECTED == get_WiFiStatusCode()) {
                 //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
                 wifi_getStats();
@@ -762,7 +764,10 @@ void *wifiConnStatusThread(void* arg)
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
         }
-        pthread_mutex_unlock(&mutexGo);
+        else
+        {
+            pthread_mutex_unlock(&mutexGo);
+        }
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
