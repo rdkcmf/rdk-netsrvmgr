@@ -240,7 +240,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
     /* If param data receives with SSID and PSK, then use these to compare with saved SSIDConnection & connect*/
     else
     {
-        if(ssid_len & psk_len)
+        if(ssid_len && psk_len)
         {
             /*Connect with Saved SSID */
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
