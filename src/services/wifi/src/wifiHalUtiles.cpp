@@ -553,7 +553,17 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
         }
         break;
-
+    case WIFI_HAL_UNRECOVERABLE_ERROR:
+        if(connCode_prev_state != connCode) {
+            notify = true;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to UNRECOVERABLE ERROR. (%d). \n", __FUNCTION__, __LINE__ , connCode );
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
+            eventData.data.wifiStateChange.state = WIFI_FAILED;
+            set_WiFiStatusCode(WIFI_FAILED);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged (%d)' with state as \'FAILED\'(%d).\n", \
+                     __FUNCTION__, __LINE__,eventId,  eventData.data.wifiStateChange.state);
+        }
+        break;
     case WIFI_HAL_ERROR_UNKNOWN:
     default:
         if(connCode_prev_state != connCode) {
