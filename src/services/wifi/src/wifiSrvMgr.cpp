@@ -127,23 +127,18 @@ int  WiFiNetworkMgr::Stop()
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
-    bool status = false;
+    bool status = true;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
-    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
-
-    param->status = false;
+    IARM_Bus_WiFiSrvMgr_SsidList_Param_t *param = (IARM_Bus_WiFiSrvMgr_SsidList_Param_t *)arg;
 
     char jbuff[MAX_SSIDLIST_BUF] = {'\0'};
     int jBuffLen = 0;
 
-#ifdef USE_HOSTIF_WIFI_HAL
-    /* Calling update Wifi list*/
-    status = updateWiFiList();
-#endif
-
 #ifdef USE_RDK_WIFI_HAL
     status = scan_Neighboring_WifiAP(jbuff);
+    jBuffLen = strlen(jbuff);
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Scan AP's SSID list buffer size : \n\"%d\"\n", __FUNCTION__, __LINE__, jBuffLen);
 #endif
     if(status == false)
     {
@@ -151,25 +146,22 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No SSID connected or SSID available.\n", __FUNCTION__, __LINE__);
         return ret;
     }
-#ifdef USE_HOSTIF_WIFI_HAL
-    sprintf(jbuff, (const char*)"\{\"getAvailableSSIDs\"\:\[\{\"ssid\"\:\"%s\", \"security\"\:%d,\"signalStrength\":%d,\"frequency\":%f\}\]\}", \
-            gSsidList.ssid, gSsidList.security, gSsidList.signalstrength, gSsidList.frequency );
-#endif
 
-    jBuffLen = strlen(jbuff) +1;
+
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] json Message length : [%d].\n", __FUNCTION__, __LINE__, jBuffLen);
 
     if(jBuffLen) {
-        memcpy(param->data.curSsids.jdata, jbuff, jBuffLen);
-        param->data.curSsids.jdataLen = jBuffLen;
+        strncpy(param->curSsids.jdata, jbuff, jBuffLen);
+        param->curSsids.jdataLen = jBuffLen;
         param->status = true;
+        ret = IARM_RESULT_SUCCESS;
     }
     else {
         param->status = false;
     }
 
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID List : [%s].\n", __FUNCTION__, __LINE__, param->data.curSsids.jdata);
+//    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID List : [%s].\n", __FUNCTION__, __LINE__, param->curSsids.jdata);
 
-    ret = IARM_RESULT_SUCCESS;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }

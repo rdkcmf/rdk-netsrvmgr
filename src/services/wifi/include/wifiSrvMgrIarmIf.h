@@ -27,7 +27,7 @@
 #define SSID_SIZE 	BUFF_LENGTH_32
 #define BSSID_BUFF 	20
 #define PASSPHRASE_BUFF BUFF_LENGTH_64
-#define MAX_SSIDLIST_BUF 4097
+#define MAX_SSIDLIST_BUF 10000
 
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
@@ -126,9 +126,13 @@ typedef struct _WiFiConnectionStatus
 
 
 /*! Get/Set Data associated with WiFi Service Manager */
+typedef struct _IARM_Bus_WiFiSrvMgr_SsidList_Param_t {
+    wifiSsidData_t curSsids;
+    bool status;
+} IARM_Bus_WiFiSrvMgr_SsidList_Param_t;
+
 typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     union {
-        wifiSsidData_t curSsids;
         WiFiStatusCode_t wifiStatus;
         setWiFiAdapter setwifiadapter;
         WiFiConnection connect;
