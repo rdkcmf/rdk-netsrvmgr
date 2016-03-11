@@ -34,6 +34,9 @@ enum {
     Test_getRadioProps =10,
     Test_getRadioStatsProps =11,
     Test_getSSIDProps =12,
+#ifdef ENABLE_LOST_FOUND
+    Test_getLAFState = 13,
+#endif
     Test_Max_Api,
 };
 
@@ -79,6 +82,27 @@ static void WIFI_MGR_API_getCurrentState()
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 }
 
+#ifdef ENABLE_LOST_FOUND
+static void WIFI_MGR_API_getLAFState()
+{
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_Bus_WiFiSrvMgr_Param_t param;
+
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+    memset(&param, 0, sizeof(param));
+
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getLNFState, (void *)&param, sizeof(param));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_getLNFState, ((param.status)?"true":"false"));
+    printf("\n***********************************\n");
+
+    if(retVal == IARM_RESULT_SUCCESS && param.status) {
+        printf(" \"getLAFState\" : %d \n", param.data.wifiLNFStatus );
+    }
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+}
+#endif
 static void WIFI_MGR_API_setEnabled()
 {
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
@@ -352,6 +376,9 @@ int main()
         printf( "10. getRadioProps\n");
         printf( "11. getRadioStatsProps\n");
         printf( "12. getSSIDProps\n");
+#ifdef ENABLE_LOST_FOUND
+        printf( "13. getLAFState\n");
+#endif
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -397,6 +424,11 @@ int main()
         case Test_getSSIDProps:
             WIFI_MGR_API_getSSIDProps();
             break;
+#ifdef ENABLE_LOST_FOUND
+        case Test_getLAFState:
+            WIFI_MGR_API_getLAFState();
+            break;
+#endif
         default:
             loop = false;
             printf( "Wrong Input..., try again.\n" );

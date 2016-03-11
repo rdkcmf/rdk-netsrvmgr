@@ -8,6 +8,9 @@ AM_CXXFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)  -I$(top_srcdir)/src/main/includ
 if RDKWIFIHAL
 AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
 endif
+if LOSTFOUND
+AM_CXXFLAGS += -DENABLE_LOST_FOUND
+endif
 
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
@@ -15,6 +18,9 @@ AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal
+endif
+if LOSTFOUND
+AM_LDFLAGS += -llaf
 endif
 
 noinst_LTLIBRARIES = libwifiservices.la

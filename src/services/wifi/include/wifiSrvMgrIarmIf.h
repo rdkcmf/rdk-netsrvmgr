@@ -40,6 +40,7 @@
 #define IARM_BUS_WIFI_MGR_API_clearSSID             "clearSSID"              /*!< Clear the given ssid*/
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Get the paired SSID */
 #define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /*!< Retrieve the paired status*/
+#define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"        /*!< Retrives the LNF state*/
 
 /*Diagnostic Apis */
 #define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /*!< Retrieve the get radio status properties*/
@@ -58,6 +59,17 @@ typedef enum _WiFiStatusCode_t {
     WIFI_FAILED								/* !< The device has encountered an unrecoverable error with the wifi adapter */
 } WiFiStatusCode_t;
 
+/*! LNF states  */
+typedef enum _WiFiLNFStatusCode_t {
+    LNF_UNITIALIZED,  // Network manager hasn't started the LNF process
+    LNF_IN_PROGRESS, // Network manager has started LNF, and waiting for operation to complete
+    CONNECTED_LNF, // Connected to the LNF network
+    CONNECTED_PRIVATE, // Connected to a network that is not LNF
+    DISCONNECTED_NO_LNF_GATEWAY_DETECTED, // unable to connect to LNF network
+    DISCONNECTED_GET_LFAT_FAILED, // client wasn't able to acquire an LFAT
+    DISCONNECTED_CANT_CONNECT_TO_PRIVATE // client could obtain LFAT, but couldn't connect to private network                                                       /* !< The device has encountered an unrecoverable error with the wifi adapter */
+} WiFiLNFStatusCode_t;
+
 /*! Error code: A recoverable, unexpected error occurred,
  * as defined by one of the following values */
 typedef enum _WiFiErrorCode_t {
@@ -71,17 +83,22 @@ typedef enum _WiFiErrorCode_t {
 } WiFiErrorCode_t;
 
 /*! Supported values are NONE - 0, WPA - 1, WEP - 2*/
-typedef enum _SsidSecurity {
-    NONE = 0,
-    WPA,
-    WEP,
-    WPA2,
-    WPA_WPA2,
-    WPA_Enterprise,
-    WPA2_Enterprise,
-    WPA_WPA2_Enterprise
-} SsidSecurity;
-
+typedef enum _SsidSecurity
+{
+   NET_WIFI_SECURITY_NONE = 0,
+   NET_WIFI_SECURITY_WEP_64,
+   NET_WIFI_SECURITY_WEP_128,
+   NET_WIFI_SECURITY_WPA_PSK_TKIP,
+   NET_WIFI_SECURITY_WPA_PSK_AES,
+   NET_WIFI_SECURITY_WPA2_PSK_TKIP,
+   NET_WIFI_SECURITY_WPA2_PSK_AES,
+   NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,
+   NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,
+   NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,
+   NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,
+   NET_WIFI_SECURITY_NOT_SUPPORTED = 15,
+ } SsidSecurity;
+ 
 typedef enum _eConnectionMethodType {
     WPS_PUSH_CONNECT,
     SSID_SECLECTION_CONNECT
@@ -113,7 +130,7 @@ typedef struct _WiFiConnection
 {
     char ssid[SSID_SIZE];
     char passphrase[PASSPHRASE_BUFF];
-    char security_mode[BUFF_MIN];
+    SsidSecurity security_mode;
     char security_WEPKey[PASSPHRASE_BUFF];
     char security_PSK[PASSPHRASE_BUFF];
 } WiFiConnection;
@@ -134,6 +151,7 @@ typedef struct _IARM_Bus_WiFiSrvMgr_SsidList_Param_t {
 
 typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     union {
+        WiFiLNFStatusCode_t wifiLNFStatus;
         WiFiStatusCode_t wifiStatus;
         setWiFiAdapter setwifiadapter;
         WiFiConnection connect;
@@ -146,7 +164,6 @@ typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     } data;
     bool status;
 } IARM_Bus_WiFiSrvMgr_Param_t;
-
 
 /*! Event Data associated with WiFi Service Manager */
 typedef struct _IARM_BUS_WiFiSrvMgr_EventData_t {

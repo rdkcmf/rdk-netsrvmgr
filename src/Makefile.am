@@ -11,6 +11,11 @@ if RDKWIFIHAL
 AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
 endif
 
+if LOSTFOUND
+AM_CXXFLAGS += -DENABLE_LOST_FOUND
+endif
+
+
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \
 	-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus -lpthread -lcjson
@@ -18,7 +23,9 @@ AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal
 endif
-
+if LOSTFOUND
+AM_LDFLAGS += -llaf -lcurl
+endif
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 
@@ -27,5 +34,8 @@ include_HEADERS =    $(top_srcdir)/src/services/wifi/include/wifiSrvMgrIarmIf.h
 
 bin_PROGRAMS = netsrvmgr
 netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp $(top_srcdir)/src/main/src/NetworkMedium.cpp
+if LOSTFOUND
+netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
+endif
 netsrvmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la
 

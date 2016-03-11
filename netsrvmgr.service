@@ -1,6 +1,6 @@
 [Unit]
 Description= Network Manager Services (wifi, moca and bluetooth) Daemon
-After= iarmbusd.service
+After= iarmbusd.service mfrmgr.service authservice.service tr69hostif.service
 Requires=iarmbusd.service
 
 [Service]

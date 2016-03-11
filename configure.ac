@@ -42,8 +42,22 @@ AC_ARG_ENABLE([rdk-wifi-hal],
            ],
          [echo " rdk-wifi-hal is enable"])
 AM_CONDITIONAL([RDKWIFIHAL], [test x$RDKWIFIHAL = xtrue])
+LOSTFOUND=" "
+AC_ARG_ENABLE([lost-found],
+        AS_HELP_STRING([--enable-lost-found],[This will enable/disable lost and found.]),
+        [
+          case "${enableval}" in
+           yes) LOSTFOUND=true ;;
+           no) LOSTFOUND=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-lost-found ]) ;;
+           esac
+           ],
+         [echo " lost-found is enable"])
+AM_CONDITIONAL([LOSTFOUND], [test x$LOSTFOUND = xtrue])
+
 
 AC_SUBST(RDKWIFIHAL)
+AC_SUBST(LOSTFOUND)
 
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
