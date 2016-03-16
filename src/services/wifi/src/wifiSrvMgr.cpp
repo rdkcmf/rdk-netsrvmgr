@@ -415,10 +415,10 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
 #ifdef USE_RDK_WIFI_HAL
-    unsigned char output_bool[BUFF_MIN];
-    char output_string[BUFF_MAX];
-    int output_INT;
-    unsigned long output_ulong;
+    unsigned char output_bool[BUFF_MIN] = {'\0'};
+    char output_string[BUFF_MAX] = {'\0'};
+    int output_INT = 0;
+    unsigned long output_ulong = 0;
     int radioIndex=1;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
@@ -506,7 +506,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioGuarderval FAILURE \n", __FUNCTION__, __LINE__);
     }
-    memset(output_string,0,BUFF_MAX);
+    output_INT = 0;
     if (wifi_getRadioMCS( radioIndex, &output_INT) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio ext channel  is %d .\n", __FUNCTION__, __LINE__, output_INT);
         param->data.radio.params.mcs=output_INT;
@@ -524,8 +524,8 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioTransmitPowerSupported FAILURE \n", __FUNCTION__, __LINE__);
     }
-    memset(output_string,0,BUFF_MAX);
-    if (wifi_getRadioTransmitPower( radioIndex,  &output_ulong) == RETURN_OK) {
+    output_INT = 0;
+    if (wifi_getRadioTransmitPower( radioIndex,  &output_INT) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio transmit power   is %lu .\n", __FUNCTION__, __LINE__, output_ulong);
     }
     else
@@ -604,7 +604,24 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioPossibleChannels FAILURE \n", __FUNCTION__, __LINE__);
     }
-
+    output_INT = 0;
+    if (wifi_getRadioTransmitPower( radioIndex, &output_INT) == RETURN_OK) {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Radio TransmitPower %lu .\n", __FUNCTION__, __LINE__, output_ulong);
+        param->data.radio.params.transmitPower = output_INT;
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to get HAL wifi_getRadioTransmitPower. \n", __FUNCTION__, __LINE__);
+    }
+    memset(output_string,0,BUFF_MAX);
+    if ( wifi_getRegulatoryDomain(radioIndex, output_string) == RETURN_OK) {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Radio wifi_getRegulatoryDomain is %s .\n", __FUNCTION__, __LINE__, output_string);
+        snprintf(param->data.radio.params.regulatoryDomain,BUFF_LENGTH_4,output_string);
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to get wifi_getRegulatoryDomain.\n", __FUNCTION__, __LINE__);
+    }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 #endif
     return ret;
