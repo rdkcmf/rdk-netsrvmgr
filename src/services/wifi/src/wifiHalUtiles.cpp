@@ -624,7 +624,7 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, char *ap_security_mode, CHAR
 
 bool scan_Neighboring_WifiAP(char *buffer)
 {
-    bool ret = true;
+    bool ret = false;
     INT radioIndex = 0,  index;
     UINT output_array_size = 0;
     wifi_neighbor_ap_t *neighbor_ap_array = NULL;
@@ -633,32 +633,49 @@ bool scan_Neighboring_WifiAP(char *buffer)
     int signalStrength = 0;
     double frequency = 0;
     SsidSecurity encrptType = NONE;
-
     cJSON *rootObj = NULL, *array_element = NULL, *array_obj = NULL;
     char *out = NULL;
     char *pFreq = NULL;
+
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter..\n", __FUNCTION__, __LINE__ );
 
     ret = wifi_getNeighboringWiFiDiagnosticResult(radioIndex, &neighbor_ap_array, &output_array_size);
 
-    if(NULL == neighbor_ap_array || output_array_size)
+    if((RETURN_OK != ret ) && ((NULL == neighbor_ap_array) || (0 == output_array_size)))
     {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed in \'wifi_getNeighboringWiFiDiagnosticResult()\' with NULL \'neighbor_ap_array\', size %d and returns as %d \n",
+                 __FUNCTION__, __LINE__, output_array_size, ret);
         return false;
     }
+    else {
+        ret = true;
+    }
+
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%d] \'wifi_getNeighboringWiFiDiagnosticResult()\' comes with \'neighbor_ap_array\', size %d and returns as %d \n",
+             __FUNCTION__, __LINE__, output_array_size, ret);
 
     rootObj = cJSON_CreateObject();
 
+    if(NULL == rootObj) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] \'Failed to create root json object.\n",  __FUNCTION__, __LINE__);
+        return false;
+    }
+
     cJSON_AddItemToObject(rootObj, "getAvailableSSIDs", array_obj=cJSON_CreateArray());
 
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n*********** Start: SSID Scan List **************** \n");
     for (index = 0; index < output_array_size; index++ )
     {
+        char temp[500] = {'\0'};
+
         ssid = neighbor_ap_array[index].ap_SSID;
         signalStrength = neighbor_ap_array[index].ap_SignalStrength;
         frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, &pFreq);
 
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID : \"%s\"  | SignalStrength : \"%d\" | frequency : \"%f\" | EncryptionMode : \"%s\" \n",
-                 __FUNCTION__, __LINE__, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
+
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] [%d] => SSID : \"%s\"  | SignalStrength : \"%d\" | frequency : \"%f\" | EncryptionMode : \"%s\" \n",\
+                 __FUNCTION__, __LINE__, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
 
         /* The type of encryption the neighboring WiFi SSID advertises.*/
         if(0 == strncasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WEP", sizeof("WEP"))) {
@@ -692,24 +709,26 @@ bool scan_Neighboring_WifiAP(char *buffer)
         cJSON_AddNumberToObject(array_element, "signalStrength", signalStrength);
         cJSON_AddNumberToObject(array_element, "frequency", frequency);
     }
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n***********End: SSID Scan List **************** \n\n");
+
 
     out = cJSON_PrintUnformatted(rootObj);
+
     if(out) {
         strncpy(buffer, out, strlen(out)+1);
     }
+
     if(rootObj) {
         cJSON_Delete(rootObj);
     }
     if(out) free(out);
 
     if(neighbor_ap_array) {
-        RDK_LOG( RDK_LOG_DEBUG,LOG_NMGR, "[%s:%d] malloc allocated = %d ", __FUNCTION__, __LINE__ , malloc_usable_size(neighbor_ap_array));
+        RDK_LOG( RDK_LOG_DEBUG,LOG_NMGR, "[%s:%d] malloc allocated = %d \n", __FUNCTION__, __LINE__ , malloc_usable_size(neighbor_ap_array));
         free(neighbor_ap_array);
-        RDK_LOG( RDK_LOG_DEBUG,LOG_NMGR, "[%s:%d] malloc allocated = %d ",__FUNCTION__, __LINE__ , malloc_usable_size(neighbor_ap_array));
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
-
 }
 
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)

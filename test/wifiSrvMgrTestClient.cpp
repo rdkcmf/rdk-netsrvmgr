@@ -41,20 +41,20 @@ enum {
 static void WIFI_MGR_API_getAvailableSSIDs()
 {
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
-    IARM_Bus_WiFiSrvMgr_Param_t param;
+    IARM_Bus_WiFiSrvMgr_SsidList_Param_t param;
     memset(&param, 0, sizeof(param));
     printf("[%s] Entering...\r\n", __FUNCTION__);
-    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, (void *)&param, sizeof(IARM_Bus_WiFiSrvMgr_Param_t));
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, (void *)&param, sizeof(IARM_Bus_WiFiSrvMgr_SsidList_Param_t));
 
     printf("\n***********************************");
     printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, ((param.status)?"true":"false"));
     printf("\n***********************************\n");
 
     if(retVal == IARM_RESULT_SUCCESS && param.status) {
-        printf("\ngetAvailableSSIDs : \"%s\" with size \'%d\'. \n", __FUNCTION__, __LINE__ , param.data.curSsids.jdata, param.data.curSsids.jdataLen);
+        printf("[\n[%s (with Message size: %d)]:\n %s \n '. \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, param.curSsids.jdataLen, param.curSsids.jdata);
     }
     else {
-        printf("%s : \"Empty\" (with buffer size: \'%d\'). \n", __FUNCTION__, __LINE__ , IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, param.data.curSsids.jdataLen);
+        printf("%s : \"Empty\" with message size: \'%d\'). \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, param.curSsids.jdataLen);
     }
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 }
