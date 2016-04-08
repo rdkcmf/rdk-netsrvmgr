@@ -24,6 +24,7 @@
 #define BUFF_MAC 	18
 #define BUFF_MIN 	17
 #define BUFF_LENGTH_32  33
+#define BUFF_LENGTH_4  4
 #define SSID_SIZE 	BUFF_LENGTH_32
 #define BSSID_BUFF 	20
 #define PASSPHRASE_BUFF BUFF_LENGTH_64
@@ -195,7 +196,7 @@ typedef struct _WiFi_Radio_Diag_Params {
     int transmitPower;
     bool ieee80211hSupported;
     bool ieeee80211hEnabled;
-    char regulatoryDomain[4];
+    char regulatoryDomain[BUFF_LENGTH_4];
 } WiFi_Radio_DiagParams;
 
 
