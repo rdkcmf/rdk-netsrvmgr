@@ -227,8 +227,9 @@ typedef struct _WiFi_Radio_Stats_Diag_Params {
 } WiFi_Radio_Stats_Diag_Params;
 
 typedef enum _IARM_Bus_WiFiSrvMgr_NumEntry_t {
-    IARM_BUS_WIFI_MGR_SSIDEntry,
-    IARM_BUS_WIFI_MGR_RadioEntry,
+    IARM_BUS_WIFI_MGR_SSID_Tbl_Props = 0,
+    IARM_BUS_WIFI_MGR_SSIDEntry = 1,
+    IARM_BUS_WIFI_MGR_RadioEntry = 2,
 } IARM_Bus_WiFiSrvMgr_NumEntry_t;
 
 
