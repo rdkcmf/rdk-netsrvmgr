@@ -427,8 +427,9 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_bool,0,BUFF_MIN);
     if (wifi_getRadioEnable(radioIndex,  output_bool) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio enable is %s .\n", __FUNCTION__, __LINE__, output_bool);
-        param->data.radio.params.enable= (output_bool == (unsigned char*)"true" ? true : false);
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio enable is %d .\n", __FUNCTION__, __LINE__, param->data.radio.params.enable);
+//        param->data.radio.params.enable= (output_bool == (unsigned char*)"true" ? true : false);
+        param->data.radio.params.enable=*output_bool;
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] radio enable is %s .\n", __FUNCTION__, __LINE__, param->data.radio.params.enable ? "true" : "false");
     }
     else
     {
