@@ -670,6 +670,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
         char temp[500] = {'\0'};
 
         ssid = neighbor_ap_array[index].ap_SSID;
+	if(ssid[0] != '\0') {
         signalStrength = neighbor_ap_array[index].ap_SignalStrength;
         frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, &pFreq);
 
@@ -708,6 +709,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
         cJSON_AddNumberToObject(array_element, "security", encrptType);
         cJSON_AddNumberToObject(array_element, "signalStrength", signalStrength);
         cJSON_AddNumberToObject(array_element, "frequency", frequency);
+	}
     }
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n***********End: SSID Scan List **************** \n\n");
 
