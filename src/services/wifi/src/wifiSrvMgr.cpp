@@ -20,11 +20,18 @@
 #include "hostIf_tr69ReqHandler.h"
 #endif
 
+#define SAVE_SSID 1
+
 #ifdef USE_RDK_WIFI_HAL
 static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 #endif /* USE_RDK_WIFI_HAL */
-
+#ifdef ENABLE_LOST_FOUND
+extern bool bDeviceActivated;
+extern WiFiLNFStatusCode_t gWifiLNFStatus;
+static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif
 ssidList gSsidList;
+extern netMgrConfigProps confProp;
 
 WiFiConnectionStatus savedWiFiConnList;
 
@@ -48,7 +55,7 @@ WiFiNetworkMgr* WiFiNetworkMgr::getInstance()
 
 int  WiFiNetworkMgr::Start()
 {
-
+    bool retVal=false;
     IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
@@ -77,7 +84,10 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_saveSSID, saveSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
-
+#ifdef ENABLE_LOST_FOUND
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_DEVICE_ACTIVATED, _eventHandler);
+#endif
     /* Diagnostic Api's*/
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioProps, getRadioProps);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setRadioProps, setRadioProps);
@@ -88,6 +98,7 @@ int  WiFiNetworkMgr::Start()
     /* Front Panel Event Listner  */
     IARM_Bus_RegisterEventHandler(IARM_BUS_IRMGR_NAME, IARM_BUS_IRMGR_EVENT_IRKEY, _irEventHandler);
 #endif
+
 
     /* Notification RPC:*/
     IARM_Bus_RegisterEvent(IARM_BUS_WIFI_MGR_EVENT_MAX);
@@ -107,6 +118,25 @@ int  WiFiNetworkMgr::Start()
 
 
     monitor_WiFiStatus();
+#endif
+
+
+#ifdef ENABLE_LOST_FOUND
+    if(confProp.wifiProps.bEnableLostFound)
+    {
+        if(getLAFssid())
+        {
+            if(false == isWifiConnected())
+            {
+                lafConnectToPrivate();
+                connectToLAF();
+            }
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] lfssid fetch failure !!!!!!! \n", __FUNCTION__, __LINE__ );
+        }
+    }
 #endif
 
     /*Check for WiFi Capability */
@@ -179,7 +209,18 @@ IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
-
+#ifdef ENABLE_LOST_FOUND
+IARM_Result_t WiFiNetworkMgr::getLNFState(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+    param->status = true;
+    param->data.wifiLNFStatus = get_WiFiLNFStatusCode();
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return ret;
+}
+#endif
 IARM_Result_t WiFiNetworkMgr::setEnabled(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
@@ -206,12 +247,14 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
 
     param->status = false;
     int ssidIndex = 1;
+    SsidSecurity securityMode;
+    securityMode=param->data.connect.security_mode;
     char *ssid = param->data.connect.ssid;
     short ssid_len = strlen(param->data.connect.ssid);
-    char *psk = param->data.connect.passphrase;
-    short psk_len = strlen (param->data.connect.passphrase);
+    char *pass = param->data.connect.passphrase;
+    short pass_len = strlen (param->data.connect.passphrase);
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Connect with SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Connect with SSID (%s) & Passphrase (%s) security mode (%d)\n", __FUNCTION__, __LINE__, ssid, pass,securityMode);
     /* If param data receives as Empty, then use the saved SSIDConnection */
     if (!ssid_len)
     {
@@ -219,7 +262,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             /*Now try to connect using saved SSID & PSK */
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NULL, NULL, NULL, savedWiFiConnList.ssidSession.passphrase);
+            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID);
 #endif
             param->status = true;
         }
@@ -229,24 +272,24 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
             param->status = false;
         }
     }
-    /* If param data receives with SSID and PSK, then use these to compare with saved SSIDConnection & connect*/
+    /* If param data receives with SSID and Pass, then use these to compare with saved SSIDConnection & connect*/
     else
     {
-        if(ssid_len && psk_len)
+        if(ssid_len && pass_len)
         {
             /*Connect with Saved SSID */
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, psk);
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", __FUNCTION__, __LINE__, ssid, pass);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, NULL, NULL, NULL, psk);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, pass,SAVE_SSID);
 #endif
             param->status = true;
         }
         /* Passphrase can be null when the network security is NONE. */
-        else if (ssid_len && (0 == psk_len))
+        else if (ssid_len && (0 == pass_len) && securityMode == NET_WIFI_SECURITY_NONE)
         {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Received valid SSID (%s) with Empty Passphrase.\n", __FUNCTION__, __LINE__, ssid);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, NULL, NULL, NULL, savedWiFiConnList.ssidSession.passphrase);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID);
 #endif
             param->status = true;
         }
@@ -365,6 +408,7 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal=false;
 //    WiFiConnectionStatus currSsidInfo;
 //    memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -372,6 +416,10 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
 
 //    get_CurrentSsidInfo(&currSsidInfo);
+#ifdef USE_RDK_WIFI_HAL
+     retVal=lastConnectedSSID(&savedWiFiConnList);
+#endif
+
     int ssid_len = strlen(savedWiFiConnList.ssidSession.ssid);
 
     param->data.isPaired = (ssid_len) ? true : false; /*currSsidInfo.isConnected*/;
@@ -786,3 +834,26 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
     return ret;
 }
 
+#ifdef ENABLE_LOST_FOUND
+static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    if (strcmp(owner, IARM_BUS_AUTHSERVICE_NAME)  == 0) {
+        switch (eventId) {
+        case IARM_BUS_AUTHSERVICE_EVENT_DEVICE_ACTIVATED:
+        {
+            IARM_BUS_AuthService_DeviceActivated_EventData_t *param = (IARM_BUS_AuthService_DeviceActivated_EventData_t *)data;
+            if (param->value == DEVICE_ACTIVATED)
+            {
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Box Activated \n", __FUNCTION__, __LINE__ );
+                bDeviceActivated = true;
+            }
+        }
+        break;
+        default:
+            break;
+        }
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}
+#endif

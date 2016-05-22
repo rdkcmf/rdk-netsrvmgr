@@ -43,7 +43,9 @@ public:
     static IARM_Result_t setRadioProps(void *arg);
     static IARM_Result_t getRadioStatsProps(void *arg);
     static IARM_Result_t getSSIDProps(void *arg);
-
+#ifdef ENABLE_LOST_FOUND
+    static IARM_Result_t getLNFState(void *arg);
+#endif
 private:
 
     WiFiNetworkMgr();

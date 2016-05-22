@@ -44,6 +44,10 @@ extern "C" {
 
 #define MAX_TIMEOUT_ON_DISCONNECT       "MAX_TIMEOUT_ON_DISCONNECT"
 #define STATS_POLL_INTERVAL          	"STATS_POLL_INTERVAL"
+#define ENABLE_LOST_FOUND_RUN              "ENABLE_LOST_FOUND"
+#define LAF_CONNECT_RETRY_INTERVAL        "LAF_CONNECT_RETRY_INTERVAL"
+#define LAF_CONNECT_START_INTERVAL 	  "LAF_CONNECT_START_INTERVAL"
+#define AUTHSERVER_URL        "AUTHSERVER_URL"
 
 #define WIFI_BCK_PATHNAME				"/opt/persistent/wifi"
 #define WIFI_BCK_FILENAME				"/opt/persistent/wifi/wifiConnectionInfo.json"
@@ -52,6 +56,7 @@ extern "C" {
 #define PSK_STR 			"psk"
 #define CONN_TYPE			"conn_type"
 #define MAX_TIME_OUT_PERIOD     60
+#define BUFFER_SIZE_128 128
 
 typedef enum _WiFiResult
 {
@@ -68,7 +73,10 @@ typedef struct  _wifiMgrConfigProps
 {
     unsigned short max_timeout;
     unsigned short statsParam_PollInterval;
-
+    bool bEnableLostFound;
+    unsigned short lnfRetryInSecs;
+    unsigned short lnfStartInSecs;
+    char authServerURL[BUFFER_SIZE_128];
 } wifiMgrConfigProps;
 
 typedef struct  _netMgrConfigProps
