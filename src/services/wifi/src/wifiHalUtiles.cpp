@@ -542,6 +542,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             if(confProp.wifiProps.bEnableLostFound)
             {
+		bWPSPairing=false;
                 lnfConnectPrivCredentials();
             }
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
@@ -596,6 +597,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             if(confProp.wifiProps.bEnableLostFound)
             {
+		bWPSPairing=false;
                 lnfConnectPrivCredentials();
             }
 
