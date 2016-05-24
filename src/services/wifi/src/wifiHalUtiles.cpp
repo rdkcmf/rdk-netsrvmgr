@@ -536,7 +536,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
             notify = true;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to SSID Change (%d) . %s. \n", __FUNCTION__, __LINE__ , connCode);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to SSID Change (%d) . \n", __FUNCTION__, __LINE__ , connCode);
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_SSID_CHANGED;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
