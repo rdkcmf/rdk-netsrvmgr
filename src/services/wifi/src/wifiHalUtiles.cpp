@@ -449,6 +449,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             if (strcasecmp(gLAFssid, ap_SSID))
             {
                 isLAFCurrConnectedssid=false;
+                memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
+                strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
+                strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
+                savedWiFiConnList.conn_type = wifi_conn_type;
             }
             else {
                 isLAFCurrConnectedssid=true;
@@ -457,10 +461,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             /*Write into file*/
 //            WiFiConnectionStatus wifiParams;
-            memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
-            strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
-            strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
-            savedWiFiConnList.conn_type = wifi_conn_type;
 
             /*Generate Event for Connect State*/
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
@@ -542,7 +542,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             if(confProp.wifiProps.bEnableLostFound)
             {
-		bWPSPairing=false;
+                bWPSPairing=false;
                 lnfConnectPrivCredentials();
             }
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
@@ -597,7 +597,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             if(confProp.wifiProps.bEnableLostFound)
             {
-		bWPSPairing=false;
+                bWPSPairing=false;
                 lnfConnectPrivCredentials();
             }
 
