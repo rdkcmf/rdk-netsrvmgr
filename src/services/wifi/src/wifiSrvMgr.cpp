@@ -104,6 +104,8 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterEvent(IARM_BUS_WIFI_MGR_EVENT_MAX);
 
     memset(&gSsidList, '\0', sizeof(ssidList));
+    /*Check for WiFi Capability */
+    isWiFiCapable();
 
 #ifdef USE_RDK_WIFI_HAL
     if(wifi_init() == RETURN_OK) {
@@ -139,8 +141,6 @@ int  WiFiNetworkMgr::Start()
     }
 #endif
 
-    /*Check for WiFi Capability */
-    isWiFiCapable();
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
