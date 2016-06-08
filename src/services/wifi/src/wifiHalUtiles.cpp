@@ -430,23 +430,22 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             }
 #endif
             /* one condition variable is signaled */
-            pthread_mutex_lock(&mutexGo);
-            if(0 == pthread_cond_signal(&condGo))
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Broadcast to monitor. \n", __FUNCTION__, __LINE__ );
-            pthread_mutex_unlock(&mutexGo);
 
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
             if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
             {
-                strcpy(command, "systemctl restart virtual-wifi-iface.service");
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] restart virtual wifi interface since there is a network change. \n", __FUNCTION__, __LINE__ );
+                strcpy(command, "systemctl restart virtual-wifi-iface.service & ");
                 system(command);
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] restart virtual wifi interface is done \n", __FUNCTION__, __LINE__ );
             }
             else
             {
                 RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] previous ssid  %s to current ssid %s. \n", __FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid, ap_SSID);
             }
-            if (strcasecmp(gLAFssid, ap_SSID))
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gLAFssid = %s  ap_SSID = %s \n", __FUNCTION__, __LINE__,gLAFssid,ap_SSID);
+            if (strcasecmp(gLAFssid, ap_SSID) != 0 )
             {
                 isLAFCurrConnectedssid=false;
                 memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
@@ -455,6 +454,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 savedWiFiConnList.conn_type = wifi_conn_type;
             }
             else {
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] This is a LNF SSID so no storing \n", __FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
             }
 
@@ -466,6 +466,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_CONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_CONNECTED);
+            pthread_mutex_lock(&mutexGo);
+            if(0 == pthread_cond_signal(&condGo))
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Broadcast to monitor. \n", __FUNCTION__, __LINE__ );
+            pthread_mutex_unlock(&mutexGo);
         } else if (ACTION_ON_DISCONNECT == action) {
             notify = true;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
@@ -793,15 +797,15 @@ bool scan_Neighboring_WifiAP(char *buffer)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
-
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
     char ap_ssid[SSID_SIZE];
+    char ap_passphrase[PASSPHRASE_BUFF];
     bool ret = true;
     int retVal;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-    retVal=wifi_lastConnected_Endpoint(ap_ssid);
+    retVal=wifi_lastConnected_Endpoint(ap_ssid,ap_passphrase);
     if(retVal != RETURN_OK )
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Error in getting lost connected SSID \n", __FUNCTION__, __LINE__);
@@ -809,8 +813,9 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__, ap_ssid);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__, ap_ssid);
         strncpy(ConnParams->ssidSession.ssid, ap_ssid, strlen(ap_ssid));
+        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, strlen(ap_passphrase));
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
@@ -890,7 +895,8 @@ bool clearSSID_On_Disconnect_AP()
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
                 __FUNCTION__, __LINE__, ap_ssid);
-        memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
+        if ( false == isLAFCurrConnectedssid )
+            memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
     }
     return ret;
 }
@@ -1197,36 +1203,62 @@ void log_message(laf_loglevel_t level, char const* function, int line, char cons
 {
     RDK_LOG( map_to_rdkloglevel(level), LOG_NMGR, "[%s:%d] %s\n", function, line, msg );
 }
-
 void *lafConnPrivThread(void* arg)
 {
     int ret = 0;
     int counter=0;
+    bool retVal;
+    int ssidIndex=1;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     while (true ) {
         pthread_mutex_lock(&mutexLAF);
         if(ret = pthread_cond_wait(&condLAF, &mutexLAF) == 0) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%d] Starting the LAF Connect private SSID \n", __FUNCTION__, __LINE__ );
+            retVal=false;
+            retVal=lastConnectedSSID(&savedWiFiConnList);
+            if(retVal == false)
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%d] Last connected ssid fetch failure \n", __FUNCTION__, __LINE__ );
+	    gWifiLNFStatus=LNF_IN_PROGRESS;
             pthread_mutex_unlock(&mutexLAF);
             while (gWifiLNFStatus != CONNECTED_PRIVATE)
             {
                 if (true == bWPSPairing)
                 {
                     bWPSPairing=false;
+			RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] WPS pairing pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
                     break;
                 }
                 if((gWifiAdopterStatus == WIFI_CONNECTED) && (false == isLAFCurrConnectedssid))
                 {
+			RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
                     gWifiLNFStatus=CONNECTED_PRIVATE;
                     break;
                 }
-                else if (!triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI) && counter < TOTAL_NO_OF_RETRY)
+                else if (!triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI))
+//                else if (!triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI) && counter < TOTAL_NO_OF_RETRY)
                 {
-                    counter++;
+                    if(bWPSPairing)
+                    {
+                        bWPSPairing=false;
+                        break;
+
+                    }
+
+//                    counter++;
+                    if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
+                    {
+                        retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,true);
+                        if(false == retVal)
+                        {
+                            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] connect with ssid %s  failed \n", __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid );
+                        }
+                    }
                     sleep(confProp.wifiProps.lnfRetryInSecs);
+
                 }
                 else
                 {
+			RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
                     break;
                 }
             }
@@ -1237,8 +1269,6 @@ void *lafConnPrivThread(void* arg)
         }
     }
 }
-
-
 void *lafConnThread(void* arg)
 {
     int ret = 0;

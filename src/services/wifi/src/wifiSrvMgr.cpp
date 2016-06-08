@@ -425,7 +425,7 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
     param->data.isPaired = (ssid_len) ? true : false; /*currSsidInfo.isConnected*/;
 
     if(param->data.isPaired) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] This is Paired with \"%s\".\n", __FUNCTION__, __LINE__, savedWiFiConnList.ssidSession.ssid);
+        RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] This is Paired with \"%s\".\n", __FUNCTION__, __LINE__, savedWiFiConnList.ssidSession.ssid);
     }
     else {
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] This is Not Paired with \"%s\".\n", __FUNCTION__, __LINE__, savedWiFiConnList.ssidSession.ssid);
