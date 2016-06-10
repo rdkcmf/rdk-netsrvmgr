@@ -36,6 +36,8 @@ extern "C" {
 #include <net/if.h>
 //}
 #include "mfrMgr.h"
+#include "sysMgr.h"
+#include "libIBusDaemon.h"
 
 #define WIFI_DEFAULT_INTERFACE "wlan0"
 
@@ -66,7 +68,7 @@ WiFiStatusCode_t get_WifiRadioStatus();
 
 extern bool updateWiFiList();
 extern ssidList gSsidList;
-
+extern IARM_Bus_Daemon_SysMode_t sysModeParam;
 
 #ifdef USE_RDK_WIFI_HAL
 bool connect_WpsPush();
