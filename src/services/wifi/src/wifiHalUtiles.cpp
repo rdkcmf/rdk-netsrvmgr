@@ -444,7 +444,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             {
                 RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] previous ssid  %s to current ssid %s. \n", __FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid, ap_SSID);
             }
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gLAFssid = %s  ap_SSID = %s \n", __FUNCTION__, __LINE__,gLAFssid,ap_SSID);
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gLAFssid = %s  ap_SSID = %s \n", __FUNCTION__, __LINE__,gLAFssid,ap_SSID);
             if (strcasecmp(gLAFssid, ap_SSID) != 0 )
             {
                 isLAFCurrConnectedssid=false;
@@ -1218,19 +1218,19 @@ void *lafConnPrivThread(void* arg)
             retVal=lastConnectedSSID(&savedWiFiConnList);
             if(retVal == false)
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%d] Last connected ssid fetch failure \n", __FUNCTION__, __LINE__ );
-	    gWifiLNFStatus=LNF_IN_PROGRESS;
+            gWifiLNFStatus=LNF_IN_PROGRESS;
             pthread_mutex_unlock(&mutexLAF);
             while (gWifiLNFStatus != CONNECTED_PRIVATE)
             {
                 if (true == bWPSPairing)
                 {
                     bWPSPairing=false;
-			RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] WPS pairing pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
+                    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] WPS pairing pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
                     break;
                 }
                 if((gWifiAdopterStatus == WIFI_CONNECTED) && (false == isLAFCurrConnectedssid))
                 {
-			RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
+                    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
                     gWifiLNFStatus=CONNECTED_PRIVATE;
                     break;
                 }
@@ -1258,7 +1258,7 @@ void *lafConnPrivThread(void* arg)
                 }
                 else
                 {
-			RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
+                    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
                     break;
                 }
             }
@@ -1321,7 +1321,7 @@ void connectToLAF()
     pthread_attr_t attr;
     bool retVal=false;
     char lfssid[33] = {'\0'};
-    if((getDeviceActivationState() == false) && (IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam))
+    if((getDeviceActivationState() == false) && (IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam))
     {
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -1346,12 +1346,15 @@ void connectToLAF()
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Now connected to Private SSID \n", __FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
         }
         else {
-            pthread_mutex_lock(&mutexLAF);
-            if(0 == pthread_cond_signal(&condLAF))
+            if(IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
             {
-                RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Signal to start LAF private SSID \n", __FUNCTION__, __LINE__ );
+                pthread_mutex_lock(&mutexLAF);
+                if(0 == pthread_cond_signal(&condLAF))
+                {
+                    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Signal to start LAF private SSID \n", __FUNCTION__, __LINE__ );
+                }
+                pthread_mutex_unlock(&mutexLAF);
             }
-            pthread_mutex_unlock(&mutexLAF);
         }
     }
 }
