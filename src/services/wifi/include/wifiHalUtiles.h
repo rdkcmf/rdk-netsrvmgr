@@ -37,11 +37,11 @@ extern "C" {
 #include <sys/ioctl.h>
 #include <net/if.h>
 //}
-#include "mfrMgr.h"
 
 #define WIFI_DEFAULT_INTERFACE "wlan0"
 
 #endif
+#include "mfrMgr.h"
 #include "sysMgr.h"
 #include "libIBusDaemon.h"
 
@@ -107,4 +107,6 @@ void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value);
 void put_boolean(char *ptr, bool val);
 void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *);
+bool storeMfrWifiCredentials(void);
+bool eraseMfrWifiCredentials(void);
 #endif /* WIFIHALUTILES_H_ */

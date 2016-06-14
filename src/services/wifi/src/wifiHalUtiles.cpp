@@ -461,6 +461,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             if (strcasecmp(gLAFssid, ap_SSID) != 0 )
             {
                 isLAFCurrConnectedssid=false;
+                if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
+                    storeMfrWifiCredentials();
                 memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
                 strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
@@ -909,7 +911,10 @@ bool clearSSID_On_Disconnect_AP()
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
                 __FUNCTION__, __LINE__, ap_ssid);
         if ( false == isLAFCurrConnectedssid )
+        {
             memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
+            eraseMfrWifiCredentials();
+        }
     }
     return ret;
 }
@@ -1570,4 +1575,92 @@ void put_boolean(char *ptr, bool val)
 {
     bool *tmp = (bool *)ptr;
     *tmp = val;
+}
+
+bool storeMfrWifiCredentials(void)
+{
+    bool retVal=false;
+#ifdef USE_RDK_WIFI_HAL
+    IARM_BUS_MFRLIB_API_WIFI_Credentials_Param_t param = {0};
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    retVal=lastConnectedSSID(&savedWiFiConnList);
+    if(retVal == false)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%d] Last connected ssid fetch failure \n", __FUNCTION__, __LINE__ );
+        return retVal;
+    }
+    else
+    {
+        retVal=false;
+        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] fetched ssid details \n",__FUNCTION__,__LINE__ );
+    }
+    param.requestType=WIFI_GET_CREDENTIALS;
+    if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
+    {
+        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in retrieving the stored wifi credentials \n",__FUNCTION__,__LINE__ );
+        if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) != 0 ) || (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) != 0))
+        {
+            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] ssid info is different continue to store ssid \n",__FUNCTION__,__LINE__ );
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d] Same ssid info not storing it %d \n",__FUNCTION__,__LINE__ );
+            return true;
+        }
+    }
+    memset(&param,0,sizeof(param));
+    param.requestType=WIFI_SET_CREDENTIALS;
+    strcpy(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
+    strcpy(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase);
+    if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
+    {
+        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in storing wifi credentials \n",__FUNCTION__,__LINE__ );
+        memset(&param,0,sizeof(param));
+        param.requestType=WIFI_GET_CREDENTIALS;
+        if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
+        {
+            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in retrieving the stored wifi credentials \n",__FUNCTION__,__LINE__ );
+            if(g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) == 0 )
+            {
+                retVal=true;
+                RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] Successfully stored the credentails and verified \n",__FUNCTION__,__LINE__ );
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] failure in storing  wifi credentials   \n",__FUNCTION__,__LINE__ );
+            }
+
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] IARM error in retrieving stored wifi credentials mfr error code %d \n",__FUNCTION__,__LINE__,param.returnVal );
+        }
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] IARM error in storing wifi credentials mfr error code \n",__FUNCTION__,__LINE__ ,param.returnVal);
+    }
+#endif
+    return retVal;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}
+
+
+bool eraseMfrWifiCredentials(void)
+{
+    bool retVal=false;
+#ifdef USE_RDK_WIFI_HAL
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_EraseAllData,0,0))
+    {
+        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in erasing wifi credentials \n",__FUNCTION__,__LINE__ );
+        retVal=true;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] failure in erasing  wifi credentials \n",__FUNCTION__,__LINE__ );
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+#endif
+    return retVal;
 }
