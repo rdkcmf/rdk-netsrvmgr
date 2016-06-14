@@ -1321,7 +1321,7 @@ void connectToLAF()
     pthread_attr_t attr;
     bool retVal=false;
     char lfssid[33] = {'\0'};
-    if(getDeviceActivationState() == false)
+    if((getDeviceActivationState() == false) && (IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam))
     {
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);

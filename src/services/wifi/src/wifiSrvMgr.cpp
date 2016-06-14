@@ -32,8 +32,8 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
 #endif
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
-
 WiFiConnectionStatus savedWiFiConnList;
+IARM_Bus_Daemon_SysMode_t sysModeParam;
 
 WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
 bool WiFiNetworkMgr::instanceIsReady = false;
@@ -93,6 +93,7 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setRadioProps, setRadioProps);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioStatsProps, getRadioStatsProps);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getSSIDProps, getSSIDProps);
+    IARM_Bus_RegisterCall(IARM_BUS_COMMON_API_SysModeChange,sysModeChange);
 
 #ifdef USE_RDK_WIFI_HAL
     /* Front Panel Event Listner  */
@@ -857,3 +858,21 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 #endif
+
+/**
+ * @brief This function is used to get the system modes (EAS, NORMAL and WAREHOUSE)
+ *
+ * @param[in] arg Pointer variable of void.
+ *
+ * @retval IARM_RESULT_SUCCESS By default it return success.
+ * 
+ */
+IARM_Result_t WiFiNetworkMgr::sysModeChange(void *arg)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    IARM_Bus_CommonAPI_SysModeChange_Param_t *param = (IARM_Bus_CommonAPI_SysModeChange_Param_t *)arg;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Sys Mode Change::New mode --> %d, Old mode --> %d\n", __FUNCTION__, __LINE__ ,param->newMode,param->oldMode);
+    sysModeParam=param->newMode;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return IARM_RESULT_SUCCESS;
+}
