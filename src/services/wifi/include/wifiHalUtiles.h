@@ -36,12 +36,12 @@ extern "C" {
 #include <net/if.h>
 //}
 #include "mfrMgr.h"
-#include "sysMgr.h"
-#include "libIBusDaemon.h"
 
 #define WIFI_DEFAULT_INTERFACE "wlan0"
 
 #endif
+#include "sysMgr.h"
+#include "libIBusDaemon.h"
 
 #define ACTION_ON_CONNECT 	1
 #define ACTION_ON_DISCONNECT 	0
