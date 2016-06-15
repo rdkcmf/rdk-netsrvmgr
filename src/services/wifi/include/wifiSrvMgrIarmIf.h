@@ -30,8 +30,10 @@
 #define PASSPHRASE_BUFF BUFF_LENGTH_64
 #define MAX_SSIDLIST_BUF 10000
 
+/*IARM Interface for wifiManager_2 */
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
+#define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"		 /*!< Returns the properties of the currently connected SSID */
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Returns the paired ssid as a string*/
 #define IARM_BUS_WIFI_MGR_API_setEnabled            "setEnabled"             /*!< Enable the wifi adapter on the box*/
 #define IARM_BUS_WIFI_MGR_API_connect               "connect"                /*!< Connect with given or saved ssid and passphrase */
@@ -85,20 +87,20 @@ typedef enum _WiFiErrorCode_t {
 /*! Supported values are NONE - 0, WPA - 1, WEP - 2*/
 typedef enum _SsidSecurity
 {
-   NET_WIFI_SECURITY_NONE = 0,
-   NET_WIFI_SECURITY_WEP_64,
-   NET_WIFI_SECURITY_WEP_128,
-   NET_WIFI_SECURITY_WPA_PSK_TKIP,
-   NET_WIFI_SECURITY_WPA_PSK_AES,
-   NET_WIFI_SECURITY_WPA2_PSK_TKIP,
-   NET_WIFI_SECURITY_WPA2_PSK_AES,
-   NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,
-   NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,
-   NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,
-   NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,
-   NET_WIFI_SECURITY_NOT_SUPPORTED = 15,
- } SsidSecurity;
- 
+    NET_WIFI_SECURITY_NONE = 0,
+    NET_WIFI_SECURITY_WEP_64,
+    NET_WIFI_SECURITY_WEP_128,
+    NET_WIFI_SECURITY_WPA_PSK_TKIP,
+    NET_WIFI_SECURITY_WPA_PSK_AES,
+    NET_WIFI_SECURITY_WPA2_PSK_TKIP,
+    NET_WIFI_SECURITY_WPA2_PSK_AES,
+    NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,
+    NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,
+    NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,
+    NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,
+    NET_WIFI_SECURITY_NOT_SUPPORTED = 15,
+} SsidSecurity;
+
 typedef enum _eConnectionMethodType {
     WPS_PUSH_CONNECT,
     SSID_SECLECTION_CONNECT
@@ -142,6 +144,14 @@ typedef struct _WiFiConnectionStatus
     eConnMethodType conn_type;
 } WiFiConnectionStatus;
 
+typedef struct _WiFiConnectedSSIDInfo
+{
+    unsigned char ssid[BUFF_LENGTH_64];		/* !< The name of connected SSID. */
+    unsigned char bssid[BUFF_LENGTH_64];	/* !< The the Basic Service Set ID (mac address). */
+    float rate;								/* !< The Physical data rate in Mbps */
+    float noise;							/* !< The average noise strength in dBm. */
+    float signalStrength;					/* !< The RSSI value in dBm. */
+} WiFiConnectedSSIDInfo_t;
 
 /*! Get/Set Data associated with WiFi Service Manager */
 typedef struct _IARM_Bus_WiFiSrvMgr_SsidList_Param_t {
@@ -157,6 +167,7 @@ typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
         WiFiConnection connect;
         WiFiConnection saveSSID;
         WiFiConnection clearSSID;
+        WiFiConnectedSSIDInfo_t getConnectedSSID;
         struct getPairedSSID {
             char ssid[SSID_SIZE];
         } getPairedSSID;
@@ -271,7 +282,13 @@ typedef struct _IARM_BUS_WiFi_DiagsPropParam_t {
     IARM_Bus_WiFiSrvMgr_NumEntry_t numEntry;
 } IARM_BUS_WiFi_DiagsPropParam_t;
 
-
+typedef enum _NetworkManager_EventId_t {
+        IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE,
+        IARM_BUS_NETWORK_MANAGER_EVENT_MAX,
+} IARM_Bus_NetworkManager_EventId_t;
+typedef struct _IARM_BUS_NetworkManager_EventData_t {
+        int value;
+} IARM_BUS_NetworkManager_EventData_t;
 
 
 #endif

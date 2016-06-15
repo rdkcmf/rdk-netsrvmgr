@@ -16,6 +16,7 @@
 #include "NetworkMedium.h"
 #include "wifiHalUtiles.h"
 
+
 #ifdef USE_HOSTIF_WIFI_HAL
 #include "hostIf_tr69ReqHandler.h"
 #endif
@@ -84,9 +85,11 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_saveSSID, saveSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectedSSID, getConnectedSSID);
 #ifdef ENABLE_LOST_FOUND
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
-    IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_DEVICE_ACTIVATED, _eventHandler);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
 #endif
     /* Diagnostic Api's*/
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioProps, getRadioProps);
@@ -418,7 +421,7 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
 
 //    get_CurrentSsidInfo(&currSsidInfo);
 #ifdef USE_RDK_WIFI_HAL
-     retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID(&savedWiFiConnList);
 #endif
 
     int ssid_len = strlen(savedWiFiConnList.ssidSession.ssid);
@@ -436,6 +439,30 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
+
+/*
+ *  The properties of the currently connected SSID
+ */
+IARM_Result_t WiFiNetworkMgr::getConnectedSSID(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal=false;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+
+    param->status = true;
+    memset(&param->data.getConnectedSSID, '\0', sizeof(WiFiConnectedSSIDInfo_t));
+
+#ifdef USE_RDK_WIFI_HAL
+    getConnectedSSIDInfo(&param->data.getConnectedSSID);
+#endif
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return ret;
+}
+
+
 
 #ifdef USE_RDK_WIFI_HAL
 static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
@@ -841,12 +868,28 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     if (strcmp(owner, IARM_BUS_AUTHSERVICE_NAME)  == 0) {
         switch (eventId) {
-        case IARM_BUS_AUTHSERVICE_EVENT_DEVICE_ACTIVATED:
+        case IARM_BUS_AUTHSERVICE_EVENT_SWITCH_TO_PRIVATE:
         {
-            IARM_BUS_AuthService_DeviceActivated_EventData_t *param = (IARM_BUS_AuthService_DeviceActivated_EventData_t *)data;
+            IARM_BUS_AuthService_EventData_t *param = (IARM_BUS_AuthService_EventData_t *)data;
             if (param->value == DEVICE_ACTIVATED)
             {
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Box Activated \n", __FUNCTION__, __LINE__ );
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Auth service msg  Box Activated \n", __FUNCTION__, __LINE__ );
+                bDeviceActivated = true;
+            }
+        }
+        break;
+        default:
+            break;
+        }
+    }
+    else if (strcmp(owner, IARM_BUS_NM_SRV_MGR_NAME)  == 0) {
+        switch (eventId) {
+        case IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE:
+        {
+            IARM_BUS_NetworkManager_EventData_t *param = (IARM_BUS_NetworkManager_EventData_t *)data;
+            if (param->value == DEVICE_ACTIVATED)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]  Service Manager msg Box Activated \n", __FUNCTION__, __LINE__ );
                 bDeviceActivated = true;
             }
         }
@@ -865,7 +908,7 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
  * @param[in] arg Pointer variable of void.
  *
  * @retval IARM_RESULT_SUCCESS By default it return success.
- * 
+ *
  */
 IARM_Result_t WiFiNetworkMgr::sysModeChange(void *arg)
 {

@@ -18,7 +18,9 @@
 #include "wifiSrvMgrIarmIf.h"
 
 #include "hostIf_tr69ReqHandler.h"
+#ifdef ENABLE_LOST_FOUND
 #include "authserviceIARM.h"
+#endif
 
 #ifdef USE_RDK_WIFI_HAL
 extern "C" {
@@ -103,4 +105,5 @@ bool isWiFiCapable();
 void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value);
 void put_boolean(char *ptr, bool val);
+void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *);
 #endif /* WIFIHALUTILES_H_ */
