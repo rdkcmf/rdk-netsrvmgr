@@ -856,7 +856,7 @@ void *wifiConnStatusThread(void* arg)
 
             while(WIFI_CONNECTED == get_WiFiStatusCode()) {
                 //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
-                wifi_getStats();
+                wifi_getStats(1, NULL);
                 //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
@@ -900,6 +900,32 @@ bool clearSSID_On_Disconnect_AP()
     }
     return ret;
 }
+
+void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
+{
+    bool ret = true;
+    int radioIndex = 1;
+    wifi_sta_stats_t stats;
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    memset(&stats, '\0', sizeof(stats));
+
+    wifi_getStats(radioIndex, &stats);
+    strncpy((char *)conSSIDInfo->ssid, (const char *)stats.sta_SSID, (size_t)BUFF_LENGTH_64);
+    strncpy((char *)conSSIDInfo->bssid, (const char *)stats.sta_BSSID, (size_t)BUFF_LENGTH_64);
+    conSSIDInfo->rate = stats.sta_PhyRate;
+    conSSIDInfo->noise = stats.sta_Noise;
+    conSSIDInfo->signalStrength = stats.sta_RSSI;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Connected SSID info: \n \
+    		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\"] \n",
+            __FUNCTION__, __LINE__,
+            stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI);
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}
+
 #endif
 
 #ifdef ENABLE_LOST_FOUND
@@ -1304,7 +1330,7 @@ void *lafConnThread(void* arg)
                 break;
             }
         }
-        sleep(confProp.wifiProps.lnfRetryInSecs);
+        sleep(1);
 //        getDeviceActivationState();
     }
     if(gWifiLNFStatus == CONNECTED_LNF)

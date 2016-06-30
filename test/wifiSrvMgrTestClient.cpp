@@ -37,6 +37,7 @@ enum {
 #ifdef ENABLE_LOST_FOUND
     Test_getLAFState = 13,
 #endif
+    Test_getConnectedSSID = 14,
     Test_Max_Api,
 };
 
@@ -257,6 +258,36 @@ static void WIFI_MGR_API_isPaired()
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 }
 
+static void WIFI_MGR_API_getConnectedSSID() {
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_Bus_WiFiSrvMgr_Param_t param;
+
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    memset(&param, 0, sizeof(param));
+
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getConnectedSSID, (void *)&param, sizeof(param));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_getConnectedSSID, ((retVal == IARM_RESULT_SUCCESS && param.status)?"true":"false"));
+    printf("\n***********************************\n");
+
+    printf("Connected SSID info: \n \
+	    	\tSSID: \"%s\"\n \
+			\tBSSID : \"%s\"\n \
+			\tPhyRate : \"%f\"\n \
+			\tNoise : \"%f\" \n \
+			\tSignalStrength(rssi) : \"%f\" \n",
+           param.data.getConnectedSSID.ssid, \
+           param.data.getConnectedSSID.bssid, \
+           param.data.getConnectedSSID.rate, \
+           param.data.getConnectedSSID.noise, \
+           param.data.getConnectedSSID.signalStrength);
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+}
+
+
 static void WIFI_MGR_API_getSSIDProps()
 {
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
@@ -379,6 +410,7 @@ int main()
 #ifdef ENABLE_LOST_FOUND
         printf( "13. getLAFState\n");
 #endif
+        printf( "14. getConnectedSSID\n");
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -429,6 +461,9 @@ int main()
             WIFI_MGR_API_getLAFState();
             break;
 #endif
+        case Test_getConnectedSSID:
+            WIFI_MGR_API_getConnectedSSID();
+            break;
         default:
             loop = false;
             printf( "Wrong Input..., try again.\n" );
