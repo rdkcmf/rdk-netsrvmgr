@@ -48,6 +48,7 @@ extern "C" {
 #define LAF_CONNECT_RETRY_INTERVAL        "LAF_CONNECT_RETRY_INTERVAL"
 #define LAF_CONNECT_START_INTERVAL 	  "LAF_CONNECT_START_INTERVAL"
 #define AUTHSERVER_URL        "AUTHSERVER_URL"
+#define DISABLE_WPS_XRE			"disableWpsXRE"
 
 #define WIFI_BCK_PATHNAME				"/opt/persistent/wifi"
 #define WIFI_BCK_FILENAME				"/opt/persistent/wifi/wifiConnectionInfo.json"
@@ -77,6 +78,7 @@ typedef struct  _wifiMgrConfigProps
     unsigned short lnfRetryInSecs;
     unsigned short lnfStartInSecs;
     char authServerURL[BUFFER_SIZE_128];
+    bool disableWpsXRE;
 } wifiMgrConfigProps;
 
 typedef struct  _netMgrConfigProps
