@@ -49,6 +49,7 @@
 #define IARM_BUS_WIFI_MGR_API_getRadioStatsProps    "getRadioStatsProps"      /*!< Retrieve the get radio stats properties*/
 #define IARM_BUS_WIFI_MGR_API_setRadioProps         "setRadioProps"           /*!< Set radio properties*/
 #define IARM_BUS_WIFI_MGR_API_getSSIDProps          "getSSIDProps"            /*!< Retrieve the ssid properties*/
+#define IARM_BUS_WIFI_MGR_API_getEndPointProps      "getEndPointProps"        /*!< Retrieve the Endpoint properties*/
 
 /*! Event states associated with WiFi connection  */
 typedef enum _WiFiStatusCode_t {
@@ -260,6 +261,27 @@ typedef enum _IARM_Bus_WiFiSrvMgr_NumEntry_t {
     IARM_BUS_WIFI_MGR_RadioEntry = 2,
 } IARM_Bus_WiFiSrvMgr_NumEntry_t;
 
+typedef struct _WiFi_EndPoint_Stats_Diag_Params {
+    unsigned long	lastDataDownlinkRate;
+    unsigned long	lastDataUplinkRate;
+    int				signalStrength;
+    unsigned long	retransmissions;
+} WiFi_EndPoint_Stats_Diag_Params;
+
+typedef struct _WiFi_EndPoint_Security_Params {
+    char	modesSupported[BUFF_LENGTH_256];
+} WiFi_EndPoint_Security_Params;
+
+typedef struct _WiFi_EndPoint_Diag_Params {
+    bool	enable;
+    char	status[BUFF_LENGTH_64];
+    char	alias[BUFF_LENGTH_64];
+    char	ProfileReference[BUFF_LENGTH_256];
+    char	SSIDReference[BUFF_LENGTH_256];
+    unsigned int ProfileNumberOfEntries;
+    WiFi_EndPoint_Stats_Diag_Params stats;
+    WiFi_EndPoint_Security_Params 	security;
+} WiFi_EndPoint_Diag_Params;
 
 typedef struct _IARM_BUS_WiFi_DiagsPropParam_t {
     union {
@@ -277,6 +299,8 @@ typedef struct _IARM_BUS_WiFi_DiagsPropParam_t {
             short ssidIndex;
             WiFi_SSID_Diag_Params params;
         } ssid;
+        unsigned int endPointNumberOfEntries;
+        WiFi_EndPoint_Diag_Params endPointInfo;
     } data;
     bool status;
     IARM_Bus_WiFiSrvMgr_NumEntry_t numEntry;

@@ -69,6 +69,7 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectedSSID, getConnectedSSID);
+
 #ifdef ENABLE_LOST_FOUND
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
     IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
@@ -80,7 +81,7 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioStatsProps, getRadioStatsProps);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getSSIDProps, getSSIDProps);
     IARM_Bus_RegisterCall(IARM_BUS_COMMON_API_SysModeChange,sysModeChange);
-
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getEndPointProps, getEndPointProps);
 #ifdef USE_RDK_WIFI_HAL
     /* Front Panel Event Listner  */
     IARM_Bus_RegisterEventHandler(IARM_BUS_IRMGR_NAME, IARM_BUS_IRMGR_EVENT_IRKEY, _irEventHandler);
@@ -914,6 +915,33 @@ IARM_Result_t WiFiNetworkMgr::sysModeChange(void *arg)
     IARM_Bus_CommonAPI_SysModeChange_Param_t *param = (IARM_Bus_CommonAPI_SysModeChange_Param_t *)arg;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Sys Mode Change::New mode --> %d, Old mode --> %d\n", __FUNCTION__, __LINE__ ,param->newMode,param->oldMode);
     sysModeParam=param->newMode;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return IARM_RESULT_SUCCESS;
+}
+
+/**
+ * @brief This function is used to get the EndPoint Details
+ *
+ * @param[in] arg Pointer variable of void.
+ *
+ * @retval IARM_RESULT_SUCCESS By default it return success.
+ *
+ */
+IARM_Result_t WiFiNetworkMgr::getEndPointProps(void *arg)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    bool retVal=false;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    IARM_BUS_WiFi_DiagsPropParam_t *param = (IARM_BUS_WiFi_DiagsPropParam_t *)arg;
+
+    param->status = true;
+    memset(&param->data.endPointInfo, '\0', sizeof(param->data.endPointInfo));
+
+#ifdef USE_RDK_WIFI_HAL
+    getEndPointInfo(&param->data.endPointInfo);
+#endif
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
 }

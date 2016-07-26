@@ -106,7 +106,8 @@ bool isWiFiCapable();
 void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value);
 void put_boolean(char *ptr, bool val);
-void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *);
 bool storeMfrWifiCredentials(void);
 bool eraseMfrWifiCredentials(void);
+void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *);
+void getEndPointInfo(WiFi_EndPoint_Diag_Params *);
 #endif /* WIFIHALUTILES_H_ */
