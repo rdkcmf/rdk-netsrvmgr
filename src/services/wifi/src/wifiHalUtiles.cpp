@@ -865,6 +865,7 @@ void *wifiConnStatusThread(void* arg)
 {
     int ret = 0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    wifi_sta_stats_t stats;
 
     while (true ) {
         pthread_mutex_lock(&mutexGo);
@@ -876,7 +877,10 @@ void *wifiConnStatusThread(void* arg)
 
             while(WIFI_CONNECTED == get_WiFiStatusCode()) {
                 //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
-                wifi_getStats(1, NULL);
+                memset(&stats, 0, sizeof(wifi_sta_stats_t));
+                wifi_getStats(1, &stats);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
+                         stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
                 //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
