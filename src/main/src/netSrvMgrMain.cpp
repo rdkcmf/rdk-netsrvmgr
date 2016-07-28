@@ -12,6 +12,7 @@
 
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
+#include "routeSrvMgr.h"
 
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
@@ -44,6 +45,7 @@ int main(int argc, char *argv[])
     const char* debugConfigFile = NULL;
     const char* configFilePath = NULL;
     int itr=0;
+    IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
 
     /* Signal handler */
     signal (SIGHUP, NetworkMgr_SignalHandler);
@@ -84,6 +86,18 @@ int main(int argc, char *argv[])
         }
         itr++;
     }
+    err = IARM_Bus_Init(IARM_BUS_NM_SRV_MGR_NAME);
+    if(IARM_RESULT_SUCCESS != err)
+    {
+        //LOG("Error initializing IARM.. error code : %d\n",err);
+        return err;
+    }
+    err = IARM_Bus_Connect();
+    if(IARM_RESULT_SUCCESS != err)
+    {
+        //LOG("Error connecting to IARM.. error code : %d\n",err);
+        return err;
+    }
 
 #ifdef RDK_LOGGER_ENABLED
     if(rdk_logger_init(debugConfigFile) == 0) b_rdk_logger_enabled = 1;
@@ -118,6 +132,7 @@ int main(int argc, char *argv[])
 
 void netSrvMgr_start()
 {
+    RouteNetworkMgr::getInstance()->Start();
     WiFiNetworkMgr::getInstance()->Start();
 }
 

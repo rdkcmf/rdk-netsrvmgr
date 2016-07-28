@@ -57,24 +57,7 @@ WiFiNetworkMgr* WiFiNetworkMgr::getInstance()
 int  WiFiNetworkMgr::Start()
 {
     bool retVal=false;
-    IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-
-    err = IARM_Bus_Init(IARM_BUS_NM_SRV_MGR_NAME);
-
-    if(IARM_RESULT_SUCCESS != err)
-    {
-        //LOG("Error initializing IARM.. error code : %d\n",err);
-        return err;
-    }
-
-    err = IARM_Bus_Connect();
-
-    if(IARM_RESULT_SUCCESS != err)
-    {
-        //LOG("Error connecting to IARM.. error code : %d\n",err);
-        return err;
-    }
 
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, getAvailableSSIDs);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getCurrentState, getCurrentState);

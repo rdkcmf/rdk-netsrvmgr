@@ -1,4 +1,4 @@
 ## Copyright (c) 2013 Comcast. All rights reserved.
 
-SUBDIRS =   wifi
-DIST_SUBDIRS =  wifi
+SUBDIRS =   wifi route
+DIST_SUBDIRS =  wifi route

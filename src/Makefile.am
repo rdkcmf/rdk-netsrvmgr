@@ -5,7 +5,9 @@ DIST_SUBDIRS = services
 
 AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) \
 	-I$(top_srcdir)/src/main/include \
-	-I$(top_srcdir)/src/services/wifi/include
+	-I$(top_srcdir)/src/services/wifi/include \
+	-I$(top_srcdir)/src/services/route/include \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb
 
 if RDKWIFIHAL
 AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
@@ -37,5 +39,5 @@ netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp $(top_srcdir)/s
 if LOSTFOUND
 netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
 endif
-netsrvmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la
+netsrvmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la $(top_builddir)/src/services/route/librouteservices.la
 

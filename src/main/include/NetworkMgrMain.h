@@ -38,6 +38,9 @@ extern "C" {
 #include "NetworkMedium.h"
 #include "irMgr.h"
 #include "comcastIrKeyCodes.h"
+#include "libIARM.h"
+
+#define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
 #define LOG_NMGR "LOG.RDK.NETSRVMGR"
 #define WIFI_CONFIG "WiFiMgr_Config"
