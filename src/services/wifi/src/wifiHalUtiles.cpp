@@ -56,6 +56,19 @@ bool get_boolean(const char *ptr)
     return *ret;
 }
 
+bool ethernet_on()
+{
+   if(access( "/tmp/wifi-on", F_OK ) != -1 )
+      return false;
+   else
+      return true;
+}
+
+static IARM_Result_t WiFi_IARM_Bus_BroadcastEvent(const char *ownerName, IARM_EventId_t eventId, void *data, size_t len)
+{
+    if( !ethernet_on() )
+       IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
+}
 
 static void set_WiFiStatusCode( WiFiStatusCode_t status)
 {
@@ -323,7 +336,7 @@ bool connect_WpsPush()
 
             eventData.data.wifiStateChange.state = WIFI_FAILED;
         }
-        IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
     }
     else if (WIFI_CONNECTED == get_WiFiStatusCode())
     {
@@ -345,7 +358,7 @@ bool connect_WpsPush()
                     ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
                     eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
                     set_WiFiStatusCode(eventData.data.wifiStateChange.state);
-                    IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+                    WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'%s\'(%d).\n", __FUNCTION__, __LINE__,
                              (ret?"CONNECTING": "FAILED"), eventData.data.wifiStateChange.state);
                     if(ret) {
@@ -372,7 +385,7 @@ bool connect_WpsPush()
             ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
             eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
             set_WiFiStatusCode(eventData.data.wifiStateChange.state);
-            IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+            WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
             if(ret) {
                 wifi_conn_type = WPS_PUSH_CONNECT;
             }
@@ -637,7 +650,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     connCode_prev_state = connCode;
     if(notify && ((eventId >= IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged) && (eventId < IARM_BUS_WIFI_MGR_EVENT_MAX)))
     {
-        IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
+        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
                                 (IARM_EventId_t) eventId,
                                 (void *)&eventData, sizeof(eventData));
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Broadcast Event id \'%d\'. \n", __FUNCTION__, __LINE__, eventId);
@@ -681,7 +694,7 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
         ret = true;
     }
     if(!bLNFConnect)
-        IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
@@ -1156,6 +1169,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         notify = true;
         sleep(10); //waiting for default route before bouncing the xre connection
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting private ssid. Bouncing xre connection.\n", __FUNCTION__, __LINE__ );
+        
         if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
         {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n", __FUNCTION__, __LINE__);

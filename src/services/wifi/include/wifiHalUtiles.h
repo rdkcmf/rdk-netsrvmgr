@@ -67,6 +67,7 @@ extern "C" {
 
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 WiFiStatusCode_t get_WifiRadioStatus();
+bool ethernet_on();
 
 extern bool updateWiFiList();
 extern ssidList gSsidList;

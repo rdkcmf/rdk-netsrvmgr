@@ -208,7 +208,11 @@ IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     param->status = true;
 
-    param->data.wifiStatus = get_WifiRadioStatus();
+    //if the ethernet is plugged in then report disabled
+    if( !ethernet_on() )
+        param->data.wifiStatus = get_WifiRadioStatus();
+    else
+        param->data.wifiStatus = WIFI_DISABLED;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
