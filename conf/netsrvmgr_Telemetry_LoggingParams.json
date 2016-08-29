@@ -1,0 +1,33 @@
+{
+    "wifi_period1_time": 60,
+"wifi_parameter_list_period1":
+    [
+        "Device.WiFi.EndPoint.1.Stats.LastDataDownlinkRate",
+        "Device.WiFi.EndPoint.1.Stats.Retransmissions",
+        "Device.WiFi.Endpoint.1.Stats.SignalStrength",
+        "Device.WiFi.Radio.1.Channel",
+        "Device.WiFi.Radio.1.Stats.FCSErrorCount",
+        "Device.WiFi.Radio.1.Stats.Noise",
+        "Device.WiFi.Radio.1.Stats.X_COMCAST-COM_NoiseFloor",
+        "Device.WiFi.Radio.1.Stats.X_COMCAST-COM_RetransmissionMetric",
+        "Device.WiFi.Radio.1.TransmitPower",
+        "Device.WiFi.Radio.1.Stats.ErrorsReceived",
+        "Device.WiFi.Radio.1.Stats.ErrorsSent",
+        "Device.WiFi.Radio.1.Stats.PacketsReceived",
+        "Device.WiFi.Radio.1.Stats.PacketsSent"  ],
+    "wifi_period2_time": 1800,
+"wifi_parameter_list_period2":
+    [
+        "Device.WiFi.Endpoint.1.NumberOfEntries",
+        "Device.WiFi.EndPoint.1.Profile.1.SSID",
+        "Device.WiFi.EndPoint.1.SSIDReference",
+        "Device.WiFi.Radio.1.Stats.X_COMCAST-COM_MaximumNoiseFloorOnChannel",
+        "Device.WiFi.Radio.1.Stats.X_COMCAST-COM_MinimumNoiseFloorOnChannel",
+        "Device.WiFi.SSID.1.BSSID",
+        "Device.WiFi.SSID.1.MACAddress",
+        "Device.WiFi.SSID.1.Name",
+        "Device.WiFi.SSID.1.SSID" ]
+
+}
+
+
