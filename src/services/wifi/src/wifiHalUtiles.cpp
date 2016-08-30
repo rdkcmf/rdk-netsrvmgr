@@ -42,6 +42,9 @@ extern WiFiConnectionStatus savedWiFiConnList;
 #ifdef USE_RDK_WIFI_HAL
 static void wifi_status_action (wifiStatusCode_t , char *, unsigned short );
 static wifiStatusCode_t connCode_prev_state;
+
+extern telemetryParams wifiParams_Tele_Period1;
+extern telemetryParams wifiParams_Tele_Period2;
 #endif
 
 int get_int(const char* ptr)

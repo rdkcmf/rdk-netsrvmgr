@@ -17,6 +17,14 @@
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
 
+/*Telemetry Configuration Parameter List*/
+#ifdef USE_RDK_WIFI_HAL
+telemetryParams wifiParams_Tele_Period1;
+telemetryParams wifiParams_Tele_Period2;
+#endif
+static bool parse_telemetry_logging_configuration( char *);
+static void teleParamList_free (gpointer val);
+
 static void netSrvMgr_start();
 static void netSrvMgr_Loop();
 
@@ -36,6 +44,17 @@ void NetworkMgr_SignalHandler (int sigNum)
 {
     RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): Received signal %d \n",__FUNCTION__, sigNum);
     signal(sigNum, SIG_DFL );
+#ifdef USE_RDK_WIFI_HAL
+    /* Telemetry Parameter list*/
+    if (wifiParams_Tele_Period1.paramlist != NULL)    {
+        g_list_free_full(wifiParams_Tele_Period1.paramlist, (GDestroyNotify)&teleParamList_free);
+    }
+
+    if (wifiParams_Tele_Period2.paramlist != NULL)
+    {
+        g_list_free_full(wifiParams_Tele_Period2.paramlist, (GDestroyNotify)&teleParamList_free);
+    }
+#endif
     kill(getpid(), sigNum );
     exit(0);
 }
@@ -251,4 +270,135 @@ static bool read_ConfigProps()
     return true;
 }
 
+/*Read Telemetry Parameter configurations*/
+void Read_Telemetery_Param_File()
+{
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+
+    gchar *contents = NULL;
+    gsize length = 0;
+    GError *error = NULL;
+
+    gboolean fstatus =  g_file_get_contents ((const gchar *) TELEMETRY_LOGGING_PARAM_FILE, &contents, &length, &error);
+
+    if(!fstatus) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s()] Failed to read \"%s\" file using g_file_get_contents() due to %s(%d) \n",
+                __FUNCTION__, TELEMETRY_LOGGING_PARAM_FILE, error->message, error->code);
+        return;
+    }
+    else {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"[%s]Successfully read \"%s\". The file Contents are \"%s\" with length (%d).\n ",\
+                __FUNCTION__, TELEMETRY_LOGGING_PARAM_FILE,  contents, (int)length);
+    }
+
+    if(contents)  {
+        parse_telemetry_logging_configuration(contents);
+        g_free(contents);
+    }
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+}
+
+/*Print parameters in list*/
+static void printf_list_info(GList *list)
+{
+    if(!list) {
+        printf("Since list is NULL, Failed to print info.");
+        return;
+    }
+
+    GList *iter = g_list_first(list);
+    while(iter)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR ," Parameters [%d] :  \"%s\"\n", (char *)iter->data);
+        iter = g_list_next(iter);
+    }
+}
+
+
+bool parse_telemetry_logging_configuration( gchar *string)
+{
+    cJSON *request_msg = NULL, *paramList = NULL;
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+
+#ifdef USE_RDK_WIFI_HAL
+    wifiParams_Tele_Period1.timePeriod = 0;
+    wifiParams_Tele_Period1.paramlist = NULL;
+
+    wifiParams_Tele_Period2.timePeriod = 0;
+    wifiParams_Tele_Period2.paramlist = NULL;
+#endif
+
+    if(NULL == string)
+    {
+        printf("[%s:%d] Failed due to invalid request buffer.\n", __FUNCTION__, __LINE__);
+        return false;
+    }
+
+    request_msg = cJSON_Parse(string);
+
+    if (!request_msg)
+    {
+        printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+    }
+    else
+    {
+        int i, arSize = 0;
+        cJSON* params = NULL;
+#ifdef USE_RDK_WIFI_HAL
+        wifiParams_Tele_Period1.timePeriod =  cJSON_GetObjectItem(request_msg, T_PERIOD_1_INTERVAL)->valueint;
+
+        paramList = cJSON_GetObjectItem(request_msg, T_PERIOD_1_PARAMETER_LIST);
+
+        arSize = cJSON_GetArraySize(paramList);
+
+        for ( i = 0; i < arSize; i++) {
+            params = cJSON_GetArrayItem(paramList, i);
+            if(!params) {
+                printf("Failed on cJSON_GetArrayItem() \n");
+            }
+            else {
+                wifiParams_Tele_Period1.paramlist = g_list_prepend(wifiParams_Tele_Period1.paramlist, g_strdup(params->valuestring));
+            }
+        }
+        if(wifiParams_Tele_Period1.paramlist)
+            wifiParams_Tele_Period1.paramlist = g_list_reverse(wifiParams_Tele_Period1.paramlist);
+
+        wifiParams_Tele_Period2.timePeriod =  cJSON_GetObjectItem(request_msg, T_PERIOD_2_INTERVAL)->valueint;
+
+        paramList = cJSON_GetObjectItem(request_msg, T_PERIOD_2_PARAMETER_LIST);
+
+        arSize = cJSON_GetArraySize(paramList);
+
+        for ( i = 0; i < arSize; i++) {
+            params = cJSON_GetArrayItem(paramList, i);
+            if(!params) {
+                printf("Failed on cJSON_GetArrayItem() \n");
+            }
+            else {
+                wifiParams_Tele_Period2.paramlist = g_list_prepend(wifiParams_Tele_Period2.paramlist, g_strdup(params->valuestring));
+            }
+        }
+        if(wifiParams_Tele_Period2.paramlist) {
+            wifiParams_Tele_Period2.paramlist = g_list_reverse(wifiParams_Tele_Period2.paramlist);
+        }
+#endif /*USE_RDK_WIFI_HAL*/
+
+        cJSON_Delete(request_msg);
+    }
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+    return true;
+}
+
+void teleParamList_free (gpointer val)
+{
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+    if(val) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"[%s] :\"%s\"\n", __FUNCTION__, (gchar *)val);
+                g_free (val);
+    }
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+}
 
