@@ -39,7 +39,7 @@ void logCallback(const char *buff)
 
 static void NetworkMgr_SignalHandler (int sigNum);
 static bool read_ConfigProps();
-
+static bool update_telemetryParams_list(gchar *, telemetryParams *, gchar *, gchar *);
 void NetworkMgr_SignalHandler (int sigNum)
 {
     RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): Received signal %d \n",__FUNCTION__, sigNum);
@@ -316,74 +316,66 @@ static void printf_list_info(GList *list)
 }
 
 
-bool parse_telemetry_logging_configuration( gchar *string)
+bool parse_telemetry_logging_configuration(gchar *string)
 {
-    cJSON *request_msg = NULL, *paramList = NULL;
-
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+
+    if(NULL == string)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR ,"[%s:%d] Failed due to NULL request buffer.\n", __FUNCTION__, __LINE__);
+        return false;
+    }
 
 #ifdef USE_RDK_WIFI_HAL
     wifiParams_Tele_Period1.timePeriod = 0;
     wifiParams_Tele_Period1.paramlist = NULL;
 
+    update_telemetryParams_list(string, &wifiParams_Tele_Period1, (gchar *)T_PERIOD_1_INTERVAL, (gchar *)T_PERIOD_1_PARAMETER_LIST);
+
     wifiParams_Tele_Period2.timePeriod = 0;
     wifiParams_Tele_Period2.paramlist = NULL;
+
+    update_telemetryParams_list(string, &wifiParams_Tele_Period2, (gchar *)T_PERIOD_2_INTERVAL, (gchar *)T_PERIOD_2_PARAMETER_LIST);
 #endif
 
-    if(NULL == string)
-    {
-        printf("[%s:%d] Failed due to invalid request buffer.\n", __FUNCTION__, __LINE__);
-        return false;
-    }
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+    return true;
+}
 
-    request_msg = cJSON_Parse(string);
+bool update_telemetryParams_list(gchar *input_buffer, telemetryParams *telemery_params, gchar *time_period_string, gchar *param_name_string)
+{
+    cJSON *request_msg = NULL;
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+
+    request_msg = cJSON_Parse(input_buffer);
 
     if (!request_msg)
     {
-        printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s] Failed to parse json buffer with \"%s\"\n",cJSON_GetErrorPtr());
+        return false;
     }
     else
     {
-        int i, arSize = 0;
-        cJSON* params = NULL;
-#ifdef USE_RDK_WIFI_HAL
-        wifiParams_Tele_Period1.timePeriod =  cJSON_GetObjectItem(request_msg, T_PERIOD_1_INTERVAL)->valueint;
+        int item, arrSize = 0;
+        cJSON* param_item = NULL, *param_list_obj = NULL;
 
-        paramList = cJSON_GetObjectItem(request_msg, T_PERIOD_1_PARAMETER_LIST);
+        telemery_params->timePeriod =  cJSON_GetObjectItem(request_msg, T_PERIOD_1_INTERVAL)->valueint;
+        param_list_obj = cJSON_GetObjectItem(request_msg, T_PERIOD_1_PARAMETER_LIST);
 
-        arSize = cJSON_GetArraySize(paramList);
+        arrSize = cJSON_GetArraySize(param_list_obj);
 
-        for ( i = 0; i < arSize; i++) {
-            params = cJSON_GetArrayItem(paramList, i);
-            if(!params) {
-                printf("Failed on cJSON_GetArrayItem() \n");
+        for ( item = 0; item < arrSize; item++) {
+            param_item = cJSON_GetArrayItem(param_list_obj, item);
+            if(!param_item) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR ,"[%s]Failed in cJSON_GetArrayItem() \n", __FUNCTION__);
             }
             else {
-                wifiParams_Tele_Period1.paramlist = g_list_prepend(wifiParams_Tele_Period1.paramlist, g_strdup(params->valuestring));
+                telemery_params->paramlist = g_list_prepend(telemery_params->paramlist, g_strdup(param_item->valuestring));
             }
         }
-        if(wifiParams_Tele_Period1.paramlist)
-            wifiParams_Tele_Period1.paramlist = g_list_reverse(wifiParams_Tele_Period1.paramlist);
-
-        wifiParams_Tele_Period2.timePeriod =  cJSON_GetObjectItem(request_msg, T_PERIOD_2_INTERVAL)->valueint;
-
-        paramList = cJSON_GetObjectItem(request_msg, T_PERIOD_2_PARAMETER_LIST);
-
-        arSize = cJSON_GetArraySize(paramList);
-
-        for ( i = 0; i < arSize; i++) {
-            params = cJSON_GetArrayItem(paramList, i);
-            if(!params) {
-                printf("Failed on cJSON_GetArrayItem() \n");
-            }
-            else {
-                wifiParams_Tele_Period2.paramlist = g_list_prepend(wifiParams_Tele_Period2.paramlist, g_strdup(params->valuestring));
-            }
-        }
-        if(wifiParams_Tele_Period2.paramlist) {
-            wifiParams_Tele_Period2.paramlist = g_list_reverse(wifiParams_Tele_Period2.paramlist);
-        }
-#endif /*USE_RDK_WIFI_HAL*/
+        if(telemery_params->paramlist)
+            telemery_params->paramlist = g_list_reverse(telemery_params->paramlist);
 
         cJSON_Delete(request_msg);
     }
@@ -397,7 +389,7 @@ void teleParamList_free (gpointer val)
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
     if(val) {
         RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"[%s] :\"%s\"\n", __FUNCTION__, (gchar *)val);
-                g_free (val);
+        g_free (val);
     }
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
 }
