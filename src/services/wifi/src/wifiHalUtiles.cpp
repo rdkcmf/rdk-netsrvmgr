@@ -829,8 +829,8 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     else
     {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__, ap_ssid);
-        strncpy(ConnParams->ssidSession.ssid, ap_ssid, strlen(ap_ssid));
-        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, strlen(ap_passphrase));
+        strncpy(ConnParams->ssidSession.ssid, ap_ssid, strlen(ConnParams->ssidSession.ssid));
+        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, strlen(ConnParams->ssidSession.passphrase));
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
