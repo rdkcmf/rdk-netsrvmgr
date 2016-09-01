@@ -19,6 +19,11 @@ if LOSTFOUND
 AM_CXXFLAGS += -DENABLE_LOST_FOUND
 endif
 
+if XCAM_SUPPORT
+AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
+sysconf_DATA = $(top_srcdir)/conf/netsrvmgr.conf
+endif
+
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \
@@ -30,6 +35,11 @@ endif
 if LOSTFOUND
 AM_LDFLAGS += -llaf -lcurl
 endif
+
+if XCAM_SUPPORT
+AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
+endif
+
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 

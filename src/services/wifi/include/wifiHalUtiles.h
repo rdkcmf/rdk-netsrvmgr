@@ -18,6 +18,13 @@
 #include "wifiSrvMgrIarmIf.h"
 
 #include "hostIf_tr69ReqHandler.h"
+
+#ifdef ENABLE_XCAM_SUPPORT
+extern "C" {
+#include "rdkc_api.h"
+}
+#endif
+
 #ifdef ENABLE_LOST_FOUND
 #include "authserviceIARM.h"
 #endif
@@ -64,7 +71,9 @@ extern "C" {
 #define MODELNAME_SIZE  10
 #define MANUFACTURER_SIZE   40
 #define WIFIMAC_SIZE    20
-
+#define DEVICEID_SIZE 512
+#define PARTNERID_SIZE 128
+#define TIME_FORMAT "%Y-%m-%d %H:%M:%S"
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 WiFiStatusCode_t get_WifiRadioStatus();
 WiFiConnectionTypeCode_t get_WifiConnectionType();
@@ -81,7 +90,7 @@ INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int,char *,char *,char *,char *,int conType = 0);
 bool scan_Neighboring_WifiAP(char *);
-bool lastConnectedSSID();
+bool lastConnectedSSID(WiFiConnectionStatus *ConnParams);
 void monitor_WiFiStatus();
 bool clearSSID_On_Disconnect_AP();
 #endif
@@ -95,7 +104,11 @@ bool getLAFssid();
 WiFiLNFStatusCode_t get_WiFiLNFStatusCode();
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType);
 bool getmacaddress(gchar* ifname,GString *data);
+bool getDeviceInfo(laf_device_info_t *dev_info);
 bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType);
+bool addSwitchToPrivateResults(int lnfError,char *currTime);
+bool convertSwitchToPrivateResultsToJson(char *buffer);
+bool clearSwitchToPrivateResults();
 int laf_wifi_connect(laf_wifi_ssid_t* const wificred);
 int laf_wifi_disconnect(void);
 void log_message(laf_loglevel_t level, char const* function, int line, char const* msg);

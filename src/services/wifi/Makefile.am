@@ -16,6 +16,11 @@ endif
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -ldbus-1  -lIARMBus 
 
+if XCAM_SUPPORT
+AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
+AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
+endif
+
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal
 endif
