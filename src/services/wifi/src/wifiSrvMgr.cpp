@@ -716,41 +716,10 @@ IARM_Result_t WiFiNetworkMgr::setRadioProps(void *arg)
 IARM_Result_t WiFiNetworkMgr::getRadioStatsProps(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
-#ifdef USE_RDK_WIFI_HAL
-    int radioIndex=1;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-
     IARM_BUS_WiFi_DiagsPropParam_t *param = (IARM_BUS_WiFi_DiagsPropParam_t *)arg;
-    wifi_radioTrafficStats_t *trafficStats =(wifi_radioTrafficStats_t *) malloc(sizeof(wifi_radioTrafficStats_t));
-    if(trafficStats == NULL)
-    {
-        printf("Malloc Memory allocation failure\n");
-        return IARM_RESULT_SUCCESS;
-    }
-    printf("malloc allocated = %d ", malloc_usable_size(trafficStats));
-    if (wifi_getRadioTrafficStats(radioIndex, trafficStats) == RETURN_OK) {
-        param->data.radio_stats.params.bytesSent = trafficStats->radio_BytesSent;
-        param->data.radio_stats.params.bytesReceived  = trafficStats->radio_BytesReceived;
-        param->data.radio_stats.params.packetsSent = trafficStats->radio_PacketsSent;
-        param->data.radio_stats.params.packetsReceived = trafficStats->radio_PacketsReceived;
-        param->data.radio_stats.params.errorsSent = trafficStats->radio_ErrorsSent;
-        param->data.radio_stats.params.errorsReceived = trafficStats->radio_ErrorsReceived;
-        param->data.radio_stats.params.discardPacketsSent  = trafficStats->radio_DiscardPacketsSent;
-        param->data.radio_stats.params.discardPacketsReceived  = trafficStats->radio_DiscardPacketsReceived;
-        param->data.radio_stats.params.plcErrorCount = trafficStats->radio_DiscardPacketsReceived;
-        param->data.radio_stats.params.fcsErrorCount = trafficStats->radio_FCSErrorCount;
-        param->data.radio_stats.params.invalidMACCount = trafficStats->radio_InvalidMACCount;
-        param->data.radio_stats.params.packetsOtherReceived = trafficStats->radio_PacketsOtherReceived;
-        param->data.radio_stats.params.noiseFloor = trafficStats->radio_NoiseFloor;
-
-    }
-    else
-    {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioTrafficStats FAILURE \n", __FUNCTION__, __LINE__);
-    }
-    free(trafficStats);
-
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+#ifdef USE_RDK_WIFI_HAL
+    WiFi_Radio_Stats_Diag_Params params;
+    param->status = getRadioStats(&param->data.radio_stats.params);
 #endif
     return ret;
 }

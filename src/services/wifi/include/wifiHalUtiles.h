@@ -108,6 +108,7 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value);
 void put_boolean(char *ptr, bool val);
 bool storeMfrWifiCredentials(void);
 bool eraseMfrWifiCredentials(void);
+bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params);
 void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *);
 void getEndPointInfo(WiFi_EndPoint_Diag_Params *);
 #endif /* WIFIHALUTILES_H_ */
