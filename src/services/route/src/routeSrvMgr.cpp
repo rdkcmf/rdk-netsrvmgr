@@ -25,11 +25,14 @@
 
 #define ROUTE_PRIORITY 50
 #define GW_SETUP_FILE "/lib/rdk/gwSetup.sh"
+#define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
 #define MAX_CJSON_EMPTY_LENGTH 40
 #define IP_SIZE 46
 #define SYSTEM_COMMAND_SHELL_NOT_FOUND 127
 #define SYSTEM_COMMAND_SHELL_SUCESS 23
 #define SYSTEM_COMMAND_ERROR -1
+#define DHCP_LEASE_FLAG "/tmp/usingdhcp"
+
 
 int messageLength;
 GList* gwList = NULL;
@@ -183,6 +186,7 @@ void* getGatewayRouteDataThrd(void* arg)
 {
     int ret = 0;
     int msgLength;
+    gint retType;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     while (true ) {
         pthread_mutex_lock(&mutexRoute);
@@ -208,6 +212,27 @@ void* getGatewayRouteDataThrd(void* arg)
         else
         {
             RouteNetworkMgr::delRouteList();
+        }
+        if((g_list_length(gwRouteInfo) == 0) && ( access( DHCP_LEASE_FLAG, F_OK ) == -1 ))
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Triggering dhcp lease since no XG gateway  \n", __FUNCTION__, __LINE__);
+            system(TRIGGER_DHCP_LEASE_FILE);
+            if(retType == SYSTEM_COMMAND_ERROR)
+            {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error has occured in shell command  \n", __FUNCTION__, __LINE__);
+            }
+            else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
+            {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] That shell command is not found  \n", __FUNCTION__, __LINE__);
+            }
+            else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_SUCESS)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call dhcp lease success %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+            }
+	    else
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] unknown error   %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+            }
         }
 //        }
 //	else
@@ -737,7 +762,7 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
             }
             else
             {
-                g_string_printf(command, "route -A inet6 del default gw %s", ipAddr);
+                g_string_printf(command, "ip -6 route del default via %s", ipAddr);
             }
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Remove Route ******* %s ******* \n", __FUNCTION__, __LINE__,command->str);
             retType=system(command->str);
