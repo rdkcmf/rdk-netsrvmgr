@@ -1859,15 +1859,16 @@ void logs_Period2_Params()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
     time(&start_t);
-
-    if(print_flag) {
-
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] print_flag : %d\n", __FUNCTION__, __LINE__, print_flag);
+    if(print_flag)
+    {
         if(NULL != wifiParams_Tele_Period2.paramlist)
         {
-            char ssid_string[BUFF_MAX];
+            char bssid_string[BUFF_MAX];
             int ssidIndex = 1;
-            memset(ssid_string,0, BUFF_MAX);
-            wifi_getBaseBSSID(ssidIndex, ssid_string);
+            memset(bssid_string,0, BUFF_MAX);
+            char output_string[BUFF_MAX];
+            wifi_getBaseBSSID(ssidIndex, bssid_string);
 
             WiFiConnectionStatus currSsidInfo;
             memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
@@ -1876,29 +1877,29 @@ void logs_Period2_Params()
             GList *iter = g_list_first(wifiParams_Tele_Period2.paramlist);
             while(iter)
             {
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d]%s \n", __FUNCTION__, __LINE__, (char *)iter->data);
                 /* Device.WiFi.Endpoint.{i}.NumberOfEntries*/
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "NumberOfEntries")) {
                     int noOfEndpoint = 1;
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, noOfEndpoint);
                 }
 
-                if((g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.1.Profile.{i}.SSID"))
-                        || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.SSID.{i}.SSID"))
-                        || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.{i}.SSIDReference")))
+                if((g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.1.Profile.1.SSID"))
+                        || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.SSID.1.SSID"))
+                        || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.1.SSIDReference")))
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, ssid_string);
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, currSsidInfo.ssidSession.ssid);
                 }
 
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "BSSID")) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, currSsidInfo);
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, bssid_string);
                 }
 
                 /* Device.WiFi.EndPoint.{i}.Profile.{i}.SSID*/
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Name")) {
-                    char output_string[BUFF_MAX];
                     memset(output_string,0, BUFF_MAX);
                     if(wifi_getSSIDName(ssidIndex, output_string) == RETURN_OK) {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, output_string);
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, output_string);
                     }
                 }
 
