@@ -63,7 +63,7 @@ int  RouteNetworkMgr::Start()
     bool retVal=false;
     IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME,IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE,_evtHandler);
     IARM_Bus_RegisterCall(IARM_BUS_ROUTE_MGR_API_getCurrentRouteData, getCurrentRouteData);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     getGatewayRouteData();
 }
@@ -84,7 +84,7 @@ int  RouteNetworkMgr::Start()
  */
 static void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if (strcmp(owner, IARM_BUS_SYSMGR_NAME) == 0) {
         switch(eventId) {
         case IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE:
@@ -95,13 +95,13 @@ static void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, s
             if(0 == pthread_cond_signal(&condRoute))
             {
                 messageLength = eventData->data.xupnpData.deviceInfoLength;
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Signal to fetch the data from upnp  %d \n", __FUNCTION__, __LINE__, eventData->data.xupnpData.deviceInfoLength );
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signal to fetch the data from upnp  %d \n", MODULE_NAME,__FUNCTION__, __LINE__, eventData->data.xupnpData.deviceInfoLength );
             }
             pthread_mutex_unlock(&mutexRoute);
             break;
         }
         }
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
 }
 
@@ -120,7 +120,7 @@ bool RouteNetworkMgr::getGatewayResults(char* gatewayResults, unsigned int messa
 {
     IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t *param = NULL;
     IARM_Result_t ret ;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     IARM_Malloc(IARM_MEMTYPE_PROCESSLOCAL, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + messageLength + 1, (void**)&param);
     param->bufLength = messageLength;
@@ -135,11 +135,11 @@ bool RouteNetworkMgr::getGatewayResults(char* gatewayResults, unsigned int messa
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch  \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch  \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gatewayResults %s \n", __FUNCTION__, __LINE__,gatewayResults);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] gatewayResults %s \n", MODULE_NAME,__FUNCTION__, __LINE__,gatewayResults);
     IARM_Free(IARM_MEMTYPE_PROCESSLOCAL, param);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 void getGatewayRouteData()
@@ -147,14 +147,14 @@ void getGatewayRouteData()
     pthread_t getGatewayRouteDataThread;
     pthread_attr_t attr;
     int rc;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     rc = pthread_create(&getGatewayRouteDataThread, &attr, &getGatewayRouteDataThrd, NULL);
     if (rc) {
         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"ERROR; return code from pthread_create() is %d\n", rc);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 /**
@@ -170,12 +170,12 @@ gboolean RouteNetworkMgr::storeRouteDetails(unsigned int messageLength)
 {
     char upnpResults[messageLength+1];
     gboolean retVal=FALSE;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     getGatewayResults(&upnpResults[0], messageLength);
     if(parse_store_gateway_data(&upnpResults[0]))
         retVal=TRUE;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
 
@@ -183,13 +183,13 @@ void* getGatewayRouteDataThrd(void* arg)
 {
     int ret = 0;
     int msgLength;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     while (true ) {
         pthread_mutex_lock(&mutexRoute);
         while(signalUpnpDataReady == false) {
             pthread_cond_wait(&condRoute, &mutexRoute);
         }
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%d] ***** Started fetching gateway data from upnp msg len = %d  ***** \n", __FUNCTION__, __LINE__,messageLength );
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Started fetching gateway data from upnp msg len = %d  ***** \n", MODULE_NAME,__FUNCTION__, __LINE__,messageLength );
         msgLength = messageLength;
         signalUpnpDataReady=false;
         pthread_mutex_unlock(&mutexRoute);
@@ -211,16 +211,16 @@ void* getGatewayRouteDataThrd(void* arg)
         }
         if((g_list_length(gwRouteInfo) == 0) && ( access( DHCP_LEASE_FLAG, F_OK ) == -1 ))
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Triggering dhcp lease since no XG gateway  \n",__FUNCTION__, __LINE__);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
             netSrvMgrUtiles::triggerDhcpLease();
         }
 //        }
 //	else
 //	{
-//            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%d] No Gateway in UPNP list  msgLength = %d msglenlocal = %d  ***** \n", __FUNCTION__, __LINE__,messageLength,msgLength );
+//            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] No Gateway in UPNP list  msgLength = %d msglenlocal = %d  ***** \n", MODULE_NAME,__FUNCTION__, __LINE__,messageLength,msgLength );
 //	}
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 /**
@@ -235,12 +235,12 @@ gboolean checkvalidip( char* ipAddress)
 {
     struct in_addr addr4;
     struct in6_addr addr6;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     int validip4 = inet_pton(AF_INET, ipAddress, &addr4);
     int validip6 = inet_pton(AF_INET6, ipAddress, &addr6);
     if (g_strrstr(g_strstrip(ipAddress),"null") || ! *ipAddress )
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] ipaddress are empty %s \n", __FUNCTION__, __LINE__ ,ipAddress);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ipaddress are empty %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,ipAddress);
         return TRUE;
     }
     if ((validip4 == 1 ) || (validip6 == 1 ))
@@ -249,7 +249,7 @@ gboolean checkvalidip( char* ipAddress)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Not a valid ip address %s \n", __FUNCTION__, __LINE__ ,ipAddress);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Not a valid ip address %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,ipAddress);
         return FALSE;
     }
 }
@@ -263,10 +263,10 @@ gboolean checkvalidip( char* ipAddress)
  */
 gboolean checkvalidhostname( char* hostname)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if (g_strrstr(g_strstrip(hostname),"null") || ! *hostname )
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] hostname  values are empty %s \n", __FUNCTION__, __LINE__ ,hostname);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] hostname  values are empty %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,hostname);
         return TRUE;
     }
     gchar **tokens = g_strsplit_set(hostname," ;\n\0", -1);
@@ -279,7 +279,7 @@ gboolean checkvalidhostname( char* hostname)
             return TRUE;
         }
     }
-    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] no valid ip so rejecting the dns values %s \n", __FUNCTION__, __LINE__ ,hostname);
+    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] no valid ip so rejecting the dns values %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,hostname);
     if(tokens)
         g_strfreev(tokens); /*CID-24000*/
     return FALSE;
@@ -287,7 +287,7 @@ gboolean checkvalidhostname( char* hostname)
 
 gboolean RouteNetworkMgr::init_gwydata(GwyDeviceData* gwydata)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwydata->serial_num = g_string_new(NULL);
     gwydata->gwyip = g_string_new(NULL);
     gwydata->gwyipv6 = g_string_new(NULL);
@@ -295,13 +295,13 @@ gboolean RouteNetworkMgr::init_gwydata(GwyDeviceData* gwydata)
     gwydata->isRouteSet=FALSE;
     gwydata->dnsconfig = g_string_new(NULL);
     gwydata->devicetype = g_string_new(NULL);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return TRUE;
 }
 
 gboolean RouteNetworkMgr::free_gwydata(GwyDeviceData* gwydata)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if(gwydata)
     {
         g_string_free(gwydata->serial_num, TRUE);
@@ -311,7 +311,7 @@ gboolean RouteNetworkMgr::free_gwydata(GwyDeviceData* gwydata)
         g_string_free(gwydata->ipv6prefix, TRUE);
         g_string_free(gwydata->devicetype, TRUE);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return TRUE;
 }
 gboolean RouteNetworkMgr::readDevFile(char *deviceFile,char *mocaIface,char *wifiIface)
@@ -320,16 +320,16 @@ gboolean RouteNetworkMgr::readDevFile(char *deviceFile,char *mocaIface,char *wif
     gboolean                result = FALSE;
     gchar* devfilebuffer = NULL;
     gchar counter=0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if (deviceFile == NULL)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] device properties file not found \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] device properties file not found \n", MODULE_NAME,__FUNCTION__, __LINE__);
         return result;
     }
     result = g_file_get_contents (deviceFile, &devfilebuffer, NULL, &error);
     if (result == FALSE)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No contents in device properties \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] No contents in device properties \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     else
     {
@@ -370,7 +370,7 @@ gboolean RouteNetworkMgr::readDevFile(char *deviceFile,char *mocaIface,char *wif
     }
     if((!mocaIface) && (!wifiIface))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] MOCA_INTERFACE  and WIFI_INTERFACE  not found in %s \n", __FUNCTION__, __LINE__,deviceFile);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] MOCA_INTERFACE  and WIFI_INTERFACE  not found in %s \n", MODULE_NAME,__FUNCTION__, __LINE__,deviceFile);
     }
     else
         result = TRUE;
@@ -379,13 +379,13 @@ gboolean RouteNetworkMgr::readDevFile(char *deviceFile,char *mocaIface,char *wif
         /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
         g_clear_error(&error);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return result;
 }
 gboolean RouteNetworkMgr::delGatewayList()
 {
     guint gwListLength=0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwListLength = g_list_length(gwList);
     if (gwListLength > 0)
     {
@@ -404,15 +404,15 @@ gboolean RouteNetworkMgr::delGatewayList()
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] NO gateway data available \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] NO gateway data available \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 gboolean RouteNetworkMgr::delRouteList()
 {
     guint gwRouteLength=0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwRouteLength = g_list_length(gwRouteInfo);
     if (gwRouteLength > 0)
     {
@@ -429,14 +429,14 @@ gboolean RouteNetworkMgr::delRouteList()
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] NO gateway data available \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] NO gateway data available \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     GList *tempGwList;
     guint counter;
     gboolean retVal=TRUE;
@@ -465,11 +465,11 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
                         g_string_assign(gwydata->ipv6prefix,cJSON_GetObjectItem(gwData, "ipv6Prefix")->valuestring);
                         g_string_assign(gwydata->devicetype,cJSON_GetObjectItem(gwData, "DevType")->valuestring);
                         gwList=g_list_append(gwList,gwydata);
-                        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] serial_num  %s gwcount %d \n", __FUNCTION__, __LINE__ ,gwydata->serial_num->str,g_list_length(gwList));
+                        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] serial_num  %s gwcount %d \n", MODULE_NAME,__FUNCTION__, __LINE__ ,gwydata->serial_num->str,g_list_length(gwList));
                     }
                     else
                     {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] not a valid gateway %s \n", __FUNCTION__, __LINE__,cJSON_GetObjectItem(gwData, "sno")->valuestring );
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] not a valid gateway %s \n", MODULE_NAME,__FUNCTION__, __LINE__,cJSON_GetObjectItem(gwData, "sno")->valuestring );
                     }
                 }
             }
@@ -477,7 +477,7 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
             {
                 checkExistingRouteValid();
                 retVal=FALSE;
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] No gwdata to parse gwcount \n", __FUNCTION__, __LINE__ );
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] No gwdata to parse gwcount \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             }
             cJSON_Delete(rootJson);
         }
@@ -490,10 +490,10 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] gateway list is empty \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] gateway list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         retVal=FALSE;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
 
@@ -503,17 +503,17 @@ gboolean RouteNetworkMgr::getRouteInterface(char * routeIf)
     char mocaIf[10]= {0};
     char wifiIf[10]= {0};
     char ipAddressBuffer[46];
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if(readDevFile(devFile,mocaIf,wifiIf))
     {
         int result = getipaddress(mocaIf,ipAddressBuffer,FALSE);
         if (!result)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Could not locate the ipaddress of the broadcast interface %s \n", __FUNCTION__, __LINE__,mocaIf );
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Could not locate the ipaddress of the broadcast interface %s \n", MODULE_NAME,__FUNCTION__, __LINE__,mocaIf );
             result = getipaddress(wifiIf,ipAddressBuffer,FALSE);
             if (!result)
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Could not locate the ipaddress of the broadcast interface %s \n", __FUNCTION__, __LINE__,wifiIf );
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Could not locate the ipaddress of the broadcast interface %s \n", MODULE_NAME,__FUNCTION__, __LINE__,wifiIf );
                 return FALSE;
             }
             else
@@ -528,10 +528,10 @@ gboolean RouteNetworkMgr::getRouteInterface(char * routeIf)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No route interface available\n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] No route interface available\n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit \n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return TRUE;
 }
 
@@ -543,13 +543,13 @@ gboolean RouteNetworkMgr::setRoute() {
     GList *element = NULL;
     gboolean retVal=FALSE;
     GwyDeviceData *gwdata;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     element = g_list_first(gwList);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gw list count %d \n", __FUNCTION__, __LINE__ ,g_list_length(gwList));
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] gw list count %d \n", MODULE_NAME,__FUNCTION__, __LINE__ ,g_list_length(gwList));
     getRouteInterface(routeIf);
     if(!routeIf)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Interface available to add route  \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] No Interface available to add route  \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return retVal;
     }
     while(element)
@@ -558,7 +558,7 @@ gboolean RouteNetworkMgr::setRoute() {
         element = g_list_next(element);
         if(!gwdata)
         {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gwdata NULL \n", __FUNCTION__, __LINE__ );
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] gwdata NULL \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             return FALSE;
         }
         if(g_strcmp0(gwdata->devicetype->str,"XG2") == 0)
@@ -588,21 +588,21 @@ gboolean RouteNetworkMgr::setRoute() {
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->ipv6prefix->str);
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->gwyipv6->str);
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->devicetype->str);
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Calling gateway script %s  \n", __FUNCTION__, __LINE__,GwRouteParam->str);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Calling gateway script %s  \n", MODULE_NAME,__FUNCTION__, __LINE__,GwRouteParam->str);
             retType=system(GwRouteParam->str);
             g_string_free(GwRouteParam,TRUE);
         }
         if(retType == SYSTEM_COMMAND_ERROR)
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error has occured in shell command  \n", __FUNCTION__, __LINE__);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error has occured in shell command  \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
         else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] That shell command is not found  \n", __FUNCTION__, __LINE__);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] That shell command is not found  \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
         else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_SUCESS)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call route set successfully %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] system call route set successfully %d  \n", MODULE_NAME,__FUNCTION__, __LINE__,WEXITSTATUS(retType));
             gwdata->isRouteSet=TRUE;
             if(checkIpMode(gwdata->ipv6prefix->str))
             {
@@ -616,10 +616,10 @@ gboolean RouteNetworkMgr::setRoute() {
         }
         else
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] no change in routing information %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] no change in routing information %d  \n", MODULE_NAME,__FUNCTION__, __LINE__,WEXITSTATUS(retType));
         }
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
 
@@ -638,7 +638,7 @@ int RouteNetworkMgr::getipaddress(char* ifname, char* ipAddressBuffer, gboolean 
     struct ifaddrs * ifAddrStruct=NULL;
     struct ifaddrs * ifa=NULL;
     void * tmpAddrPtr=NULL;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     getifaddrs(&ifAddrStruct);
     //char addressBuffer[INET_ADDRSTRLEN] = NULL;
     int found=0;
@@ -674,13 +674,13 @@ int RouteNetworkMgr::getipaddress(char* ifname, char* ipAddressBuffer, gboolean 
         }
     }
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return found;
 }
 
 gboolean RouteNetworkMgr::checkAddRouteInfo(char *ipAddr,bool isIPv4,char *ipv6Pfix)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     routeInfo *gwdata=NULL;
     gwRouteInfo=g_list_first(gwRouteInfo);
     GList* tmpGWRouteInfo=g_list_find_custom(gwRouteInfo,ipAddr,(GCompareFunc)g_list_find_ip);
@@ -699,15 +699,15 @@ gboolean RouteNetworkMgr::checkAddRouteInfo(char *ipAddr,bool isIPv4,char *ipv6P
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Route %s is already in the list \n", __FUNCTION__, __LINE__, ipAddr);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Route %s is already in the list \n", MODULE_NAME,__FUNCTION__, __LINE__, ipAddr);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 }
 
 gboolean RouteNetworkMgr::addRouteToList(char *ipAddr,bool isIPv4,char *ipv6Pfix)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     routeInfo *routeInfoData = g_new(routeInfo,1);
     routeInfoData->isIPv4 = isIPv4;
     routeInfoData->ipStr = g_string_new(NULL);
@@ -715,8 +715,8 @@ gboolean RouteNetworkMgr::addRouteToList(char *ipAddr,bool isIPv4,char *ipv6Pfix
     g_string_assign(routeInfoData->ipStr,ipAddr);
     g_string_assign(routeInfoData->ipv6Pfix,ipv6Pfix);
     gwRouteInfo=g_list_prepend(gwRouteInfo,routeInfoData);
-    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] length of route list is %d \n",__FUNCTION__, __LINE__,g_list_length(gwRouteInfo));
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] length of route list is %d \n",MODULE_NAME,__FUNCTION__, __LINE__,g_list_length(gwRouteInfo));
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 
 }
@@ -727,7 +727,7 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
     routeInfo *routeInfoData;
     gint retType;
     gboolean retVal=false;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwRouteLength = g_list_length(gwRouteInfo);
     if (gwRouteLength > 0)
     {
@@ -736,7 +736,7 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
         if( gwRouteInfo != NULL)
         {
             GString* command=g_string_new(NULL);
-	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Route to be removed  ******* %s ******* \n", __FUNCTION__, __LINE__,ipAddr);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Route to be removed  ******* %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,ipAddr);
             if (isIPv4)
             {
                 g_string_printf(command, "route del default gw %s", ipAddr);
@@ -745,19 +745,19 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
             {
                 g_string_printf(command, "ip -6 route del default via %s", ipAddr);
             }
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Remove Route ******* %s ******* \n", __FUNCTION__, __LINE__,command->str);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Remove Route ******* %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,command->str);
             retType=system(command->str);
             if(retType == SYSTEM_COMMAND_ERROR)
             {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error has occured in shell command  \n", __FUNCTION__, __LINE__);
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error has occured in shell command  \n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
             else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
             {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] That shell command is not found  \n", __FUNCTION__, __LINE__);
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] That shell command is not found  \n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
             else
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call route set successfully %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] system call route set successfully %d  \n", MODULE_NAME,__FUNCTION__, __LINE__,WEXITSTATUS(retType));
                 retVal=true;
             }
             sendCurrentRouteData();
@@ -767,15 +767,15 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
         }
         else
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Existing route exist in the new list \n", __FUNCTION__, __LINE__);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Existing route exist in the new list \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
 gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if((routeInfoData) && (gwRouteInfo))
     {
         gwRouteInfo = g_list_first(gwRouteInfo);
@@ -789,9 +789,9 @@ gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] route info data is NULL \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route info data is NULL \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 
 }
@@ -799,10 +799,10 @@ gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
 bool checkIpMode(char *v6Prefix)
 {
     bool retVal=TRUE;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if (g_strrstr(g_strstrip(v6Prefix),"null") ||  ! *(v6Prefix))
         retVal=FALSE;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
 
@@ -814,7 +814,7 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
     routeInfo *routeInfoData=NULL;
     GList* tmpGWList;
     char tempIP[46];
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwRouteLength = g_list_length(gwRouteInfo);
     tempGwRouteLength = gwRouteLength;
     if (gwRouteLength > 0)
@@ -832,7 +832,7 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
             if(!tmpGWList)
 //            if((g_list_find(gwList,tempIP) == NULL))
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] route %s  is not there in new list proceed to remove it \n", __FUNCTION__, __LINE__,routeInfoData->ipStr->str);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route %s  is not there in new list proceed to remove it \n", MODULE_NAME,__FUNCTION__, __LINE__,routeInfoData->ipStr->str);
                 checkRemoveRouteInfo(routeInfoData->ipStr->str,routeInfoData->isIPv4);
             }
 	    else if((!routeInfoData->isIPv4) && (gwdata) && (g_strcmp0(g_strstrip(routeInfoData->ipv6Pfix->str),g_strstrip(gwdata->ipv6prefix->str)) != 0))
@@ -842,11 +842,11 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
             }
             else
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] route   is there in new list \n", __FUNCTION__, __LINE__);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route   is there in new list \n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
         }
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if((g_list_length(gwRouteInfo) != 0 ) && (g_list_length(gwRouteInfo) != tempGwRouteLength))
     {
 	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] existing route are fine \n",__FUNCTION__, __LINE__);
@@ -859,7 +859,7 @@ gboolean RouteNetworkMgr::printExistingRouteValid()
     guint gwRouteLength=0;
     GwyDeviceData *gwdata = NULL;
     routeInfo *routeInfoData=NULL;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwRouteLength = g_list_length(gwRouteInfo);
     if (gwRouteLength > 0)
     {
@@ -868,14 +868,14 @@ gboolean RouteNetworkMgr::printExistingRouteValid()
         {
             routeInfoData = (routeInfo*)element->data;
             element = g_list_next(element);
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] ipstring %s isipv4 %d gwRouteLength %d \n", __FUNCTION__, __LINE__,routeInfoData->ipStr->str,routeInfoData->isIPv4,gwRouteLength);
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] ipstring %s isipv4 %d gwRouteLength %d \n", MODULE_NAME,__FUNCTION__, __LINE__,routeInfoData->ipStr->str,routeInfoData->isIPv4,gwRouteLength);
         }
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] local route list is empty \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] local route list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 }
 
@@ -885,9 +885,9 @@ gboolean RouteNetworkMgr::printExistingRouteValid()
 gboolean RouteNetworkMgr::printGatewayList()
 {
     guint gwListLength=0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     gwListLength = g_list_length(gwList);
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] gateway count %d \n", __FUNCTION__, __LINE__,gwListLength);
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] gateway count %d \n", MODULE_NAME,__FUNCTION__, __LINE__,gwListLength);
     if (gwListLength > 0)
     {
         GwyDeviceData *gwdata = NULL;
@@ -896,20 +896,20 @@ gboolean RouteNetworkMgr::printGatewayList()
         {
             gwdata = (GwyDeviceData*)element->data;
             element = g_list_next(element);
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] gateway list %s \n", __FUNCTION__, __LINE__,gwdata->serial_num->str);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] gateway list %s \n", MODULE_NAME,__FUNCTION__, __LINE__,gwdata->serial_num->str);
         }
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] local gateway list is empty \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] local gateway list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 }
 
 guint RouteNetworkMgr::g_list_find_ip(routeInfo* gwData, gconstpointer* ip )
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if (g_strcmp0(g_strstrip(gwData->ipStr->str),g_strstrip((gchar *)ip)) == 0)
         return 0;
     else
@@ -917,7 +917,7 @@ guint RouteNetworkMgr::g_list_find_ip(routeInfo* gwData, gconstpointer* ip )
 }
 guint RouteNetworkMgr::g_list_find_gw(GwyDeviceData* gwData, gconstpointer* ip )
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if ((g_strcmp0(g_strstrip(gwData->gwyip->str),g_strstrip((gchar *)ip)) == 0) || (g_strcmp0(g_strstrip(gwData->gwyipv6->str),g_strstrip((gchar *)ip)) == 0))
 //    if ((g_strcmp0(g_strstrip(gwData->gwyip->str),g_strstrip((gchar *)ip)) == 0) )
         return 0;
@@ -929,7 +929,7 @@ gboolean RouteNetworkMgr::getCurrentRoute(char * routeIp,gboolean* isIpv4)
 {
     FILE *pf;
     char data[100]= {0};
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     GString* command=g_string_new(NULL);
     *isIpv4=lastRouteSetV4;
     if(lastRouteSetV4)
@@ -943,19 +943,19 @@ gboolean RouteNetworkMgr::getCurrentRoute(char * routeIp,gboolean* isIpv4)
     pf=popen(command->str,"r");
     if(!pf)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] pipe to open route failed %s \n", __FUNCTION__, __LINE__,command->str );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] pipe to open route failed %s \n", MODULE_NAME,__FUNCTION__, __LINE__,command->str );
         return FALSE;
     }
 
     fgets(data,sizeof(data) , pf);
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Current Route set is %s \n", __FUNCTION__, __LINE__,data );
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Current Route set is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,data );
     g_stpcpy(routeIp,g_strstrip(data));
     g_string_free(command,TRUE);
     if(pclose(pf))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] pipe command stream not closed properly \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] pipe command stream not closed properly \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return TRUE;
 }
 
@@ -964,21 +964,21 @@ void sendDefaultGatewayRoute()
     pthread_t sendDefaultGatewayRouteThread;
     pthread_attr_t attr;
     int rc;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     rc = pthread_create(&sendDefaultGatewayRouteThread, &attr, &sendDefaultGatewayRouteThrd, NULL);
     if (rc) {
         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"ERROR; sendDefaultGatewayRoute return code from pthread_create() is %d\n", rc);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 void* sendDefaultGatewayRouteThrd(void* arg)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     RouteNetworkMgr::sendCurrentRouteData();
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 gboolean RouteNetworkMgr::sendCurrentRouteData()
@@ -988,10 +988,10 @@ gboolean RouteNetworkMgr::sendCurrentRouteData()
     gboolean retVal=FALSE;
     gboolean isIpv4;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if(getCurrentRoute(routeIp,&isIpv4))
     {
-	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] route data to be sent is %s and isIpv4 %d \n", __FUNCTION__, __LINE__,routeIp,isIpv4);
+	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route data to be sent is %s and isIpv4 %d \n", MODULE_NAME,__FUNCTION__, __LINE__,routeIp,isIpv4);
         strcpy(data.routeIp,routeIp);
         data.ipv4=isIpv4;
         if(!routeIf)
@@ -999,21 +999,21 @@ gboolean RouteNetworkMgr::sendCurrentRouteData()
     }
     if (IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME, (IARM_EventId_t) IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA, (void *)&data, sizeof(data)) == IARM_RESULT_SUCCESS)
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Successfully send IARM_BUS_NETSRVMGR_Route_Event event \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully send IARM_BUS_NETSRVMGR_Route_Event event \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         retVal=TRUE;
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] IARM_BUS_NETSRVMGR_Route_Event IARM failed \n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_NETSRVMGR_Route_Event IARM failed \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
 
 IARM_Result_t RouteNetworkMgr::getCurrentRouteData(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     IARM_Bus_RouteSrvMgr_RouteData_Param_t *param = (IARM_Bus_RouteSrvMgr_RouteData_Param_t *)arg;
     if(getCurrentRoute(param->route.routeIp,&param->route.ipv4))
     {
@@ -1023,11 +1023,11 @@ IARM_Result_t RouteNetworkMgr::getCurrentRouteData(void *arg)
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] no current route available \n", __FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] no current route available \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         param->status = false;
         ret=IARM_RESULT_IPCCORE_FAIL;
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }

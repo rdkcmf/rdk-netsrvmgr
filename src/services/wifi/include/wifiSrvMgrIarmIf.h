@@ -16,6 +16,9 @@
 //#include "libIBus.h"
 #include "libIARM.h"
 
+#define MODULE_NAME "WIFI_MODULE"
+#define SUB_MODULE_NAME "LNF"
+
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
 #define BUFF_LENGTH_64  65
