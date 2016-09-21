@@ -828,9 +828,11 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     }
     else
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__, ap_ssid);
-        strncpy(ConnParams->ssidSession.ssid, ap_ssid, strlen(ConnParams->ssidSession.ssid));
-        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, strlen(ConnParams->ssidSession.passphrase));
+        strncpy(ConnParams->ssidSession.ssid, ap_ssid, sizeof(ConnParams->ssidSession.ssid)-1);
+        ConnParams->ssidSession.ssid[sizeof(ConnParams->ssidSession.ssid)-1]='\0';
+        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, sizeof(ConnParams->ssidSession.passphrase)-1);
+        ConnParams->ssidSession.passphrase[sizeof(ConnParams->ssidSession.passphrase)-1]='\0';
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__,ConnParams->ssidSession.ssid);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
@@ -1598,13 +1600,13 @@ bool storeMfrWifiCredentials(void)
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in retrieving the stored wifi credentials \n",__FUNCTION__,__LINE__ );
-        if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) != 0 ) || (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) != 0))
+        if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) != 0 ) && (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) != 0))
         {
             RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] ssid info is different continue to store ssid \n",__FUNCTION__,__LINE__ );
         }
         else
         {
-            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d] Same ssid info not storing it %d \n",__FUNCTION__,__LINE__ );
+            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d] Same ssid info not storing it stored ssid %s new ssid %d \n",__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
             return true;
         }
     }
@@ -1620,10 +1622,10 @@ bool storeMfrWifiCredentials(void)
         if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
         {
             RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in retrieving the stored wifi credentials \n",__FUNCTION__,__LINE__ );
-            if(g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) == 0 )
+            if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) == 0 ) && (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) == 0 ))
             {
                 retVal=true;
-                RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] Successfully stored the credentails and verified \n",__FUNCTION__,__LINE__ );
+                RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] Successfully stored the credentails and verified stored ssid %s current ssid %s \n",__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
             }
             else
             {
