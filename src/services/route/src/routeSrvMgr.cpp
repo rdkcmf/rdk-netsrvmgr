@@ -198,9 +198,11 @@ void* getGatewayRouteDataThrd(void* arg)
 //        {
         if(RouteNetworkMgr::storeRouteDetails(msgLength))
         {
-            RouteNetworkMgr::checkExistingRouteValid();
-            if(RouteNetworkMgr::setRoute())
-		RouteNetworkMgr::sendCurrentRouteData();
+            if(RouteNetworkMgr::checkExistingRouteValid())
+	    {
+                if(RouteNetworkMgr::setRoute())
+		   RouteNetworkMgr::sendCurrentRouteData();
+	    }
 //                sendDefaultGatewayRoute();
         }
         else
@@ -443,6 +445,7 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
             if(gwFullData)
             {
                 guint gwCount = cJSON_GetArraySize(gwFullData);
+		RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] gateway count in json %d \n", __FUNCTION__, __LINE__,gwCount);
                 for (counter = 0; counter < gwCount; counter++)
                 {
                     cJSON *gwData = cJSON_GetArrayItem(gwFullData, counter);
@@ -473,6 +476,12 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
             }
             cJSON_Delete(rootJson);
         }
+	else
+	{
+	     retVal=FALSE;
+             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] JSON is empty \n",__FUNCTION__, __LINE__ );
+	 
+	}
     }
     else
     {
@@ -592,11 +601,11 @@ gboolean RouteNetworkMgr::setRoute() {
             gwdata->isRouteSet=TRUE;
             if(checkIpMode(gwdata->ipv6prefix->str))
             {
-                checkAddRouteInfo(gwdata->gwyipv6->str,FALSE);
+                checkAddRouteInfo(gwdata->gwyipv6->str,FALSE,gwdata->ipv6prefix->str);
             }
             else
             {
-                checkAddRouteInfo(gwdata->gwyip->str,TRUE);
+                checkAddRouteInfo(gwdata->gwyip->str,TRUE,gwdata->ipv6prefix->str);
             }
             retVal=TRUE;
         }
@@ -664,15 +673,24 @@ int RouteNetworkMgr::getipaddress(char* ifname, char* ipAddressBuffer, gboolean 
     return found;
 }
 
-gboolean RouteNetworkMgr::checkAddRouteInfo(char *ipAddr,bool isIPv4)
+gboolean RouteNetworkMgr::checkAddRouteInfo(char *ipAddr,bool isIPv4,char *ipv6Pfix)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    routeInfo *gwdata=NULL;
     gwRouteInfo=g_list_first(gwRouteInfo);
     GList* tmpGWRouteInfo=g_list_find_custom(gwRouteInfo,ipAddr,(GCompareFunc)g_list_find_ip);
+    if(tmpGWRouteInfo)
+        gwdata = (routeInfo*)tmpGWRouteInfo->data;
     if(!tmpGWRouteInfo)
     {
         lastRouteSetV4=isIPv4;
-        addRouteToList(ipAddr,isIPv4);
+        addRouteToList(ipAddr,isIPv4,ipv6Pfix);
+    }
+    else if ( (!isIPv4) && (gwdata) && (g_strcmp0(g_strstrip(gwdata->ipv6Pfix->str),ipv6Pfix) != 0))
+    {
+	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Adding route since prefix changed from %s to %s \n",__FUNCTION__, __LINE__,gwdata->ipv6Pfix->str,ipv6Pfix);
+        lastRouteSetV4=isIPv4;
+        addRouteToList(ipAddr,isIPv4,ipv6Pfix);
     }
     else
     {
@@ -682,13 +700,15 @@ gboolean RouteNetworkMgr::checkAddRouteInfo(char *ipAddr,bool isIPv4)
     return true;
 }
 
-gboolean RouteNetworkMgr::addRouteToList(char *ipAddr,bool isIPv4)
+gboolean RouteNetworkMgr::addRouteToList(char *ipAddr,bool isIPv4,char *ipv6Pfix)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     routeInfo *routeInfoData = g_new(routeInfo,1);
     routeInfoData->isIPv4 = isIPv4;
     routeInfoData->ipStr = g_string_new(NULL);
+    routeInfoData->ipv6Pfix = g_string_new(NULL);
     g_string_assign(routeInfoData->ipStr,ipAddr);
+    g_string_assign(routeInfoData->ipv6Pfix,ipv6Pfix);
     gwRouteInfo=g_list_prepend(gwRouteInfo,routeInfoData);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return true;
@@ -753,6 +773,7 @@ gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
     if(routeInfoData)
     {
         g_string_free(routeInfoData->ipStr,TRUE);
+        g_string_free(routeInfoData->ipv6Pfix,TRUE);
         g_free(routeInfoData);
         gwRouteInfo = g_list_remove(gwRouteInfo, routeInfoData);
     }
@@ -778,12 +799,14 @@ bool checkIpMode(char *v6Prefix)
 gboolean RouteNetworkMgr::checkExistingRouteValid()
 {
     guint gwRouteLength=0;
+    guint tempGwRouteLength=0;
     GwyDeviceData *gwdata = NULL;
     routeInfo *routeInfoData=NULL;
     GList* tmpGWList;
     char tempIP[46];
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     gwRouteLength = g_list_length(gwRouteInfo);
+    tempGwRouteLength = gwRouteLength;
     if (gwRouteLength > 0)
     {
         GList *element = g_list_first(gwRouteInfo);
@@ -794,10 +817,17 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
             gwList=g_list_first(gwList);
             g_stpcpy(tempIP,routeInfoData->ipStr->str);
             tmpGWList=g_list_find_custom(gwList,tempIP,(GCompareFunc)g_list_find_gw);
+	    if(tmpGWList)
+	        gwdata = (GwyDeviceData*)tmpGWList->data;
             if(!tmpGWList)
 //            if((g_list_find(gwList,tempIP) == NULL))
             {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] route %s  is not there in new list proceed to remove it \n", __FUNCTION__, __LINE__,routeInfoData->ipStr->str);
+                checkRemoveRouteInfo(routeInfoData->ipStr->str,routeInfoData->isIPv4);
+            }
+	    else if((!routeInfoData->isIPv4) && (gwdata) && (g_strcmp0(g_strstrip(routeInfoData->ipv6Pfix->str),g_strstrip(gwdata->ipv6prefix->str)) != 0))
+	    {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] prefix changed from %s to %s \n",__FUNCTION__, __LINE__,routeInfoData->ipv6Pfix->str,gwdata->ipv6prefix->str);
                 checkRemoveRouteInfo(routeInfoData->ipStr->str,routeInfoData->isIPv4);
             }
             else
@@ -807,6 +837,11 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
         }
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    if(g_list_length(gwRouteInfo) != tempGwRouteLength)
+    {
+	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] existing route are fine \n",__FUNCTION__, __LINE__);
+	return false;
+    }
     return true;
 }
 gboolean RouteNetworkMgr::printExistingRouteValid()
