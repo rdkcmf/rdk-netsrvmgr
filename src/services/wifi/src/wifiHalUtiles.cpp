@@ -812,7 +812,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
 }
-bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
+bool lastConnectedSSID()
 {
     char ap_ssid[SSID_SIZE];
     char ap_passphrase[PASSPHRASE_BUFF];
@@ -828,11 +828,11 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     }
     else
     {
-        strncpy(ConnParams->ssidSession.ssid, ap_ssid, sizeof(ConnParams->ssidSession.ssid)-1);
-        ConnParams->ssidSession.ssid[sizeof(ConnParams->ssidSession.ssid)-1]='\0';
-        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, sizeof(ConnParams->ssidSession.passphrase)-1);
-        ConnParams->ssidSession.passphrase[sizeof(ConnParams->ssidSession.passphrase)-1]='\0';
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__,ConnParams->ssidSession.ssid);
+        strncpy(savedWiFiConnList.ssidSession.ssid, ap_ssid, sizeof(savedWiFiConnList.ssidSession.ssid)-1);
+        savedWiFiConnList.ssidSession.ssid[sizeof(savedWiFiConnList.ssidSession.ssid)-1]='\0';
+        strncpy(savedWiFiConnList.ssidSession.passphrase, ap_passphrase, sizeof(savedWiFiConnList.ssidSession.passphrase)-1);
+        savedWiFiConnList.ssidSession.passphrase[sizeof(savedWiFiConnList.ssidSession.passphrase)-1]='\0';
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] last connected  ssid is  %s   \n", __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
@@ -1262,7 +1262,7 @@ void *lafConnPrivThread(void* arg)
         if(ret = pthread_cond_wait(&condLAF, &mutexLAF) == 0) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%d] Starting the LAF Connect private SSID \n", __FUNCTION__, __LINE__ );
             retVal=false;
-            retVal=lastConnectedSSID(&savedWiFiConnList);
+            retVal=lastConnectedSSID();
             if(retVal == false)
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%d] Last connected ssid fetch failure \n", __FUNCTION__, __LINE__ );
             gWifiLNFStatus=LNF_IN_PROGRESS;
@@ -1376,7 +1376,7 @@ void connectToLAF()
     }
     else
     {
-        retVal=lastConnectedSSID(&savedWiFiConnList);
+        retVal=lastConnectedSSID();
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
         {
             sleep(confProp.wifiProps.lnfStartInSecs);
@@ -1386,7 +1386,7 @@ void connectToLAF()
             but defineltly not LF SSID. - No need to trigger LNF*/
         /* Here, 'getDeviceActivationState == true'*/
         laf_get_lfssid(lfssid);
-        lastConnectedSSID(&savedWiFiConnList);
+        lastConnectedSSID();
 
         if((strcasecmp(lfssid, savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus()))
         {
@@ -1585,7 +1585,7 @@ bool storeMfrWifiCredentials(void)
 #ifdef USE_RDK_WIFI_HAL
     IARM_BUS_MFRLIB_API_WIFI_Credentials_Param_t param = {0};
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-    retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID();
     if(retVal == false)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%d] Last connected ssid fetch failure \n", __FUNCTION__, __LINE__ );
@@ -1594,20 +1594,20 @@ bool storeMfrWifiCredentials(void)
     else
     {
         retVal=false;
-        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] fetched ssid details \n",__FUNCTION__,__LINE__ );
+        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] fetched ssid details  %s \n",__FUNCTION__,__LINE__,savedWiFiConnList.ssidSession.ssid);
     }
     param.requestType=WIFI_GET_CREDENTIALS;
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] IARM success in retrieving the stored wifi credentials \n",__FUNCTION__,__LINE__ );
-        if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) != 0 ) && (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) != 0))
+        if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) == 0 ) && (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) == 0))
         {
-            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] ssid info is different continue to store ssid \n",__FUNCTION__,__LINE__ );
+            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
+            return true;
         }
         else
         {
-            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d] Same ssid info not storing it stored ssid %s new ssid %d \n",__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
-            return true;
+            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%d] ssid info is different continue to store ssid \n",__FUNCTION__,__LINE__ );
         }
     }
     memset(&param,0,sizeof(param));
