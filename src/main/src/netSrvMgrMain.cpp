@@ -219,6 +219,10 @@ static bool read_ConfigProps()
                     {
                         strcpy(confProp.wifiProps.authServerURL,value);
                     }
+                    if(0 == strncasecmp(DISABLE_WPS_XRE, keys[key], strlen(keys[key])))
+                    {
+                        confProp.wifiProps.disableWpsXRE = (atoi(value) == 0) ? false : true;
+                    }
                     if(value) g_free(value);
                 }
                 if(keys) g_strfreev(keys);

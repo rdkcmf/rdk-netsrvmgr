@@ -471,22 +471,33 @@ IARM_Result_t WiFiNetworkMgr::getConnectedSSID(void *arg)
 #ifdef USE_RDK_WIFI_HAL
 static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
-    IARM_Bus_IRMgr_EventData_t *irEventData = (IARM_Bus_IRMgr_EventData_t*)data;
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-    int keyCode = irEventData->data.irkey.keyCode;
-    int keyType = irEventData->data.irkey.keyType;
-    int isFP = irEventData->data.irkey.isFP;
-
+    /* By default, the WPS shall be handled through XRE,
+     * if "DISABLE_WPS_XRE" flag is set to '1' in /etc/netsrvmgr.conf, then
+     * it will enable through netsrvmgr, else handled by xre  */
+    if(confProp.wifiProps.disableWpsXRE)
     {
-        if (keyType == KET_KEYDOWN && keyCode == KED_WPS)
+        IARM_Bus_IRMgr_EventData_t *irEventData = (IARM_Bus_IRMgr_EventData_t*)data;
+
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+        int keyCode = irEventData->data.irkey.keyCode;
+        int keyType = irEventData->data.irkey.keyType;
+        int isFP = irEventData->data.irkey.isFP;
+
         {
-            pthread_mutex_lock(&wpsConnLock);
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received Key info [Type : %d; Code : %d; isFP : %d ] \n", __FUNCTION__, __LINE__, keyType, keyCode, isFP );
-            connect_WpsPush();
-            pthread_mutex_unlock(&wpsConnLock);
+            if (keyType == KET_KEYDOWN && keyCode == KED_WPS)
+            {
+                pthread_mutex_lock(&wpsConnLock);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Received Key info [Type : %d; Code : %d; isFP : %d ] \n", __FUNCTION__, __LINE__, keyType, keyCode, isFP );
+                connect_WpsPush();
+                pthread_mutex_unlock(&wpsConnLock);
+            }
         }
+
     }
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    else {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Disabled WPS event by default. Now, WPS key functionality handled by XRE and disabled in netsrvmgr.\n", __FUNCTION__, __LINE__ );
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 #endif
 
