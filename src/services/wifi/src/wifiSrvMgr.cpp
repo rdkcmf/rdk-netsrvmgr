@@ -392,7 +392,7 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 
 //    if (currSsidInfo.ssidSession.ssid[0] != '\0')
 #ifdef USE_RDK_WIFI_HAL
-    retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID();
 #endif
     if( retVal == true )
     {
@@ -425,7 +425,7 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
 
 //    get_CurrentSsidInfo(&currSsidInfo);
 #ifdef USE_RDK_WIFI_HAL
-    retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID();
 #endif
 
     int ssid_len = strlen(savedWiFiConnList.ssidSession.ssid);
