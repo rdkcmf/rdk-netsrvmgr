@@ -18,6 +18,7 @@
 #include "libIBus.h"
 #include "libIBusDaemon.h"
 #include "wifiSrvMgrIarmIf.h"
+#include "NetworkMgrMain.h"
 
 #define NM_MGR_WIFI_CLIENT "NetworkMgrWiFiClientApps"
 
