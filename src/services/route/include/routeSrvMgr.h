@@ -29,6 +29,7 @@ typedef struct _routeInfo
 {
     bool isIPv4;
     GString* ipStr;
+    GString* ipv6Pfix;
 } routeInfo;
 
 class RouteNetworkMgr
@@ -56,8 +57,8 @@ private:
     static gboolean getRouteInterface(char * routeIf);
     static gboolean readDevFile(char *deviceFile,char *mocaIface,char *wifiIface);
     static int getipaddress(char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled);
-    static gboolean checkAddRouteInfo(char *ipAddr,bool isIPv4);
-    static gboolean addRouteToList(char *ipAddr,bool isIPv4);
+    static gboolean checkAddRouteInfo(char *ipAddr,bool isIPv4,char *ipv6Pfix);
+    static gboolean addRouteToList(char *ipAddr,bool isIPv4,char *ipv6Pfix);
     static gboolean checkRemoveRouteInfo(char *ipAddr,bool isIPv4);
     static gboolean removeRouteFromList(routeInfo *routeInfoData);
     static gboolean printExistingRouteValid();
