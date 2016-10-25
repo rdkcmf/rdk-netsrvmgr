@@ -62,6 +62,20 @@ extern "C" {
 #define MAX_TIME_OUT_PERIOD     60
 #define BUFFER_SIZE_128 128
 
+/*Telemetery logging file configurations */
+#define TELEMETRY_LOGGING_PARAM_FILE "/etc/netsrvmgr_Telemetry_LoggingParams.json"
+#define T_PERIOD_1_INTERVAL  		"wifi_period1_time"
+#define T_PERIOD_1_PARAMETER_LIST "wifi_parameter_list_period1"
+#define T_PERIOD_2_INTERVAL  		"wifi_period2_time"
+#define T_PERIOD_2_PARAMETER_LIST "wifi_parameter_list_period2"
+
+
+typedef struct {
+    int timePeriod;
+    GList* paramlist;
+} telemetryParams;
+
+
 typedef enum _WiFiResult
 {
     WiFiResult_ok= 0,
