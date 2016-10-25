@@ -681,7 +681,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     }
     output_INT = 0;
     if (wifi_getRadioTransmitPower( radioIndex, &output_INT) == RETURN_OK) {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Radio TransmitPower %lu .\n", __FUNCTION__, __LINE__, output_ulong);
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Radio TransmitPower %lu .\n", __FUNCTION__, __LINE__, output_INT);
         param->data.radio.params.transmitPower = output_INT;
     }
     else
