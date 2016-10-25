@@ -39,6 +39,7 @@ void logCallback(const char *buff)
 
 static void NetworkMgr_SignalHandler (int sigNum);
 static bool read_ConfigProps();
+void Read_Telemetery_Param_File();
 static bool update_telemetryParams_list(gchar *, telemetryParams *, gchar *, gchar *);
 void NetworkMgr_SignalHandler (int sigNum)
 {
@@ -144,6 +145,7 @@ int main(int argc, char *argv[])
         strcpy(confProp.wifiProps.authServerURL,"http://localhost:50050/authService/getDeviceId");
 #endif
     }
+    Read_Telemetery_Param_File();
     netSrvMgr_start();
     netSrvMgr_Loop();
 

@@ -45,6 +45,8 @@ static wifiStatusCode_t connCode_prev_state;
 
 extern telemetryParams wifiParams_Tele_Period1;
 extern telemetryParams wifiParams_Tele_Period2;
+static void logs_Period1_Params();
+static void logs_Period2_Params();
 #endif
 
 int get_int(const char* ptr)
@@ -882,6 +884,12 @@ void *wifiConnStatusThread(void* arg)
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
                          stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
                 //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+
+                /*Telemetry Parameter logging*/
+                logs_Period1_Params();
+
+                logs_Period2_Params();
+
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
         }
@@ -1716,3 +1724,199 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 #endif
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
+
+
+#ifdef USE_RDK_WIFI_HAL
+
+bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params)
+{
+    int radioIndex=1;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    wifi_radioTrafficStats_t *trafficStats =(wifi_radioTrafficStats_t *) malloc(sizeof(wifi_radioTrafficStats_t));
+    if(trafficStats == NULL)
+    {
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s]Malloc Memory allocation failure\n", __FUNCTION__);
+        return false;
+    }
+    printf("malloc allocated = %d ", malloc_usable_size(trafficStats));
+    if (wifi_getRadioTrafficStats(radioIndex, trafficStats) == RETURN_OK) {
+        params->bytesSent = trafficStats->radio_BytesSent;
+        params->bytesReceived  = trafficStats->radio_BytesReceived;
+        params->packetsSent = trafficStats->radio_PacketsSent;
+        params->packetsReceived = trafficStats->radio_PacketsReceived;
+        params->errorsSent = trafficStats->radio_ErrorsSent;
+        params->errorsReceived = trafficStats->radio_ErrorsReceived;
+        params->discardPacketsSent  = trafficStats->radio_DiscardPacketsSent;
+        params->discardPacketsReceived  = trafficStats->radio_DiscardPacketsReceived;
+        params->plcErrorCount = trafficStats->radio_DiscardPacketsReceived;
+        params->fcsErrorCount = trafficStats->radio_FCSErrorCount;
+        params->invalidMACCount = trafficStats->radio_InvalidMACCount;
+        params->packetsOtherReceived = trafficStats->radio_PacketsOtherReceived;
+        params->noiseFloor = trafficStats->radio_NoiseFloor;
+
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getRadioTrafficStats FAILURE \n", __FUNCTION__, __LINE__);
+    }
+    free(trafficStats);
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return true;
+}
+
+void logs_Period1_Params()
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    if(NULL != wifiParams_Tele_Period1.paramlist)
+    {
+        WiFi_EndPoint_Diag_Params endPointInfo;
+        getEndPointInfo(&endPointInfo);
+        WiFi_Radio_Stats_Diag_Params params;
+        getRadioStats(&params);
+
+        GList *iter = g_list_first(wifiParams_Tele_Period1.paramlist);
+
+        while(iter)
+        {
+            /* Device.WiFi.EndPoint.{i}.Stats.LastDataDownlinkRate*/
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "LastDataDownlinkRate")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s : %lu \n",  (char *)iter->data, endPointInfo.stats.lastDataDownlinkRate);
+            }
+            /* Device.WiFi.EndPoint.{i}.Stats.LastDataUplinkRate */
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "LastDataUplinkRate ")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s : %lu \n",  (char *)iter->data, endPointInfo.stats.lastDataUplinkRate);
+            }
+
+            /* Device.WiFi.EndPoint.{i}.Stats.Retransmissions*/
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Retransmissions")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %lu \n",  (char *)iter->data, endPointInfo.stats.retransmissions);
+            }
+
+            /*Device.WiFi.Endpoint.{i}.Stats.SignalStrength*/
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "SignalStrength")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, endPointInfo.stats.signalStrength);
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Channel")) {
+                unsigned long output_ulong = 0;
+                int radioIndex = 1;
+                if (wifi_getRadioChannel(radioIndex, &output_ulong) == RETURN_OK) {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s \" %lu .\n", (char *)iter->data , output_ulong);
+                }
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.FCSErrorCount")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, params.fcsErrorCount);
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.Noise")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, params.noiseFloor);
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TransmitPower"))
+            {
+                INT output_INT = 0;
+                int radioIndex = 1;
+                if (wifi_getRadioTransmitPower( radioIndex,  &output_INT) == RETURN_OK) {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s \" %lu .\n", (char *)iter->data , output_INT);
+                }
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsReceived")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, params.errorsReceived);
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsSent")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, params.errorsSent);
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsReceived")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, params.packetsReceived);
+            }
+
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsSent")) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\"%s\" : %d \n",  (char *)iter->data, params.packetsSent);
+            }
+
+            iter = g_list_next(iter);
+        }
+
+    }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}
+
+
+void logs_Period2_Params()
+{
+    bool print_flag = true;
+    time_t start_t;
+    static time_t lastExec_t;
+    double diff_t;
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+    time(&start_t);
+
+    if(print_flag) {
+
+        if(NULL != wifiParams_Tele_Period2.paramlist)
+        {
+            char ssid_string[BUFF_MAX];
+            int ssidIndex = 1;
+            memset(ssid_string,0, BUFF_MAX);
+            wifi_getBaseBSSID(ssidIndex, ssid_string);
+
+            WiFiConnectionStatus currSsidInfo;
+            memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
+            get_CurrentSsidInfo(&currSsidInfo);
+
+            GList *iter = g_list_first(wifiParams_Tele_Period2.paramlist);
+            while(iter)
+            {
+                /* Device.WiFi.Endpoint.{i}.NumberOfEntries*/
+                if(g_strrstr ((const gchar *)iter->data, (const gchar *) "NumberOfEntries")) {
+                    int noOfEndpoint = 1;
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s : %d \n",  (char *)iter->data, noOfEndpoint);
+                }
+
+                if((g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.1.Profile.{i}.SSID"))
+                        || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.SSID.{i}.SSID"))
+                        || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.{i}.SSIDReference")))
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s : %d \n",  (char *)iter->data, ssid_string);
+                }
+
+                if(g_strrstr ((const gchar *)iter->data, (const gchar *) "BSSID")) {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s : %d \n",  (char *)iter->data, currSsidInfo);
+                }
+
+                /* Device.WiFi.EndPoint.{i}.Profile.{i}.SSID*/
+                if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Name")) {
+                    char output_string[BUFF_MAX];
+                    memset(output_string,0, BUFF_MAX);
+                    if(wifi_getSSIDName(ssidIndex, output_string) == RETURN_OK) {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s : %d \n",  (char *)iter->data, output_string);
+                    }
+                }
+
+                iter = g_list_next(iter);
+            }
+        }
+    }
+    diff_t = difftime(start_t, lastExec_t);
+
+    if (diff_t >= wifiParams_Tele_Period2.timePeriod) {
+        time(&lastExec_t);
+        print_flag = true;
+    }
+    else
+    {
+        print_flag = false;
+    }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}
+#endif
