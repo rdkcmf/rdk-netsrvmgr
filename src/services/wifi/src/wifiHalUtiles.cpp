@@ -1673,3 +1673,46 @@ bool eraseMfrWifiCredentials(void)
 #endif
     return retVal;
 }
+
+
+void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
+{
+    bool ret = true;
+    int radioIndex = 1;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+#ifdef USE_RDK_WIFI_HAL
+    wifi_sta_stats_t stats;
+    memset(&stats, '\0', sizeof(stats));
+
+    wifi_getStats(radioIndex, &stats);
+
+    bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
+    if (enable)
+    {
+        strncpy((char *)endPointInfo->status, "Enabled", (size_t)BUFF_LENGTH_64);
+        endPointInfo->enable = enable;
+        strncpy((char *)endPointInfo->SSIDReference, (const char *)stats.sta_SSID, (size_t)BUFF_LENGTH_64);
+
+        endPointInfo->stats.signalStrength = stats.sta_RSSI;
+        endPointInfo->stats.retransmissions = stats.sta_Retransmissions;
+        endPointInfo->stats.lastDataDownlinkRate = stats.sta_LastDataDownlinkRate;
+        endPointInfo->stats.lastDataUplinkRate = stats.sta_LastDataUplinkRate;
+        /*endPointInfo->security.modesSupported = ;*/
+    }
+    else
+    {
+        strncpy((char *)endPointInfo->status, "Disabled", (size_t)BUFF_LENGTH_64);
+        endPointInfo->enable = enable;
+    }
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] \n Profile : \"EndPoint.1.\": \n \
+    		[Enable : \"%d\"| Status : \"%s\" | SSIDReference : \"%s\" ] \n",
+            __FUNCTION__, __LINE__, endPointInfo->enable, endPointInfo->status, endPointInfo->SSIDReference);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] \n Profile : \"EndPoint.1.Stats.\": \n \
+    		[SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ] \n",
+            __FUNCTION__, __LINE__, endPointInfo->stats.signalStrength, endPointInfo->stats.retransmissions,
+            endPointInfo->stats.lastDataDownlinkRate, endPointInfo->stats.lastDataUplinkRate);
+#endif
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+}

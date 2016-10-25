@@ -39,6 +39,7 @@ enum {
     Test_getLAFState = 13,
 #endif
     Test_getConnectedSSID = 14,
+    Test_getEndPointProps = 15,
     Test_Max_Api,
 };
 
@@ -288,6 +289,32 @@ static void WIFI_MGR_API_getConnectedSSID() {
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 }
 
+static void WIFI_MGR_API_getEndPointProps() {
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_BUS_WiFi_DiagsPropParam_t param;
+
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    memset(&param, 0, sizeof(param));
+
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getEndPointProps, (void *)&param, sizeof(param));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_getEndPointProps, ((retVal == IARM_RESULT_SUCCESS && param.status)?"true":"false"));
+    printf("\n***********************************\n");
+
+    printf("\n Profile : \"EndPoint.1.\": \n \
+     		[Enable : \"%d\"| Status : \"%s\" | SSIDReference : \"%s\" ] \n",
+           param.data.endPointInfo.enable, param.data.endPointInfo.status, param.data.endPointInfo.SSIDReference);
+
+    printf(" \n Profile : \"EndPoint.1.Stats.\": \n \
+     		[SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ] \n",
+           param.data.endPointInfo.stats.signalStrength, param.data.endPointInfo.stats.retransmissions,
+           param.data.endPointInfo.stats.lastDataDownlinkRate, param.data.endPointInfo.stats.lastDataUplinkRate);
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+}
+
 
 static void WIFI_MGR_API_getSSIDProps()
 {
@@ -412,6 +439,7 @@ int main()
         printf( "13. getLAFState\n");
 #endif
         printf( "14. getConnectedSSID\n");
+        printf( "15. getEndPointProps\n");
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -464,6 +492,9 @@ int main()
 #endif
         case Test_getConnectedSSID:
             WIFI_MGR_API_getConnectedSSID();
+            break;
+        case Test_getEndPointProps:
+            WIFI_MGR_API_getEndPointProps();
             break;
         default:
             loop = false;
