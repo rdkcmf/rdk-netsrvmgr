@@ -312,7 +312,7 @@ static void printf_list_info(GList *list)
     GList *iter = g_list_first(list);
     while(iter)
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR ," Parameters [%d] :  \"%s\"\n", (char *)iter->data);
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR ,"[%s] Parameter Name :  \"%s\"\n", __FUNCTION__, (char *)iter->data);
         iter = g_list_next(iter);
     }
 }
@@ -338,6 +338,7 @@ bool parse_telemetry_logging_configuration(gchar *string)
     wifiParams_Tele_Period2.paramlist = NULL;
 
     update_telemetryParams_list(string, &wifiParams_Tele_Period2, (gchar *)T_PERIOD_2_INTERVAL, (gchar *)T_PERIOD_2_PARAMETER_LIST);
+
 #endif
 
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
@@ -362,8 +363,8 @@ bool update_telemetryParams_list(gchar *input_buffer, telemetryParams *telemery_
         int item, arrSize = 0;
         cJSON* param_item = NULL, *param_list_obj = NULL;
 
-        telemery_params->timePeriod =  cJSON_GetObjectItem(request_msg, T_PERIOD_1_INTERVAL)->valueint;
-        param_list_obj = cJSON_GetObjectItem(request_msg, T_PERIOD_1_PARAMETER_LIST);
+        telemery_params->timePeriod =  cJSON_GetObjectItem(request_msg, time_period_string)->valueint;
+        param_list_obj = cJSON_GetObjectItem(request_msg, param_name_string);
 
         arrSize = cJSON_GetArraySize(param_list_obj);
 
