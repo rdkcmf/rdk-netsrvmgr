@@ -4,7 +4,7 @@
 #include <glib.h>
 #include "netSrvCurl.h"
 
-CurlObject::CurlObject(std::string url)
+CurlObject::CurlObject(std::string url,char *data)
 {
     CURLcode res;
     char errbuf[CURL_ERROR_SIZE];
@@ -20,6 +20,12 @@ CurlObject::CurlObject(std::string url)
     res=curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
     if(CURLE_OK != res)
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s:%d] : curl failed with curl error %d  \n",__FUNCTION__,__LINE__,res);
+    if(data != NULL)
+    {
+      curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, data);
+      curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, strlen(data));
+    }
+
     curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, errbuf);
     errbuf[0] = 0;
     res=curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, &CurlObject::curlwritefunc);
@@ -45,7 +51,8 @@ CurlObject::CurlObject(std::string url)
     curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
     if(http_code != 200)
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): curl failed with http error %d  \n",__FUNCTION__,http_code);
-
+    //Set member variable so that we can access the http code
+    m_httpcode = http_code;
     curl_easy_cleanup(curl_handle);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 
@@ -68,6 +75,11 @@ int CurlObject::curlwritefunc(char *data, size_t size, size_t nmemb, std::string
 gchar* CurlObject::getCurlData() {
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR , "%s(): Authservice url output %s  \n",__FUNCTION__,curlDataBuffer.c_str());
     return g_strdup(curlDataBuffer.c_str());
+}
+
+long CurlObject::gethttpcode()
+{
+ return m_httpcode;
 }
 
 CurlObject::~CurlObject()

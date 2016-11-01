@@ -269,6 +269,19 @@ static bool read_ConfigProps()
                     {
                         confProp.wifiProps.lnfStartInSecs = atoi(value);
                     }
+                    if(0 == strncasecmp(GET_AUTHTOKEN_URL, keys[key], strlen(keys[key]) ) )
+                    {
+                        strcpy(confProp.wifiProps.getAuthTokenUrl,value);
+                    }
+                    if(0 == strncasecmp(GET_LFAT_URL, keys[key], strlen(keys[key]) ) )
+                    {
+                        strcpy(confProp.wifiProps.getLfatUrl,value);
+                    }
+                    if(0 == strncasecmp(SET_LFAT_URL, keys[key], strlen(keys[key]) ) )
+                    {
+                        strcpy(confProp.wifiProps.setLfatUrl,value);
+                    }
+
 #endif
                     if(0 == strncasecmp(AUTHSERVER_URL, keys[key], strlen(keys[key])))
                     {

@@ -111,6 +111,8 @@ bool convertSwitchToPrivateResultsToJson(char *buffer);
 bool clearSwitchToPrivateResults();
 int laf_wifi_connect(laf_wifi_ssid_t* const wificred);
 int laf_wifi_disconnect(void);
+int laf_get_lfat(laf_lfat_t *lfat);
+int laf_set_lfat(laf_lfat_t* const lfat);
 void log_message(laf_loglevel_t level, char const* function, int line, char const* msg);
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 bool getDeviceActivationState();
