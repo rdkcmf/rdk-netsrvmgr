@@ -452,12 +452,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
-            if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
+            if((savedWiFiConnList.ssidSession.ssid[0] != '\0')&&(ap_SSID[0] != '\0')&&(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0))
             {
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] restart virtual wifi interface since there is a network change. \n", __FUNCTION__, __LINE__ );
-                strcpy(command, "systemctl restart virtual-wifi-iface.service & ");
-                system(command);
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] restart virtual wifi interface is done \n", __FUNCTION__, __LINE__ );
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] get dhcp lease since there is a network change. \n",__FUNCTION__, __LINE__ );
+                netSrvMgrUtiles::triggerDhcpLease();
             }
             else
             {
@@ -557,7 +555,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
         }
         break;
-        /* the SSID of the network changed */
+    /* the SSID of the network changed */
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
             notify = true;
@@ -574,7 +572,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
         }
         break;
-        /* the connection to the network was lost */
+    /* the connection to the network was lost */
     case WIFI_HAL_ERROR_CONNECTION_LOST:
         if(connCode_prev_state != connCode) {
             notify = true;
@@ -586,7 +584,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
         }
         break;
-        /* the connection failed for an unknown reason */
+    /* the connection failed for an unknown reason */
     case WIFI_HAL_ERROR_CONNECTION_FAILED:
         if(connCode_prev_state != connCode)
         {
@@ -599,7 +597,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
         }
         break;
-        /* the connection was interrupted */
+    /* the connection was interrupted */
     case WIFI_HAL_ERROR_CONNECTION_INTERRUPTED:
         if(connCode_prev_state != connCode) {
             notify = true;
@@ -611,7 +609,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
         }
         break;
-        /* the connection failed due to invalid credentials */
+    /* the connection failed due to invalid credentials */
     case WIFI_HAL_ERROR_INVALID_CREDENTIALS:
         if(connCode_prev_state != connCode) {
             notify = true;
@@ -1368,6 +1366,8 @@ void *lafConnThread(void* arg)
             }
         }
         sleep(1);
+        if((gWifiLNFStatus != CONNECTED_PRIVATE) && (false == isLAFCurrConnectedssid) && (gWifiAdopterStatus == WIFI_CONNECTED))
+                    gWifiLNFStatus=CONNECTED_PRIVATE;
 //        getDeviceActivationState();
     }
     if(gWifiLNFStatus == CONNECTED_LNF)
@@ -1562,10 +1562,10 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
         param.paramtype = hostIf_StringType;
         strcpy(param.paramValue, (char *) value);
         break;
-        /*    case  hostIf_IntegerType:
-            case hostIf_UnsignedIntType:
-                put_int(param.paramValue, value);
-                param.paramtype = hostIf_IntegerType;*/
+    /*    case  hostIf_IntegerType:
+        case hostIf_UnsignedIntType:
+            put_int(param.paramValue, value);
+            param.paramtype = hostIf_IntegerType;*/
     case hostIf_BooleanType:
         put_boolean(param.paramValue,*(bool*)value);
         param.paramtype = hostIf_BooleanType;
@@ -1928,3 +1928,4 @@ void logs_Period2_Params()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 #endif
+
