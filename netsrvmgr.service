@@ -4,6 +4,7 @@ After= iarmbusd.service mfrmgr.service authservice.service tr69hostif.service
 Requires=iarmbusd.service
 
 [Service]
+EnvironmentFile=/etc/device.properties
 ExecStart=/bin/sh -c 'source /lib/rdk/opt-override.sh;/usr/bin/netsrvmgr --debugconfig $DEBUGINIFILE --configFilePath $NETSRVMGRINIFILE'
 ExecStop=/bin/kill -15 $MAINPID
 Restart=always

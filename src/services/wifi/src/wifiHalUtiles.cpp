@@ -9,6 +9,7 @@
  */
 
 #include "wifiHalUtiles.h"
+#include "netsrvmgrUtiles.h"
 
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 #ifdef ENABLE_LOST_FOUND
@@ -38,7 +39,7 @@ WiFiStatusCode_t get_WifiRadioStatus();
 
 
 extern WiFiConnectionStatus savedWiFiConnList;
-
+extern char gWifiMacAddress[MAC_ADDR_BUFF_LEN];
 #ifdef USE_RDK_WIFI_HAL
 static void wifi_status_action (wifiStatusCode_t , char *, unsigned short );
 static wifiStatusCode_t connCode_prev_state;
@@ -1900,6 +1901,12 @@ void logs_Period2_Params()
                     memset(output_string,0, BUFF_MAX);
                     if(wifi_getSSIDName(ssidIndex, output_string) == RETURN_OK) {
                         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, output_string);
+                    }
+                }
+
+                if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.SSID.1.MACAddress")) {
+                    if(gWifiMacAddress[0] != '\0') {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, gWifiMacAddress);
                     }
                 }
 

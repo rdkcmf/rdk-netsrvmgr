@@ -15,7 +15,7 @@
 #include "wifiSrvMgrIarmIf.h"
 #include "NetworkMedium.h"
 #include "wifiHalUtiles.h"
-
+#include "netsrvmgrUtiles.h"
 
 #ifdef USE_HOSTIF_WIFI_HAL
 #include "hostIf_tr69ReqHandler.h"
@@ -34,6 +34,7 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
 WiFiConnectionStatus savedWiFiConnList;
+char gWifiMacAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
 IARM_Bus_Daemon_SysMode_t sysModeParam;
 
 WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
@@ -128,7 +129,19 @@ int  WiFiNetworkMgr::Start()
         }
     }
 #endif
-
+    /*Get WiFi interface Mac*/
+    {
+        // get wifi mac address
+        char *ifName = netSrvMgrUtiles::get_IfName_devicePropsFile();
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The interface  use is '%s'\n", __FUNCTION__, __LINE__, ifName);
+        if(netSrvMgrUtiles::getMacAddress_IfName(ifName, gWifiMacAddress)) {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The '%s' Mac Addr :%s \n", __FUNCTION__, __LINE__, ifName, gWifiMacAddress);
+        }
+	else
+	{
+            RDK_LOG( RDK_LOG_WARN, LOG_NMGR, "[%s:%d] Failed to get wifi mac address. \n", __FUNCTION__, __LINE__);
+	}
+    }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
@@ -788,9 +801,9 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] HAL wifi_getBaseBSSID FAILURE \n", __FUNCTION__, __LINE__);
         }
         memset(output_string,0, BUFF_MAX);
-        if (wifi_getSSIDMACAddress(ssidIndex, output_string) == RETURN_OK) {
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID MAC address is %s .\n", __FUNCTION__, __LINE__, output_string);
-            snprintf(param->data.ssid.params.macaddr,BUFF_MAC,output_string);
+        if (gWifiMacAddress[0] != '\0') {
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID MAC address is %s .\n", __FUNCTION__, __LINE__, gWifiMacAddress);
+            snprintf(param->data.ssid.params.macaddr,BUFF_MAC, gWifiMacAddress);
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] SSID MAC address is %s .\n", __FUNCTION__, __LINE__, param->data.ssid.params.macaddr);
         }
         else

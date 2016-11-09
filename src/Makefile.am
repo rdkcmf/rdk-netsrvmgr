@@ -35,7 +35,9 @@ AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 include_HEADERS =    $(top_srcdir)/src/services/wifi/include/wifiSrvMgrIarmIf.h
 
 bin_PROGRAMS = netsrvmgr
-netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp $(top_srcdir)/src/main/src/NetworkMedium.cpp
+netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp \
+			$(top_srcdir)/src/main/src/NetworkMedium.cpp \
+			$(top_srcdir)/src/main/src/netsrvmgrUtiles.cpp
 if LOSTFOUND
 netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
 endif
