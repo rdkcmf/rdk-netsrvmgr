@@ -41,6 +41,8 @@
 #include "NetworkMgrMain.h"
 #include "netsrvmgrUtiles.h"
 
+#define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
+
 using namespace netSrvMgrUtiles;
 
 /**
@@ -127,3 +129,26 @@ char* netSrvMgrUtiles::get_IfName_devicePropsFile(void)
 
 /** @} */
 
+
+
+void netSrvMgrUtiles::triggerDhcpLease(void)
+{
+    static gint retType;
+    retType=system(TRIGGER_DHCP_LEASE_FILE);
+    if(retType == SYSTEM_COMMAND_ERROR)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error has occured in shell command  \n", __FUNCTION__, __LINE__);
+    }
+    else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] That shell command is not found  \n", __FUNCTION__, __LINE__);
+    }
+    else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_SUCESS)
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call dhcp lease success %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] unknown error   %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+    }
+}

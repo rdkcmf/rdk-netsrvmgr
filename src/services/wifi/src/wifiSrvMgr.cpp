@@ -895,9 +895,14 @@ IARM_Result_t WiFiNetworkMgr::sysModeChange(void *arg)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     IARM_Bus_CommonAPI_SysModeChange_Param_t *param = (IARM_Bus_CommonAPI_SysModeChange_Param_t *)arg;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Sys Mode Change::New mode --> %d, Old mode --> %d\n", __FUNCTION__, __LINE__ ,param->newMode,param->oldMode);
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Sys Mode Change::New mode --> %d, Old mode --> %d\n",__FUNCTION__, __LINE__ ,param->newMode,param->oldMode);
     sysModeParam=param->newMode;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    if(IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam)
+    {
+	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Trigger Dhcp lease since we are in warehouse mode \n",__FUNCTION__, __LINE__ );
+    	netSrvMgrUtiles::triggerDhcpLease();
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n",__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
 }
 

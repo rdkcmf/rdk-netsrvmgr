@@ -22,15 +22,12 @@
 #include "routeSrvMgr.h"
 #include "NetworkMgrMain.h"
 #include "NetworkMedium.h"
+#include "netsrvmgrUtiles.h"
 
 #define ROUTE_PRIORITY 50
 #define GW_SETUP_FILE "/lib/rdk/gwSetup.sh"
-#define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
 #define MAX_CJSON_EMPTY_LENGTH 40
 #define IP_SIZE 46
-#define SYSTEM_COMMAND_SHELL_NOT_FOUND 127
-#define SYSTEM_COMMAND_SHELL_SUCESS 23
-#define SYSTEM_COMMAND_ERROR -1
 #define DHCP_LEASE_FLAG "/tmp/usingdhcp"
 
 
@@ -186,7 +183,6 @@ void* getGatewayRouteDataThrd(void* arg)
 {
     int ret = 0;
     int msgLength;
-    gint retType;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     while (true ) {
         pthread_mutex_lock(&mutexRoute);
@@ -203,10 +199,10 @@ void* getGatewayRouteDataThrd(void* arg)
         if(RouteNetworkMgr::storeRouteDetails(msgLength))
         {
             if(RouteNetworkMgr::checkExistingRouteValid())
-	    {
+            {
                 if(RouteNetworkMgr::setRoute())
-		   RouteNetworkMgr::sendCurrentRouteData();
-	    }
+                    RouteNetworkMgr::sendCurrentRouteData();
+            }
 //                sendDefaultGatewayRoute();
         }
         else
@@ -215,24 +211,8 @@ void* getGatewayRouteDataThrd(void* arg)
         }
         if((g_list_length(gwRouteInfo) == 0) && ( access( DHCP_LEASE_FLAG, F_OK ) == -1 ))
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Triggering dhcp lease since no XG gateway  \n", __FUNCTION__, __LINE__);
-            system(TRIGGER_DHCP_LEASE_FILE);
-            if(retType == SYSTEM_COMMAND_ERROR)
-            {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error has occured in shell command  \n", __FUNCTION__, __LINE__);
-            }
-            else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
-            {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] That shell command is not found  \n", __FUNCTION__, __LINE__);
-            }
-            else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_SUCESS)
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call dhcp lease success %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
-            }
-	    else
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] unknown error   %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
-            }
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Triggering dhcp lease since no XG gateway  \n",__FUNCTION__, __LINE__);
+            netSrvMgrUtiles::triggerDhcpLease();
         }
 //        }
 //	else
@@ -779,7 +759,7 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call route set successfully %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
                 retVal=true;
             }
-	    sendCurrentRouteData();
+            sendCurrentRouteData();
             routeInfoData=(routeInfo *)gwRouteInfo->data;
             removeRouteFromList(routeInfoData);
             g_string_free(command,TRUE);
@@ -842,8 +822,8 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
             gwList=g_list_first(gwList);
             g_stpcpy(tempIP,routeInfoData->ipStr->str);
             tmpGWList=g_list_find_custom(gwList,tempIP,(GCompareFunc)g_list_find_gw);
-	    if(tmpGWList)
-	        gwdata = (GwyDeviceData*)tmpGWList->data;
+            if(tmpGWList)
+                gwdata = (GwyDeviceData*)tmpGWList->data;
             if(!tmpGWList)
 //            if((g_list_find(gwList,tempIP) == NULL))
             {
