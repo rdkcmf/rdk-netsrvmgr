@@ -13,6 +13,7 @@
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
 #include "routeSrvMgr.h"
+#include "mocaSrvMgr.h"
 
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
@@ -155,6 +156,9 @@ void netSrvMgr_start()
 {
     RouteNetworkMgr::getInstance()->Start();
     WiFiNetworkMgr::getInstance()->Start();
+#ifdef USE_RDK_MOCA_HAL
+    MocaNetworkMgr::getInstance()->Start();
+#endif
 }
 
 void netSrvMgr_Loop()

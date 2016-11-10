@@ -30,7 +30,19 @@ AC_CHECK_HEADERS([stdlib.h unistd.h])
 #PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
 #PKG_CHECK_MODULES([GTHREAD], [gthread-2.0 >= 2.24.0])
 RDKWIFIHAL=" "
+RDKMOCAHAL=" "
 
+AC_ARG_ENABLE([rdk-moca-hal],
+        AS_HELP_STRING([--enable-rdk-moca-hal],[This will enable/disable rdk moca hal.]),
+        [
+          case "${enableval}" in
+           yes) RDKMOCAHAL=true ;;
+           no) RDKMOCAHAL=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-rdk-moca-hal ]) ;;
+           esac
+           ],
+         [echo " rdk-moca-hal is enable"])
+AM_CONDITIONAL([RDKMOCAHAL], [test x$RDKMOCAHAL = xtrue])
 AC_ARG_ENABLE([rdk-wifi-hal],
         AS_HELP_STRING([--enable-rdk-wifi-hal],[This will enable/disable rdk wifi hal.]),
         [
@@ -57,6 +69,7 @@ AM_CONDITIONAL([LOSTFOUND], [test x$LOSTFOUND = xtrue])
 
 
 AC_SUBST(RDKWIFIHAL)
+AC_SUBST(RDKMOCAHAL)
 AC_SUBST(LOSTFOUND)
 
 
@@ -73,6 +86,7 @@ AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/services/Makefile])
 AC_CONFIG_FILES([src/services/wifi/Makefile])
 AC_CONFIG_FILES([src/services/route/Makefile])
+AC_CONFIG_FILES([src/services/moca/Makefile])
 AC_CONFIG_FILES([test/Makefile])
 
 AC_OUTPUT
