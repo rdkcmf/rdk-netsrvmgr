@@ -292,6 +292,10 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
     short ssid_len = strlen(param->data.connect.ssid);
     char *pass = param->data.connect.passphrase;
     short pass_len = strlen (param->data.connect.passphrase);
+    char *eapIden = param->data.connect.eapIdentity;
+    char * carootcert = param->data.connect.carootcert;
+    char * clientcert = param->data.connect.clientcert;
+    char * privatekey = param->data.connect.privatekey;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connect with SSID (%s) & Passphrase (%s) security mode (%d)\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid, pass,securityMode);
     /* If param data receives as Empty, then use the saved SSIDConnection */
@@ -301,7 +305,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             /*Now try to connect using saved SSID & PSK */
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID);
+            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey);
 #endif
             param->status = true;
         }
@@ -319,7 +323,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
             /*Connect with Saved SSID */
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid, pass);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, pass,SAVE_SSID);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, pass,SAVE_SSID,eapIden,carootcert,clientcert,privatekey);
 #endif
             param->status = true;
         }
@@ -328,7 +332,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) with Empty Passphrase.\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey);
 #endif
             param->status = true;
         }

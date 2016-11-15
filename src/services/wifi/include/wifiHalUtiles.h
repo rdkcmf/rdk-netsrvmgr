@@ -101,7 +101,7 @@ extern IARM_Bus_Daemon_SysMode_t sysModeParam;
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
-bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int);
+bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int,char *,char *,char *,char *);
 bool scan_Neighboring_WifiAP(char *);
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams);
 void monitor_WiFiStatus();
@@ -109,7 +109,6 @@ bool clearSSID_On_Disconnect_AP();
 #endif
 
 #ifdef ENABLE_LOST_FOUND
-static char gLAFssid[SSID_SIZE];
 bool isWifiConnected();
 void connectToLAF();
 void lafConnectToPrivate();

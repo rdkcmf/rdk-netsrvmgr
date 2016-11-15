@@ -490,8 +490,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             {
                 RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] previous ssid  %s to current ssid %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid, ap_SSID);
             }
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] gLAFssid = %s  ap_SSID = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,gLAFssid,ap_SSID);
-            if (strcasecmp(gLAFssid, ap_SSID) != 0 )
+            if (! laf_is_lnfssid(ap_SSID))
             {
                 isLAFCurrConnectedssid=false;
                 if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
@@ -746,7 +745,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 }
 
 /*Connect using SSID Selection */
-bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mode, CHAR *ap_security_WEPKey, CHAR *ap_security_PreSharedKey, CHAR *ap_security_KeyPassphrase,int saveSSID)
+bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mode, CHAR *ap_security_WEPKey, CHAR *ap_security_PreSharedKey, CHAR *ap_security_KeyPassphrase,int saveSSID,CHAR * eapIdentity,CHAR * carootcert,CHAR * clientcert,CHAR * privatekey)
 {
     int ret = true;
     wifiSecurityMode_t securityMode;
@@ -761,7 +760,7 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d  \n",
              MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
 
-    ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID);
+    ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
 
     if(ret)
     {
@@ -1257,8 +1256,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     bool notify = false;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] new ssid = (%s) gLAFssid = (%s) is laf current ssid %d \n", MODULE_NAME,__FUNCTION__, __LINE__,wificred->ssid,gLAFssid,isLAFCurrConnectedssid );
-    if ((strcmp(wificred->ssid, gLAFssid) == 0) && (true == isLAFCurrConnectedssid) && (WIFI_CONNECTED == get_WifiRadioStatus()))
+    if (laf_is_lnfssid(wificred->ssid) && (true == isLAFCurrConnectedssid) && (WIFI_CONNECTED == get_WifiRadioStatus()))
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already connected to LF ssid Ignoring the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return 0;
@@ -1269,7 +1267,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         return EPERM;
     }
     setLNFState(LNF_IN_PROGRESS);
-    if (strcmp(wificred->ssid, gLAFssid) == 0)
+    if (laf_is_lnfssid(wificred->ssid))
     {
         bLNFConnect=true;
     }
@@ -1278,10 +1276,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         bLNFConnect=false;
     }
 #ifdef USE_RDK_WIFI_HAL
-    if(wificred->psk[0] == '\0')
-        retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, wificred->passphrase,(int)(!bLNFConnect));
-    else
-        retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, wificred->psk, NULL,(int)(!bLNFConnect));
+        retVal=connect_withSSID(ssidIndex, wificred->ssid, (SsidSecurity)wificred->security_mode, NULL,wificred->psk, wificred->passphrase,(int)(!bLNFConnect),wificred->identity,wificred->carootcert,wificred->clientcert,wificred->privatekey);
 //    retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, wificred->psk);
 #endif
     if(false == retVal)
@@ -1305,7 +1300,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     }
 
     /* Bounce xre session only if switching from LF to private */
-    if(strcmp(wificred->ssid, gLAFssid) != 0)
+    if(! laf_is_lnfssid(wificred->ssid))
     {
         setLNFState(CONNECTED_PRIVATE);
         notify = true;
@@ -1473,7 +1468,7 @@ void *lafConnPrivThread(void* arg)
 //                  counter++;
                 if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
                 {
-                    retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,true);
+                    retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL);
                     if(false == retVal)
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s  failed \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid );
@@ -1598,10 +1593,9 @@ void connectToLAF()
         /* If Device is activated and already connected to Private or any network,
             but defineltly not LF SSID. - No need to trigger LNF*/
         /* Here, 'getDeviceActivationState == true'*/
-        laf_get_lfssid(lfssid);
         lastConnectedSSID(&savedWiFiConnList);
 
-        if((strcasecmp(lfssid, savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus()))
+        if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus()))
         {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
         }
@@ -1631,17 +1625,18 @@ void lafConnectToPrivate()
 
 bool getLAFssid()
 {
+    char lafSsid[SSID_SIZE];
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    memset( gLAFssid, 0, SSID_SIZE);
-    laf_get_lfssid(gLAFssid);
-    if(gLAFssid)
+    memset(lafSsid, 0, SSID_SIZE);
+    laf_get_lfssid(lafSsid);
+    if(lafSsid)
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] lfssid is %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,gLAFssid);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] lfssid is %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,lafSsid);
         return true;
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lfssid is empty %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,gLAFssid);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lfssid is empty \n", MODULE_NAME,__FUNCTION__, __LINE__);
         return false;
     }
 }
@@ -1650,7 +1645,7 @@ bool isLAFCurrConnectedssid()
 {
     bool retVal=false;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    if((strcmp(savedWiFiConnList.ssidSession.ssid, gLAFssid) == 0))
+    if(laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid))
     {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] LAF is the current connected ssid \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         retVal=true;
