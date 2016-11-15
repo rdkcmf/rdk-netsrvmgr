@@ -18,6 +18,7 @@
 
 #define MODULE_NAME "WIFI_MODULE"
 #define SUB_MODULE_NAME "LNF"
+#define MAX_FILE_PATH_LEN       4096
 
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
@@ -150,6 +151,10 @@ typedef struct _WiFiConnection
     SsidSecurity security_mode;
     char security_WEPKey[PASSPHRASE_BUFF];
     char security_PSK[PASSPHRASE_BUFF];
+    char eapIdentity[BUFF_LENGTH_256];
+    char carootcert[MAX_FILE_PATH_LEN];
+    char clientcert[MAX_FILE_PATH_LEN];
+    char privatekey[MAX_FILE_PATH_LEN];
 } WiFiConnection;
 
 typedef struct _WiFiConnectionStatus

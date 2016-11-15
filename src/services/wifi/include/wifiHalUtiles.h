@@ -79,7 +79,7 @@ bool shutdownWifi();
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
-bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int,int conType = 0);
+bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int,char *,char *,char *,char *,int conType = 0);
 bool scan_Neighboring_WifiAP(char *);
 bool lastConnectedSSID();
 void monitor_WiFiStatus();
@@ -87,7 +87,6 @@ bool clearSSID_On_Disconnect_AP();
 #endif
 
 #ifdef ENABLE_LOST_FOUND
-static char gLAFssid[SSID_SIZE];
 bool isWifiConnected();
 void connectToLAF();
 void lafConnectToPrivate();
