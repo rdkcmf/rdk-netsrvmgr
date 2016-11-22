@@ -430,6 +430,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     bool notify = false;
     char command[128]= {'\0'};
     const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
+    static unsigned int bounceXreFlag=0;
     memset(&eventData, 0, sizeof(eventData));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -471,10 +472,22 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
                 strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
                 savedWiFiConnList.conn_type = wifi_conn_type;
+		if(bounceXreFlag)
+		{
+		    bounceXreFlag=0;
+		    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting private ssid. Bouncing xre connection.\n",__FUNCTION__, __LINE__ );
+        	    if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
+        	    {
+            		RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
+        	    }
+		}
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
             }
             else {
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] This is a LNF SSID so no storing \n", __FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
+		if(!bounceXreFlag)
+		   bounceXreFlag=1;
             }
 
 
@@ -1188,13 +1201,14 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     if(strcmp(wificred->ssid, gLAFssid) != 0)
     {
         notify = true;
-        sleep(10); //waiting for default route before bouncing the xre connection
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting private ssid. Bouncing xre connection.\n", __FUNCTION__, __LINE__ );
-        
-        if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
-        {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n", __FUNCTION__, __LINE__);
-        }
+//        sleep(10); //waiting for default route before bouncing the xre connection
+//        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+//#ifdef ENABLE_IARM
+//        if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
+//        {
+//            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
+//        }
+//#endif
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
