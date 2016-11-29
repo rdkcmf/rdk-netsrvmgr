@@ -454,11 +454,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 {
     const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
     char command[128]= {'\0'};
+    static unsigned int bounceXreFlag=0;
 #ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
-    static unsigned int bounceXreFlag=0;
     memset(&eventData, 0, sizeof(eventData));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
