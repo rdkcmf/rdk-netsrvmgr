@@ -26,6 +26,8 @@ public:
     static MocaNetworkMgr* getInstance();
     int Start();
     static void printMocaTelemetry();
+    static IARM_Result_t mocaTelemetryLogEnable(void *arg);
+    static IARM_Result_t mocaTelemetryLogDuration(void *arg);
 private:
     MocaNetworkMgr();
     virtual ~MocaNetworkMgr();

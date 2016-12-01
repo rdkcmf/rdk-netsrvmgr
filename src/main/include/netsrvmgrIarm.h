@@ -47,6 +47,8 @@ typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_MAX,
 } IARM_Bus_NetworkManager_MoCA_EventId_t;
 
+#define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus "getTelemetryLogStatus"
+#define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration "getTelemetryLogDuration"
 
 
 #endif /* _NETSRVMGRIARM_H_ */
