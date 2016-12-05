@@ -902,7 +902,7 @@ IARM_Result_t WiFiNetworkMgr::sysModeChange(void *arg)
 	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Trigger Dhcp lease since we are in warehouse mode \n",__FUNCTION__, __LINE__ );
     	netSrvMgrUtiles::triggerDhcpLease();
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
 }
 
