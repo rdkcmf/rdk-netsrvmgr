@@ -715,6 +715,7 @@ gboolean RouteNetworkMgr::addRouteToList(char *ipAddr,bool isIPv4,char *ipv6Pfix
     g_string_assign(routeInfoData->ipStr,ipAddr);
     g_string_assign(routeInfoData->ipv6Pfix,ipv6Pfix);
     gwRouteInfo=g_list_prepend(gwRouteInfo,routeInfoData);
+    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] length of route list is %d \n",__FUNCTION__, __LINE__,g_list_length(gwRouteInfo));
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return true;
 
@@ -775,12 +776,16 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
 gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-    if(routeInfoData)
+    if((routeInfoData) && (gwRouteInfo))
     {
-        g_string_free(routeInfoData->ipStr,TRUE);
-        g_string_free(routeInfoData->ipv6Pfix,TRUE);
-        g_free(routeInfoData);
+        gwRouteInfo = g_list_first(gwRouteInfo);
         gwRouteInfo = g_list_remove(gwRouteInfo, routeInfoData);
+        if(routeInfoData)
+        {
+            g_string_free(routeInfoData->ipStr,TRUE);
+            g_string_free(routeInfoData->ipv6Pfix,TRUE);
+            g_free(routeInfoData);
+        }
     }
     else
     {
@@ -842,7 +847,7 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
         }
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
-    if(g_list_length(gwRouteInfo) != tempGwRouteLength)
+    if((g_list_length(gwRouteInfo) != 0 ) && (g_list_length(gwRouteInfo) != tempGwRouteLength))
     {
 	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] existing route are fine \n",__FUNCTION__, __LINE__);
 	return false;
