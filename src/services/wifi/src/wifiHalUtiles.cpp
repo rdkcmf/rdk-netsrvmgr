@@ -1349,6 +1349,7 @@ void *lafConnPrivThread(void* arg)
         {
             pthread_mutex_unlock(&mutexLAF);
         }
+	sleep(1);
     }
 }
 void *lafConnThread(void* arg)
