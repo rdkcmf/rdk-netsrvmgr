@@ -1428,6 +1428,7 @@ void *lafConnPrivThread(void* arg)
             pthread_cond_wait(&condLAF, &mutexLAF);
         }
         pthread_mutex_unlock(&mutexLAF);
+        triggerLAF = false;
 
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
         if(gWifiLNFStatus == CONNECTED_LNF)
@@ -1490,6 +1491,7 @@ void *lafConnPrivThread(void* arg)
             sleep(1);
         }
         bIsStopLNFWhileDisconnected=true;
+        sleep(1);
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
