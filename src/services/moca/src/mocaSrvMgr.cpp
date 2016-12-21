@@ -106,7 +106,9 @@ void MocaNetworkMgr::printMocaTelemetry()
     unsigned int totalMoCANode;
     unsigned int count=0;
     GString *phyRate=g_string_new(NULL);
+    GString *mocaPower=g_string_new(NULL);
     mocaPhyRateData mocaPhyRate = { 0 };
+    mocaPowerLevelData mocaPowerLevel = { 0 };
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
     moca_init();
     moca_getStatus(&status);
@@ -152,6 +154,40 @@ void MocaNetworkMgr::printMocaTelemetry()
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_TX_RATE:%s\n",phyRate->str);
             }
         }
+        moca_getRxPower(&mocaPowerLevel);
+	count=0;
+        while(count < mocaPowerLevel.totalNodesPresent)
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RXPOWER_%d_%d:%d\n",mocaPowerLevel.deviceNodeId,mocaPowerLevel.neighNodeId[count],mocaPowerLevel.mocaPower[count]);
+            g_string_append_printf(mocaPower,"%d",mocaPowerLevel.mocaPower[count]);
+            count ++;
+            if(count < mocaPowerLevel.totalNodesPresent)
+            {
+                g_string_append_c(mocaPower,',');
+            }
+            else
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RX_POWER:%s\n",mocaPower->str);
+            }
+        }
+        memset(&mocaPowerLevel, 0, sizeof mocaPhyRate);
+        moca_getTxPowerReduction(&mocaPowerLevel);
+        count=0;
+        g_string_assign(mocaPower,"");
+        while(count < mocaPowerLevel.totalNodesPresent)
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TXPOWERREDUCTION_%d_%d:%d\n",mocaPowerLevel.deviceNodeId,mocaPowerLevel.neighNodeId[count],mocaPowerLevel.mocaPower[count]);
+            g_string_append_printf(mocaPower,"%d",mocaPowerLevel.mocaPower[count]);
+            count ++;
+            if(count < mocaPowerLevel.totalNodesPresent)
+            {
+                g_string_append_c(mocaPower,',');
+            }
+            else
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TX_POWER_REDUCTION:%s\n",mocaPower->str);
+            }
+        }
         if (mocaPhyRate.deviceNodeId == ncNodeID )
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_IS_CURRENT_NODE_NC:1\n");
@@ -168,6 +204,7 @@ void MocaNetworkMgr::printMocaTelemetry()
 
     }
     g_string_free(phyRate,TRUE);
+    g_string_free(mocaPower,TRUE);
     moca_UnInit();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 
