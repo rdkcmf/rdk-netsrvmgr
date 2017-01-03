@@ -26,10 +26,7 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include "mocaSrvMgr.h"
-extern "C"
-{
-#include "moca_hal.h"
-}
+#include "rdk_moca_hal.h"
 #include "netsrvmgrIarm.h"
 #include "NetworkMgrMain.h"
 #include "NetworkMedium.h"
@@ -41,6 +38,7 @@ unsigned int mocaLogDuration=3600;
 
 MocaNetworkMgr* MocaNetworkMgr::instance = NULL;
 bool MocaNetworkMgr::instanceIsReady = false;
+static RMH_Handle rmh = NULL;
 
 
 MocaNetworkMgr::MocaNetworkMgr() {}
@@ -51,6 +49,7 @@ MocaNetworkMgr* MocaNetworkMgr::getInstance()
     if (instance == NULL)
     {
         instance = new MocaNetworkMgr();
+        rmh=RMH_Initialize(); /* TODO: Need to find the correct location to call RMH_Destroy(rmh); */
         instanceIsReady = true;
     }
     return instance;
@@ -100,95 +99,116 @@ void startMocaTelemetry()
 
 void MocaNetworkMgr::printMocaTelemetry()
 {
-    eMoCALinkStatus status;
+    RMH_LinkStatus status;
     unsigned int ncNodeID;
-    unsigned char mac[6];
+    unsigned char mac[32];
     unsigned int totalMoCANode;
     unsigned int count=0;
     GString *phyRate=g_string_new(NULL);
     GString *mocaPower=g_string_new(NULL);
-    mocaPhyRateData mocaPhyRate = { 0 };
-    mocaPowerLevelData mocaPowerLevel = { 0 };
+    RMH_NetworkStatus txNetworkStatus, rxNetworkStatus;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
-    moca_init();
-    moca_getStatus(&status);
-    if(status == UP)
+    if (RMH_GetLinkStatus(rmh, &status) != RMH_SUCCESS) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetLinkStatus!\n",__FUNCTION__, __LINE__ );
+    }
+    else if(status == RMH_INTERFACE_UP)
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_STATUS:UP\n");
-        moca_getNetworkControllerNodeId(&ncNodeID);
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_NODEID:%d\n",ncNodeID);
-        moca_getNetworkControllerMac(mac);
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_MAC:%02x:%02x:%02x:%02x:%02x:%02x\n",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
-        moca_getNumberOfNodesConnected(&totalMoCANode);
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TOTAL_NODE:%d\n",++totalMoCANode);
-        moca_getPhyRxRate(&mocaPhyRate);
-        while(count < mocaPhyRate.totalNodesPresent)
-        {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYRXRATE_%d_%d:%d\n",mocaPhyRate.deviceNodeId,mocaPhyRate.neighNodeId[count],mocaPhyRate.phyRate[count]);
-            g_string_append_printf(phyRate,"%d",mocaPhyRate.phyRate[count]);
-            count ++;
-            if(count < mocaPhyRate.totalNodesPresent)
+        if (RMH_GetNetworkControllerNodeId(rmh, &ncNodeID) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkControllerNodeId!\n",__FUNCTION__, __LINE__ );
+        }
+        else {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_NODEID:%d\n",ncNodeID);
+        }
+
+        if (RMH_GetNetworkControllerMacString(rmh, mac, sizeof(mac)) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkControllerMac!\n",__FUNCTION__, __LINE__ );
+        }
+        else {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_MAC:%s\n",mac);
+        }
+
+        if (RMH_GetNumNodesInNetwork(rmh, &totalMoCANode) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNumberOfConnectedNodes!\n",__FUNCTION__, __LINE__ );
+        }
+        else {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TOTAL_NODE:%d\n",totalMoCANode);
+        }
+
+        if (RMH_GetNetworkStatusRx(rmh, &rxNetworkStatus) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkStatusRx!\n",__FUNCTION__, __LINE__ );
+        }
+        else if (RMH_GetNetworkStatusTx(rmh, &txNetworkStatus) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkStatusTx!\n",__FUNCTION__, __LINE__ );
+        }
+        else {
+            while(count < rxNetworkStatus.remoteNodesPresent)
             {
-                g_string_append_c(phyRate,',');
+                RMH_RemoteNodeStatus *status=&rxNetworkStatus.remoteNodes[count];
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYRXRATE_%d_%d:%d\n", rxNetworkStatus.localNodeId, status->nodeId, status->phyRate);
+                g_string_append_printf(phyRate,"%d",status->phyRate);
+                count ++;
+                if(count < rxNetworkStatus.remoteNodesPresent)
+                {
+                    g_string_append_c(phyRate,',');
+                }
+                else
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_RX_RATE:%s\n",phyRate->str);
+                }
             }
-            else
+            count=0;
+            g_string_assign(phyRate,"");
+            while(count < txNetworkStatus.remoteNodesPresent)
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_RX_RATE:%s\n",phyRate->str);
+                RMH_RemoteNodeStatus *status=&txNetworkStatus.remoteNodes[count];
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYTXRATE_%d_%d:%d\n", txNetworkStatus.localNodeId, status->nodeId, status->phyRate);
+                g_string_append_printf(phyRate,"%d",status->phyRate);
+                count ++;
+                if(count < txNetworkStatus.remoteNodesPresent)
+                {
+                    g_string_append_c(phyRate,',');
+                }
+                else
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_TX_RATE:%s\n",phyRate->str);
+                }
+            }
+            count=0;
+            while(count < rxNetworkStatus.remoteNodesPresent)
+            {
+                RMH_RemoteNodeStatus *status=&rxNetworkStatus.remoteNodes[count];
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RXPOWER_%d_%d:%d\n", rxNetworkStatus.localNodeId, status->nodeId, status->power);
+                g_string_append_printf(mocaPower,"%d",status->power);
+                count ++;
+                if(count < rxNetworkStatus.remoteNodesPresent)
+                {
+                    g_string_append_c(mocaPower,',');
+                }
+                else
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RX_POWER:%s\n",mocaPower->str);
+                }
+            }
+            count=0;
+            g_string_assign(mocaPower,"");
+            while(count < txNetworkStatus.remoteNodesPresent)
+            {
+                RMH_RemoteNodeStatus *status=&txNetworkStatus.remoteNodes[count];
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TXPOWERREDUCTION_%d_%d:%d\n", txNetworkStatus.localNodeId, status->nodeId, status->backoff);
+                g_string_append_printf(mocaPower,"%d",status->backoff);
+                count ++;
+                if(count < txNetworkStatus.remoteNodesPresent)
+                {
+                    g_string_append_c(mocaPower,',');
+                }
+                else
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TX_POWER_REDUCTION:%s\n",mocaPower->str);
+                }
             }
         }
-        memset(&mocaPhyRate, 0, sizeof mocaPhyRate);
-        moca_getPhyTxRate(&mocaPhyRate);
-        count=0;
-        g_string_assign(phyRate,"");
-        while(count < mocaPhyRate.totalNodesPresent)
-        {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYTXRATE_%d_%d:%d\n",mocaPhyRate.deviceNodeId,mocaPhyRate.neighNodeId[count],mocaPhyRate.phyRate[count]);
-            g_string_append_printf(phyRate,"%d",mocaPhyRate.phyRate[count]);
-            count ++;
-            if(count < mocaPhyRate.totalNodesPresent)
-            {
-                g_string_append_c(phyRate,',');
-            }
-            else
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_TX_RATE:%s\n",phyRate->str);
-            }
-        }
-        moca_getRxPower(&mocaPowerLevel);
-	count=0;
-        while(count < mocaPowerLevel.totalNodesPresent)
-        {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RXPOWER_%d_%d:%d\n",mocaPowerLevel.deviceNodeId,mocaPowerLevel.neighNodeId[count],mocaPowerLevel.mocaPower[count]);
-            g_string_append_printf(mocaPower,"%d",mocaPowerLevel.mocaPower[count]);
-            count ++;
-            if(count < mocaPowerLevel.totalNodesPresent)
-            {
-                g_string_append_c(mocaPower,',');
-            }
-            else
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RX_POWER:%s\n",mocaPower->str);
-            }
-        }
-        memset(&mocaPowerLevel, 0, sizeof mocaPhyRate);
-        moca_getTxPowerReduction(&mocaPowerLevel);
-        count=0;
-        g_string_assign(mocaPower,"");
-        while(count < mocaPowerLevel.totalNodesPresent)
-        {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TXPOWERREDUCTION_%d_%d:%d\n",mocaPowerLevel.deviceNodeId,mocaPowerLevel.neighNodeId[count],mocaPowerLevel.mocaPower[count]);
-            g_string_append_printf(mocaPower,"%d",mocaPowerLevel.mocaPower[count]);
-            count ++;
-            if(count < mocaPowerLevel.totalNodesPresent)
-            {
-                g_string_append_c(mocaPower,',');
-            }
-            else
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TX_POWER_REDUCTION:%s\n",mocaPower->str);
-            }
-        }
-        if (mocaPhyRate.deviceNodeId == ncNodeID )
+        if (rxNetworkStatus.localNodeId == ncNodeID )
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_IS_CURRENT_NODE_NC:1\n");
         }
@@ -205,9 +225,7 @@ void MocaNetworkMgr::printMocaTelemetry()
     }
     g_string_free(phyRate,TRUE);
     g_string_free(mocaPower,TRUE);
-    moca_UnInit();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
-
 }
 
 static void _mocaEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
