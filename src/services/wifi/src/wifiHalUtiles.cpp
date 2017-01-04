@@ -512,6 +512,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_DISCONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", __FUNCTION__, __LINE__, WIFI_DISCONNECTED);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
         }
         break;
     case WIFI_HAL_CONNECTING:
@@ -583,6 +584,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             }
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_SSID_CHANGED\n");
         }
         break;
     /* the connection to the network was lost */
@@ -595,6 +597,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_LOST\n");
         }
         break;
     /* the connection failed for an unknown reason */
@@ -608,6 +611,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_FAILED\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_FAILED\n");
         }
         break;
     /* the connection was interrupted */
@@ -620,6 +624,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_INTERRUPTED\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_INTERRUPTED\n");
         }
         break;
     /* the connection failed due to invalid credentials */
@@ -636,9 +641,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 bWPSPairing=false;
                 lnfConnectPrivCredentials();
             }
-
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'INVALID_CREDENTIALS\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_INVALID_CREDENTIALS\n");
         }
         break;
     case WIFI_HAL_UNRECOVERABLE_ERROR:
@@ -650,6 +655,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             set_WiFiStatusCode(WIFI_FAILED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onWIFIStateChanged (%d)' with state as \'FAILED\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiStateChange.state);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_UNRECOVERABLE_ERROR\n");
         }
         break;
     case WIFI_HAL_ERROR_UNKNOWN:
@@ -662,6 +668,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventData.data.wifiError.code = WIFI_UNKNOWN;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Notification on 'onError (%d)' with state as \'UNKNOWN\'(%d).\n", \
                      __FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_UNKNOWN\n");
         }
         break;
     }

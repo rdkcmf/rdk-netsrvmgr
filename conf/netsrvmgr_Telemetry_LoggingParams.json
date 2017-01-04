@@ -1,5 +1,5 @@
 {
-    "wifi_period1_time": 60,
+    "wifi_period1_time": 900,
 "wifi_parameter_list_period1":
     [
         "Device.WiFi.EndPoint.1.Stats.LastDataDownlinkRate",
@@ -15,7 +15,7 @@
         "Device.WiFi.Radio.1.Stats.ErrorsSent",
         "Device.WiFi.Radio.1.Stats.PacketsReceived",
         "Device.WiFi.Radio.1.Stats.PacketsSent"  ],
-    "wifi_period2_time": 1800,
+    "wifi_period2_time": 900,
 "wifi_parameter_list_period2":
     [
         "Device.WiFi.Endpoint.1.NumberOfEntries",
