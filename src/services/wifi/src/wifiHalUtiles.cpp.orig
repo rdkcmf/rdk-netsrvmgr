@@ -492,7 +492,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             }
             if (! laf_is_lnfssid(ap_SSID))
             {
-                setLNFState(CONNECTED_PRIVATE);
                 isLAFCurrConnectedssid=false;
                 if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
                     storeMfrWifiCredentials();
