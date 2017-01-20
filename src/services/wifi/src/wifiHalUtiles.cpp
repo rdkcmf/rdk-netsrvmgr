@@ -575,6 +575,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
             /* Event Id & Code */
+            if(confProp.wifiProps.bEnableLostFound)
+            {
+                lnfConnectPrivCredentials();
+            }
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
