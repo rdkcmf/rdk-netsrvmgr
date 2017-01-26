@@ -101,45 +101,45 @@ void MocaNetworkMgr::printMocaTelemetry()
 {
     RMH_LinkStatus status;
     unsigned int ncNodeID;
-    unsigned char mac[32];
+    char mac[32];
     unsigned int totalMoCANode;
     unsigned int count=0;
     GString *phyRate=g_string_new(NULL);
     GString *mocaPower=g_string_new(NULL);
     RMH_NetworkStatus txNetworkStatus, rxNetworkStatus;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
-    if (RMH_GetLinkStatus(rmh, &status) != RMH_SUCCESS) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetLinkStatus!\n",__FUNCTION__, __LINE__ );
+    if (RMH_Network_GetLinkStatus(rmh, &status) != RMH_SUCCESS) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetLinkStatus!\n",__FUNCTION__, __LINE__ );
     }
     else if(status == RMH_INTERFACE_UP)
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_STATUS:UP\n");
-        if (RMH_GetNetworkControllerNodeId(rmh, &ncNodeID) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkControllerNodeId!\n",__FUNCTION__, __LINE__ );
+        if (RMH_Network_GetNCNodeId(rmh, &ncNodeID) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetNCNodeId!\n",__FUNCTION__, __LINE__ );
         }
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_NODEID:%d\n",ncNodeID);
         }
 
-        if (RMH_GetNetworkControllerMacString(rmh, mac, sizeof(mac)) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkControllerMac!\n",__FUNCTION__, __LINE__ );
+        if (RMH_Network_GetNCMacString(rmh, mac, sizeof(mac)) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetNCMacString!\n",__FUNCTION__, __LINE__ );
         }
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_MAC:%s\n",mac);
         }
 
-        if (RMH_GetNumNodesInNetwork(rmh, &totalMoCANode) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNumberOfConnectedNodes!\n",__FUNCTION__, __LINE__ );
+        if (RMH_Network_GetNumNodes(rmh, &totalMoCANode) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetNumNodes!\n",__FUNCTION__, __LINE__ );
         }
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TOTAL_NODE:%d\n",totalMoCANode);
         }
 
-        if (RMH_GetNetworkStatusRx(rmh, &rxNetworkStatus) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkStatusRx!\n",__FUNCTION__, __LINE__ );
+        if (RMH_Network_GetStatusRx(rmh, &rxNetworkStatus) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetStatusRx!\n",__FUNCTION__, __LINE__ );
         }
-        else if (RMH_GetNetworkStatusTx(rmh, &txNetworkStatus) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_GetNetworkStatusTx!\n",__FUNCTION__, __LINE__ );
+        else if (RMH_Network_GetStatusTx(rmh, &txNetworkStatus) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetStatusTx!\n",__FUNCTION__, __LINE__ );
         }
         else {
             while(count < rxNetworkStatus.remoteNodesPresent)
