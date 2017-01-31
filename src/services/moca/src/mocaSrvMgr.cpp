@@ -26,7 +26,6 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include "mocaSrvMgr.h"
-#include "rdk_moca_hal.h"
 #include "netsrvmgrIarm.h"
 #include "NetworkMgrMain.h"
 #include "NetworkMedium.h"
@@ -64,6 +63,7 @@ int  MocaNetworkMgr::Start()
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG_DURATION, _mocaEventHandler);
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus, mocaTelemetryLogEnable);
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration, mocaTelemetryLogDuration);
+    RMH_Callback_RegisterEvent(rmh, eventCallback, NULL, LINK_STATUS_CHANGED | MOCA_VERSION_CHANGED);
     startMocaTelemetry();
 }
 
@@ -72,6 +72,7 @@ void *mocaTelemetryThrd(void* arg)
     int ret = 0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
 
+    MocaNetworkMgr::printMocaTelemetry();
     while (true) {
         if(mocaLogEnable)
         {
@@ -102,6 +103,7 @@ void MocaNetworkMgr::printMocaTelemetry()
     RMH_LinkStatus status;
     unsigned int ncNodeID;
     char mac[32];
+    RMH_MoCAVersion mocaVersion;
     unsigned int totalMoCANode;
     unsigned int count=0;
     GString *phyRate=g_string_new(NULL);
@@ -109,37 +111,45 @@ void MocaNetworkMgr::printMocaTelemetry()
     RMH_NetworkStatus txNetworkStatus, rxNetworkStatus;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
     if (RMH_Network_GetLinkStatus(rmh, &status) != RMH_SUCCESS) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetLinkStatus!\n",__FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetLinkStatus!\n",__FUNCTION__, __LINE__ );
     }
     else if(status == RMH_INTERFACE_UP)
     {
+	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_LINK_STATUS_CHANGED:%d \n",status);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_STATUS:UP\n");
+        if (RMH_Self_GetHighestSupportedMoCAVersion(rmh,&mocaVersion) != RMH_SUCCESS)
+	{
+	   RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Self_GetHighestSupportedMoCAVersion!\n",__FUNCTION__, __LINE__ );
+	}
+	else {
+	   RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_VERSION_CHANGED:%s \n",RMH_MoCAVersionToString(mocaVersion));
+	}
         if (RMH_Network_GetNCNodeId(rmh, &ncNodeID) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetNCNodeId!\n",__FUNCTION__, __LINE__ );
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetNCNodeId!\n",__FUNCTION__, __LINE__ );
         }
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_NODEID:%d\n",ncNodeID);
         }
 
         if (RMH_Network_GetNCMacString(rmh, mac, sizeof(mac)) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetNCMacString!\n",__FUNCTION__, __LINE__ );
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetNCMacString!\n",__FUNCTION__, __LINE__ );
         }
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_MAC:%s\n",mac);
         }
 
         if (RMH_Network_GetNumNodes(rmh, &totalMoCANode) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetNumNodes!\n",__FUNCTION__, __LINE__ );
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetNumNodes!\n",__FUNCTION__, __LINE__ );
         }
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TOTAL_NODE:%d\n",totalMoCANode);
         }
 
         if (RMH_Network_GetStatusRx(rmh, &rxNetworkStatus) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetStatusRx!\n",__FUNCTION__, __LINE__ );
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetStatusRx!\n",__FUNCTION__, __LINE__ );
         }
         else if (RMH_Network_GetStatusTx(rmh, &txNetworkStatus) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "Failed calling RMH_Network_GetStatusTx!\n",__FUNCTION__, __LINE__ );
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetStatusTx!\n",__FUNCTION__, __LINE__ );
         }
         else {
             while(count < rxNetworkStatus.remoteNodesPresent)
@@ -274,4 +284,20 @@ IARM_Result_t MocaNetworkMgr::mocaTelemetryLogDuration(void *arg)
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] get venent to get the moca log duration set %d \n",__FUNCTION__, __LINE__,mocaLogDuration);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
     return ret;
+}
+
+static void eventCallback(enum RMH_Event event, struct RMH_EventData *eventData, void* userContext){
+    switch(event) {
+    case LINK_STATUS_CHANGED:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] MoCA Link status changed to %d \n",__FUNCTION__, __LINE__,eventData->LINK_STATUS_CHANGED.status );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_LINK_STATUS_CHANGED:%d \n",eventData->LINK_STATUS_CHANGED.status);
+        break;
+    case MOCA_VERSION_CHANGED:
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] MoCA version changed to %s \n",__FUNCTION__, __LINE__,RMH_MoCAVersionToString(eventData->MOCA_VERSION_CHANGED.version));
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_VERSION_CHANGED:%s \n",RMH_MoCAVersionToString(eventData->MOCA_VERSION_CHANGED.version));
+        break;
+    default:
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] MoCA Event Not Supported \n",__FUNCTION__, __LINE__ );
+        break;
+    }
 }
