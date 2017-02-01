@@ -16,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = src src/services test
-DIST_SUBDIRS =src src/services test
+SUBDIRS = src test
+DIST_SUBDIRS =src test
 
 
 
