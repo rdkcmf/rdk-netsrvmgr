@@ -47,11 +47,15 @@
 #define SYSTEM_COMMAND_SHELL_SUCESS 23
 #define SYSTEM_COMMAND_ERROR -1
 
+
 namespace netSrvMgrUtiles
 {
 char* get_IfName_devicePropsFile(void);
 bool getMacAddress_IfName(char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN]);
 void triggerDhcpLease(void);
+bool getRouteInterface(char* devname);
+bool readDevFile(char *deviceName);
+char getAllNetworkInterface(char* devAllInterface);
 }
 
 

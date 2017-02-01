@@ -170,12 +170,10 @@ int  WiFiNetworkMgr::Start()
 
 int  WiFiNetworkMgr::Stop()
 {
-#ifdef ENABLE_IARM
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    IARM_Bus_Disconnect();
-    IARM_Bus_Term();
+    wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
+    shutdownWifi();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-#endif
 }
 
 #ifdef ENABLE_IARM

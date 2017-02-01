@@ -44,6 +44,7 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <ifaddrs.h>
 
 #include "NetworkMgrMain.h"
 #include "netsrvmgrUtiles.h"
@@ -158,4 +159,149 @@ void netSrvMgrUtiles::triggerDhcpLease(void)
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] unknown error   %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
     }
+}
+
+bool netSrvMgrUtiles::getRouteInterface(char* devname)
+{
+    char dst[50],gw[50];
+    char line[100] , *ptr , *ctr, *sptr;
+    int ret;
+    FILE *fp;
+    fp = fopen("/proc/net/ipv6_route","r");
+    if(fp!=NULL) {
+        while((ret=fscanf(fp,"%s %*x %*s %*x %s %*x %*x %*x %*x %s",
+                          dst,gw,
+                          devname))!=EOF) {
+            /*return value must be parameter's number*/
+            if(ret!=3) {
+                continue;
+            }
+            if((strcmp(dst,gw) == 0) && (strcmp(devname,"sit0") != 0) && (strcmp(devname,"lo") != 0) )
+            {
+                
+		readDevFile(devname);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__,devname);
+                return true;
+            } 
+        }    
+    } 
+
+    fclose(fp);
+    fp = fopen("/proc/net/route" , "r");
+    while(fgets(line , 100 , fp))
+    {
+        ptr = strtok_r(line , " \t", &sptr);
+        ctr = strtok_r(NULL , " \t", &sptr);
+    
+        if(ptr!=NULL && ctr!=NULL)
+        {
+            if(strcmp(ctr , "00000000") == 0)
+            {
+                strcpy(devname,ptr);
+		readDevFile(devname);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__,devname);
+                return true;
+            }
+        }
+    }
+    fclose(fp);
+    return false;
+}
+
+bool netSrvMgrUtiles::readDevFile(char *deviceName)
+{
+    GError                  *error=NULL;
+    gboolean                result = FALSE;
+    gchar* devfilebuffer = NULL;
+    const gchar* deviceFile = "//etc/device.properties";
+    if(!deviceName)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] device name is null  \n", __FUNCTION__, __LINE__);
+	return result;
+    }	
+    result = g_file_get_contents (deviceFile, &devfilebuffer, NULL, &error);
+    if (result == FALSE)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No contents in device properties  \n", __FUNCTION__, __LINE__);
+    }
+    else
+    {
+        /* reset result = FALSE to identify device properties from devicefile contents */
+        result = FALSE;
+        gchar **tokens = g_strsplit_set(devfilebuffer,",='\n'", -1);
+        guint toklength = g_strv_length(tokens);
+        guint loopvar=0;
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Interface Name  %s  \n", __FUNCTION__, __LINE__,deviceName);
+        for (loopvar=0; loopvar<toklength; loopvar++)
+        {
+            if (g_strrstr(g_strstrip(tokens[loopvar]), "ETHERNET_INTERFACE") && ((g_strcmp0(g_strstrip(tokens[loopvar+1]),deviceName)) == 0))
+            {
+                if ((loopvar+1) < toklength )
+                {
+                    strcpy(deviceName,"ETHERNET");
+        	    result=TRUE;
+		    break;
+                }
+            }
+            else if (g_strrstr(g_strstrip(tokens[loopvar]), "MOCA_INTERFACE") && ((g_strcmp0(g_strstrip(tokens[loopvar+1]),deviceName)) == 0))
+            {
+                if ((loopvar+1) < toklength )
+                {
+                    strcpy(deviceName,"MOCA");
+        	    result=TRUE;
+		    break;
+                }
+            }
+            else if (g_strrstr(g_strstrip(tokens[loopvar]), "WIFI_INTERFACE") && ((g_strcmp0(g_strstrip(tokens[loopvar+1]),deviceName)) == 0))
+            {
+                if ((loopvar+1) < toklength )
+                {
+                    strcpy(deviceName,"WIFI");
+        	    result=TRUE;
+		    break;
+                }
+            }
+        }
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Network Type  %s  \n", __FUNCTION__, __LINE__,deviceName);
+    }
+    return result;
+}
+
+char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
+{
+    struct ifaddrs *ifAddrStruct,*tmpAddrPtr;
+    bool firstInterface=false;
+    char count=0;
+    char tempInterface[10];
+    getifaddrs(&ifAddrStruct);
+    tmpAddrPtr = ifAddrStruct;
+    GString *device = g_string_new(NULL);
+
+    while (tmpAddrPtr)
+    {
+        if (tmpAddrPtr->ifa_addr && (strcmp(tmpAddrPtr->ifa_name,"sit0") != 0) && (strcmp(tmpAddrPtr->ifa_name,"lo") != 0))
+	{
+	    g_stpcpy(tempInterface,tmpAddrPtr->ifa_name);
+               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] 1 interface [%s].  \n", __FUNCTION__, __LINE__,tempInterface);
+	    if((readDevFile(tempInterface)) && (!g_strrstr(device->str,tempInterface)))
+	    {
+	       if(firstInterface)
+	       {	
+                 g_string_append_printf(device,"%s",",");
+               }
+	       else
+	       {
+	         firstInterface=true;
+               }
+               g_string_append_printf(device,"%s",tempInterface);
+               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] interface [%s] interface List [%s]  \n", __FUNCTION__, __LINE__,tempInterface,device->str);
+	       count++;
+	    }
+	}
+        tmpAddrPtr = tmpAddrPtr->ifa_next;
+    }
+    freeifaddrs(ifAddrStruct);
+    strcpy(devAllInterface,device->str);
+    g_string_free(device,TRUE);
+    return count;
 }

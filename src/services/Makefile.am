@@ -16,15 +16,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS =   wifi
-if ROUTE_SUPPORT
-SUBDIRS += route
+SUBDIRS =
+DIST_SUBDIRS =
+
+if RDKWIFIHAL
+SUBDIRS +=   wifi
+DIST_SUBDIRS +=  wifi
 endif
 
-DIST_SUBDIRS =  wifi
 if ROUTE_SUPPORT
+SUBDIRS += route
 DIST_SUBDIRS += route
 endif
+
 if RDKMOCAHAL
 SUBDIRS += moca
 DIST_SUBDIRS += moca

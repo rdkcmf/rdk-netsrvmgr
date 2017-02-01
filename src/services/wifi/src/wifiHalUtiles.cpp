@@ -21,8 +21,11 @@
 #include "netsrvmgrUtiles.h"
 
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
+pthread_t wifiStatusMonitorThread;
 #ifdef ENABLE_LOST_FOUND
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
+pthread_t lafConnectThread;
+pthread_t lafConnectToPrivateThread;
 pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier_laf_connect;
@@ -968,7 +971,6 @@ void *wifiConnStatusThread(void* arg)
 
 void monitor_WiFiStatus()
 {
-    pthread_t wifiStatusMonitorThread;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -1273,6 +1275,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     {
         bLNFConnect=false;
     }
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] new = %d old = %d \n", MODULE_NAME,__FUNCTION__, __LINE__ ,(SsidSecurity)wificred->security_mode,wificred->security_mode);
 #ifdef USE_RDK_WIFI_HAL
         retVal=connect_withSSID(ssidIndex, wificred->ssid, (SsidSecurity)wificred->security_mode, NULL,wificred->psk, wificred->passphrase,(int)(!bLNFConnect),wificred->identity,wificred->carootcert,wificred->clientcert,wificred->privatekey);
 //    retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, wificred->psk);
@@ -1559,7 +1562,6 @@ void *lafConnThread(void* arg)
 void connectToLAF()
 {
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    pthread_t lafConnectThread;
     pthread_attr_t attr;
     bool retVal=false;
     char lfssid[33] = {'\0'};
@@ -1611,7 +1613,6 @@ void connectToLAF()
 
 void lafConnectToPrivate()
 {
-    pthread_t lafConnectToPrivateThread;
     pthread_attr_t attr;
 
     pthread_barrier_init(&barrier_laf_connect, NULL, 2);
@@ -2212,4 +2213,46 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 
 
 #endif
-
+bool shutdownWifi()
+{
+    bool result=true;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    if ((wifiStatusMonitorThread) && ( pthread_cancel(wifiStatusMonitorThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] wifiStatusMonitorThread cancel failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        result=false;
+    }
+#ifdef ENABLE_LOST_FOUND
+    if ((lafConnectThread) && (pthread_cancel(lafConnectThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lafConnectThread cancel failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        result=false;
+    }
+    if ((lafConnectToPrivateThread) && (pthread_cancel(lafConnectToPrivateThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lafConnectToPrivateThread failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        result=false;
+    }
+#endif
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Start WiFi Uninitialization \n", MODULE_NAME,__FUNCTION__, __LINE__);
+#ifdef USE_RDK_WIFI_HAL
+    wifi_uninit();
+#endif
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  WiFi Uninitialization done \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    gWifiAdopterStatus = WIFI_UNINSTALLED;
+#ifdef ENABLE_LOST_FOUND
+    condLAF = PTHREAD_COND_INITIALIZER;
+    mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+    triggerLAF = false;
+    gWifiLNFStatus = LNF_UNITIALIZED;
+    bLNFConnect=false;
+    bStopLNFWhileDisconnected=false;
+    isLAFCurrConnectedssid=false;
+    bIsStopLNFWhileDisconnected=false;
+#endif
+    wifiStatusLock = PTHREAD_MUTEX_INITIALIZER;
+    condGo = PTHREAD_COND_INITIALIZER;
+    mutexGo = PTHREAD_MUTEX_INITIALIZER;
+    memset(&gSsidList,0,sizeof gSsidList);
+    memset(&savedWiFiConnList,0,sizeof savedWiFiConnList);
+    memset(&wifiConnData,0,sizeof wifiConnData);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return result;
+}
