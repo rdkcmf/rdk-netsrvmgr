@@ -22,6 +22,7 @@ endif
 if LOSTFOUND
 AM_LDFLAGS += -llaf
 endif
-
+if RDKWIFIHAL
 noinst_LTLIBRARIES = libwifiservices.la
-libwifiservices_la_SOURCES =	src/wifiSrvMgr.cpp src/wifiHalUtiles.cpp
+libwifiservices_la_SOURCES = src/wifiSrvMgr.cpp src/wifiHalUtiles.cpp
+endif

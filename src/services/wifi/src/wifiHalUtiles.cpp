@@ -16,6 +16,9 @@ static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
 pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+pthread_t wifiStatusMonitorThread;
+pthread_t lafConnectThread;
+pthread_t lafConnectToPrivateThread;
 WiFiLNFStatusCode_t gWifiLNFStatus = LNF_UNITIALIZED;
 bool bDeviceActivated=false;
 bool bLNFConnect=false;
@@ -915,7 +918,6 @@ void *wifiConnStatusThread(void* arg)
 
 void monitor_WiFiStatus()
 {
-    pthread_t wifiStatusMonitorThread;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -1394,7 +1396,6 @@ void *lafConnThread(void* arg)
 
 void connectToLAF()
 {
-    pthread_t lafConnectThread;
     pthread_attr_t attr;
     bool retVal=false;
     char lfssid[33] = {'\0'};
@@ -1439,7 +1440,6 @@ void connectToLAF()
 
 void lafConnectToPrivate()
 {
-    pthread_t lafConnectToPrivateThread;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -1943,3 +1943,43 @@ void logs_Period2_Params()
 }
 #endif
 
+bool shutdownWifi()
+{
+    bool result=true;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
+    if ((wifiStatusMonitorThread) && ( pthread_cancel(wifiStatusMonitorThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] wifiStatusMonitorThread cancel failed! \n",__FUNCTION__, __LINE__);
+        result=false;
+    }
+#ifdef ENABLE_LOST_FOUND
+    if ((lafConnectThread) && (pthread_cancel(lafConnectThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] lafConnectThread cancel failed! \n", __FUNCTION__, __LINE__);
+        result=false;
+    }
+    if ((lafConnectToPrivateThread) && (pthread_cancel(lafConnectToPrivateThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] lafConnectToPrivateThread failed! \n",__FUNCTION__, __LINE__);
+        result=false;
+    }
+#endif
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Start WiFi Uninitialization \n", __FUNCTION__, __LINE__);
+#ifdef USE_RDK_WIFI_HAL
+    wifi_uninit();
+#endif
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]  WiFi Uninitialization done \n", __FUNCTION__, __LINE__);
+    gWifiAdopterStatus = WIFI_UNINSTALLED;
+#ifdef ENABLE_LOST_FOUND
+    condLAF = PTHREAD_COND_INITIALIZER;
+    mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+    gWifiLNFStatus = LNF_UNITIALIZED;
+    bLNFConnect=false;
+    isLAFCurrConnectedssid=false;
+#endif
+    wifiStatusLock = PTHREAD_MUTEX_INITIALIZER;
+    condGo = PTHREAD_COND_INITIALIZER;
+    mutexGo = PTHREAD_MUTEX_INITIALIZER;
+    memset(&gSsidList,0,sizeof gSsidList);
+    memset(&savedWiFiConnList,0,sizeof savedWiFiConnList);
+    memset(&wifiConnData,0,sizeof wifiConnData);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+    return result;
+}

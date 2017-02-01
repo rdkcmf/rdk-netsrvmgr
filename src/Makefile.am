@@ -44,7 +44,11 @@ netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp \
 if LOSTFOUND
 netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
 endif
-netsrvmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la $(top_builddir)/src/services/route/librouteservices.la
+netsrvmgr_LDADD = 
+if RDKWIFIHAL
+netsrvmgr_LDADD += $(top_builddir)/src/services/wifi/libwifiservices.la
+endif
+netsrvmgr_LDADD += $(top_builddir)/src/services/route/librouteservices.la
 
 if RDKMOCAHAL
 netsrvmgr_LDADD +=  $(top_builddir)/src/services/moca/libmocaservices.la
