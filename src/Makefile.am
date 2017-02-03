@@ -1,5 +1,6 @@
 ## Copyright (c) 2013 Comcast. All rights reserved.
 
+AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS =  services
 DIST_SUBDIRS = services
 
@@ -7,7 +8,8 @@ AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) \
 	-I$(top_srcdir)/src/main/include \
 	-I$(top_srcdir)/src/services/wifi/include \
 	-I$(top_srcdir)/src/services/route/include \
-	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
+	-I$(top_srcdir)/src/services/moca/include
 
 if RDKWIFIHAL
 AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
@@ -32,7 +34,8 @@ AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
 
 # the list of header files that belong to the library (to be installed later)
-include_HEADERS =    $(top_srcdir)/src/services/wifi/include/wifiSrvMgrIarmIf.h
+include_HEADERS =    $(top_srcdir)/src/services/wifi/include/wifiSrvMgrIarmIf.h \
+		     $(top_srcdir)/src/main/include/netsrvmgrIarm.h
 
 bin_PROGRAMS = netsrvmgr
 netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp \
@@ -43,3 +46,8 @@ netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
 endif
 netsrvmgr_LDADD = $(top_builddir)/src/services/wifi/libwifiservices.la $(top_builddir)/src/services/route/librouteservices.la
 
+if RDKMOCAHAL
+netsrvmgr_LDADD +=  $(top_builddir)/src/services/moca/libmocaservices.la
+AM_LDFLAGS +=  -lrdkmocahal
+AM_CXXFLAGS += -DUSE_RDK_MOCA_HAL
+endif
