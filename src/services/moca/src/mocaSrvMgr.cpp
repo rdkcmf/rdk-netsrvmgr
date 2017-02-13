@@ -102,13 +102,16 @@ void MocaNetworkMgr::printMocaTelemetry()
 {
     RMH_LinkStatus status;
     unsigned int ncNodeID;
-    char mac[32];
+    uint8_t mac[6];
+    char macStr[32];
     RMH_MoCAVersion mocaVersion;
     unsigned int totalMoCANode;
     unsigned int count=0;
-    GString *phyRate=g_string_new(NULL);
-    GString *mocaPower=g_string_new(NULL);
-    RMH_NetworkStatus txNetworkStatus, rxNetworkStatus;
+    unsigned int selfNodeId;
+    unsigned int i;
+    RMH_NodeList_Uint32_t nodeList;
+    GString *resString=g_string_new(NULL);
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
     if (RMH_Network_GetLinkStatus(rmh, &status) != RMH_SUCCESS) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetLinkStatus!\n",__FUNCTION__, __LINE__ );
@@ -117,7 +120,7 @@ void MocaNetworkMgr::printMocaTelemetry()
     {
 	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_LINK_STATUS_CHANGED:%d \n",status);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_STATUS:UP\n");
-        if (RMH_Self_GetHighestSupportedMoCAVersion(rmh,&mocaVersion) != RMH_SUCCESS)
+	if (RMH_Self_GetHighestSupportedMoCAVersion(rmh,&mocaVersion) != RMH_SUCCESS)
 	{
 	   RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Self_GetHighestSupportedMoCAVersion!\n",__FUNCTION__, __LINE__ );
 	}
@@ -131,11 +134,11 @@ void MocaNetworkMgr::printMocaTelemetry()
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_NODEID:%d\n",ncNodeID);
         }
 
-        if (RMH_Network_GetNCMacString(rmh, mac, sizeof(mac)) != RMH_SUCCESS) {
+        if (RMH_Network_GetNCMac(rmh, &mac) != RMH_SUCCESS) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetNCMacString!\n",__FUNCTION__, __LINE__ );
         }
         else {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_MAC:%s\n",mac);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_NC_MAC:%s\n", RMH_MacToString(mac, macStr, sizeof(macStr)/sizeof(macStr[0])));
         }
 
         if (RMH_Network_GetNumNodes(rmh, &totalMoCANode) != RMH_SUCCESS) {
@@ -145,80 +148,87 @@ void MocaNetworkMgr::printMocaTelemetry()
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TOTAL_NODE:%d\n",totalMoCANode);
         }
 
-        if (RMH_Network_GetStatusRx(rmh, &rxNetworkStatus) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetStatusRx!\n",__FUNCTION__, __LINE__ );
+        if (RMH_Self_GetNodeId(rmh, &selfNodeId) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Self_GetNodeId!\n",__FUNCTION__, __LINE__ );
+        } else if (RMH_Network_GetAssociateId(rmh, &nodeList) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetAssociateId!\n",__FUNCTION__, __LINE__ );
+        } else {
+            g_string_assign(resString,"");
+            for (i = 0; i < RMH_MAX_MOCA_NODES; i++) {
+                if (nodeList.nodePresent[i]) {
+                    uint32_t phyRate;
+                    if (RMH_RemoteNodeRx_GetUnicastPhyRate(rmh, i, &phyRate) != RMH_SUCCESS) {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeRx_GetUnicastPhyRate!\n",__FUNCTION__, __LINE__ );
+                    }
+                    else {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYRXRATE_%d_%d:%d\n", selfNodeId, i, phyRate);
+                        g_string_append_printf(resString,"%d,",phyRate);
+                    }
+                }
+            }
+            if (resString->len > 0) {
+                g_string_truncate(resString, resString->len-1); /*Remove last comma */
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_RX_RATE:%s\n",resString->str);
+                g_string_assign(resString,"");
+            }
+
+            for (i = 0; i < RMH_MAX_MOCA_NODES; i++) {
+                if (nodeList.nodePresent[i]) {
+                    uint32_t phyRate;
+                    if (RMH_RemoteNodeTx_GetUnicastPhyRate(rmh, i, &phyRate) != RMH_SUCCESS) {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeTx_GetUnicastPhyRate!\n",__FUNCTION__, __LINE__ );
+                    }
+                    else {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYTXRATE_%d_%d:%d\n", selfNodeId, i, phyRate);
+                        g_string_append_printf(resString,"%d,",phyRate);
+                    }
+                }
+            }
+            if (resString->len > 0) {
+                g_string_truncate(resString, resString->len-1); /*Remove last comma */
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_TX_RATE:%s\n",resString->str);
+                g_string_assign(resString,"");
+            }
+
+            for (i = 0; i < RMH_MAX_MOCA_NODES; i++) {
+                if (nodeList.nodePresent[i]) {
+                    float power;
+                    if (RMH_RemoteNodeRx_GetPower(rmh, i, &power) != RMH_SUCCESS) {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeRx_GetPower!\n",__FUNCTION__, __LINE__ );
+                    }
+                    else {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RXPOWER_%d_%d:%2.02f\n", selfNodeId, i, power);
+                        g_string_append_printf(resString,"%2.02f,",power);
+                    }
+                }
+            }
+            if (resString->len > 0) {
+                g_string_truncate(resString, resString->len-1); /*Remove last comma */
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RX_POWER:%s\n",resString->str);
+                g_string_assign(resString,"");
+            }
+
+            g_string_assign(resString,"");
+            for (i = 0; i < RMH_MAX_MOCA_NODES; i++) {
+                if (nodeList.nodePresent[i]) {
+                    uint32_t powerReduction;
+                    if (RMH_RemoteNodeTx_GetPowerReduction(rmh, i, &powerReduction) != RMH_SUCCESS) {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeRx_GetPower!\n",__FUNCTION__, __LINE__ );
+                    }
+                    else {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TXPOWERREDUCTION_%d_%d:%d\n", selfNodeId, i, powerReduction);
+                        g_string_append_printf(resString,"%d,",powerReduction);
+                    }
+                }
+            }
+            if (resString->len > 0) {
+                g_string_truncate(resString, resString->len-1); /*Remove last comma */
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TX_POWER_REDUCTION:%s\n",resString->str);
+                g_string_assign(resString,"");
+            }
+
         }
-        else if (RMH_Network_GetStatusTx(rmh, &txNetworkStatus) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetStatusTx!\n",__FUNCTION__, __LINE__ );
-        }
-        else {
-            while(count < rxNetworkStatus.remoteNodesPresent)
-            {
-                RMH_RemoteNodeStatus *status=&rxNetworkStatus.remoteNodes[count];
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYRXRATE_%d_%d:%d\n", rxNetworkStatus.localNodeId, status->nodeId, status->phyRate);
-                g_string_append_printf(phyRate,"%d",status->phyRate);
-                count ++;
-                if(count < rxNetworkStatus.remoteNodesPresent)
-                {
-                    g_string_append_c(phyRate,',');
-                }
-                else
-                {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_RX_RATE:%s\n",phyRate->str);
-                }
-            }
-            count=0;
-            g_string_assign(phyRate,"");
-            while(count < txNetworkStatus.remoteNodesPresent)
-            {
-                RMH_RemoteNodeStatus *status=&txNetworkStatus.remoteNodes[count];
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHYTXRATE_%d_%d:%d\n", txNetworkStatus.localNodeId, status->nodeId, status->phyRate);
-                g_string_append_printf(phyRate,"%d",status->phyRate);
-                count ++;
-                if(count < txNetworkStatus.remoteNodesPresent)
-                {
-                    g_string_append_c(phyRate,',');
-                }
-                else
-                {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_PHY_TX_RATE:%s\n",phyRate->str);
-                }
-            }
-            count=0;
-            while(count < rxNetworkStatus.remoteNodesPresent)
-            {
-                RMH_RemoteNodeStatus *status=&rxNetworkStatus.remoteNodes[count];
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RXPOWER_%d_%d:%d\n", rxNetworkStatus.localNodeId, status->nodeId, status->power);
-                g_string_append_printf(mocaPower,"%d",status->power);
-                count ++;
-                if(count < rxNetworkStatus.remoteNodesPresent)
-                {
-                    g_string_append_c(mocaPower,',');
-                }
-                else
-                {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RX_POWER:%s\n",mocaPower->str);
-                }
-            }
-            count=0;
-            g_string_assign(mocaPower,"");
-            while(count < txNetworkStatus.remoteNodesPresent)
-            {
-                RMH_RemoteNodeStatus *status=&txNetworkStatus.remoteNodes[count];
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TXPOWERREDUCTION_%d_%d:%d\n", txNetworkStatus.localNodeId, status->nodeId, status->backoff);
-                g_string_append_printf(mocaPower,"%d",status->backoff);
-                count ++;
-                if(count < txNetworkStatus.remoteNodesPresent)
-                {
-                    g_string_append_c(mocaPower,',');
-                }
-                else
-                {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TX_POWER_REDUCTION:%s\n",mocaPower->str);
-                }
-            }
-        }
-        if (rxNetworkStatus.localNodeId == ncNodeID )
+        if (selfNodeId == ncNodeID )
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_IS_CURRENT_NODE_NC:1\n");
         }
@@ -233,8 +243,7 @@ void MocaNetworkMgr::printMocaTelemetry()
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_STATUS:DOWN \n");
 
     }
-    g_string_free(phyRate,TRUE);
-    g_string_free(mocaPower,TRUE);
+    g_string_free(resString,TRUE);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
