@@ -150,8 +150,8 @@ void MocaNetworkMgr::printMocaTelemetry()
 
         if (RMH_Self_GetNodeId(rmh, &selfNodeId) != RMH_SUCCESS) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Self_GetNodeId!\n",__FUNCTION__, __LINE__ );
-        } else if (RMH_Network_GetAssociateId(rmh, &nodeList) != RMH_SUCCESS) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetAssociateId!\n",__FUNCTION__, __LINE__ );
+        } else if (RMH_Network_GetAssociatedId(rmh, &nodeList) != RMH_SUCCESS) {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetAssociatedId!\n",__FUNCTION__, __LINE__ );
         } else {
             g_string_assign(resString,"");
             for (i = 0; i < RMH_MAX_MOCA_NODES; i++) {
@@ -193,8 +193,8 @@ void MocaNetworkMgr::printMocaTelemetry()
             for (i = 0; i < RMH_MAX_MOCA_NODES; i++) {
                 if (nodeList.nodePresent[i]) {
                     float power;
-                    if (RMH_RemoteNodeRx_GetPower(rmh, i, &power) != RMH_SUCCESS) {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeRx_GetPower!\n",__FUNCTION__, __LINE__ );
+                    if (RMH_RemoteNodeRx_GetUnicastPower(rmh, i, &power) != RMH_SUCCESS) {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeRx_GetUnicastPower!\n",__FUNCTION__, __LINE__ );
                     }
                     else {
                         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_RXPOWER_%d_%d:%2.02f\n", selfNodeId, i, power);
@@ -213,7 +213,7 @@ void MocaNetworkMgr::printMocaTelemetry()
                 if (nodeList.nodePresent[i]) {
                     uint32_t powerReduction;
                     if (RMH_RemoteNodeTx_GetPowerReduction(rmh, i, &powerReduction) != RMH_SUCCESS) {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeRx_GetPower!\n",__FUNCTION__, __LINE__ );
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_RemoteNodeTx_GetPowerReduction!\n",__FUNCTION__, __LINE__ );
                     }
                     else {
                         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_TXPOWERREDUCTION_%d_%d:%d\n", selfNodeId, i, powerReduction);
