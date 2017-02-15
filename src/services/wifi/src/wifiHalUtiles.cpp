@@ -454,7 +454,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 {
     const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
     char command[128]= {'\0'};
-    static unsigned int bounceXreFlag=0;
+    static unsigned int switchLnf2Priv=0;
 #ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
@@ -481,15 +481,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
-            if((savedWiFiConnList.ssidSession.ssid[0] != '\0')&&(ap_SSID[0] != '\0')&&(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0))
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] get dhcp lease since there is a network change. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-                netSrvMgrUtiles::triggerDhcpLease();
-            }
-            else
-            {
-                RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] previous ssid  %s to current ssid %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid, ap_SSID);
-            }
             if (! laf_is_lnfssid(ap_SSID))
             {
                 setLNFState(CONNECTED_PRIVATE);
@@ -500,9 +491,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
                 strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
                 savedWiFiConnList.conn_type = wifi_conn_type;
-		if(bounceXreFlag)
+		if(switchLnf2Priv)
 		{
-		    bounceXreFlag=0;
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] get dhcp lease since there is a network change. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    netSrvMgrUtiles::triggerDhcpLease();
 		    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #ifdef ENABLE_IARM
         	    if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
@@ -510,6 +502,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             		RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
         	    }
 #endif
+		    switchLnf2Priv=0;
 		}
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
             }
@@ -517,8 +510,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is a LNF SSID so no storing \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
                 setLNFState(CONNECTED_LNF);
-		if(!bounceXreFlag)
-		   bounceXreFlag=1;
+		if(!switchLnf2Priv)
+		   switchLnf2Priv=1;
             }
 
             /*Write into file*/
