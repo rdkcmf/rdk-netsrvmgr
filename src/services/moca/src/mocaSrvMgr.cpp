@@ -115,9 +115,9 @@ void MocaNetworkMgr::printMocaTelemetry()
     {
 	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_LINK_STATUS_CHANGED:%d \n",status);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"TELEMETRY_MOCA_STATUS:UP\n");
-	if (RMH_Self_GetHighestSupportedMoCAVersion(rmh,&mocaVersion) != RMH_SUCCESS)
+	if (RMH_Network_GetMoCAVersion(rmh,&mocaVersion) != RMH_SUCCESS)
 	{
-	   RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Self_GetHighestSupportedMoCAVersion!\n",__FUNCTION__, __LINE__ );
+	   RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]Failed calling RMH_Network_GetMoCAVersion!\n",__FUNCTION__, __LINE__ );
 	}
 	else {
 	   RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_MOCA_VERSION_CHANGED:%s \n",RMH_MoCAVersionToString(mocaVersion));
