@@ -48,7 +48,7 @@ MocaNetworkMgr* MocaNetworkMgr::getInstance()
     if (instance == NULL)
     {
         instance = new MocaNetworkMgr();
-        rmh=RMH_Initialize(); /* TODO: Need to find the correct location to call RMH_Destroy(rmh); */
+        rmh=RMH_Initialize(eventCallback, NULL); /* TODO: Need to find the correct location to call RMH_Destroy(rmh); */
         instanceIsReady = true;
     }
     return instance;
@@ -63,7 +63,7 @@ int  MocaNetworkMgr::Start()
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG_DURATION, _mocaEventHandler);
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus, mocaTelemetryLogEnable);
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration, mocaTelemetryLogDuration);
-    RMH_Callback_RegisterEvent(rmh, eventCallback, NULL, LINK_STATUS_CHANGED | MOCA_VERSION_CHANGED);
+    RMH_Callback_RegisterEvents(rmh, LINK_STATUS_CHANGED | MOCA_VERSION_CHANGED);
     startMocaTelemetry();
 }
 
