@@ -425,12 +425,12 @@ INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *con
 
 void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned short action)
 {
+    static unsigned int switchLnf2Priv=0;
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
     char command[128]= {'\0'};
     const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
-    static unsigned int bounceXreFlag=0;
     memset(&eventData, 0, sizeof(eventData));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -453,16 +453,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
-            if((savedWiFiConnList.ssidSession.ssid[0] != '\0')&&(ap_SSID[0] != '\0')&&(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0))
-            {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] get dhcp lease since there is a network change. \n",__FUNCTION__, __LINE__ );
-                netSrvMgrUtiles::triggerDhcpLease();
-            }
-            else
-            {
-                RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] previous ssid  %s to current ssid %s. \n", __FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid, ap_SSID);
-            }
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] gLAFssid = %s  ap_SSID = %s \n", __FUNCTION__, __LINE__,gLAFssid,ap_SSID);
             if (strcasecmp(gLAFssid, ap_SSID) != 0 )
             {
                 isLAFCurrConnectedssid=false;
@@ -472,22 +462,24 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
                 strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
                 savedWiFiConnList.conn_type = wifi_conn_type;
-		if(bounceXreFlag)
+		if(switchLnf2Priv)
 		{
-		    bounceXreFlag=0;
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] get dhcp lease since there is a network change. \n",__FUNCTION__, __LINE__ );
+                    netSrvMgrUtiles::triggerDhcpLease();
 		    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting private ssid. Bouncing xre connection.\n",__FUNCTION__, __LINE__ );
         	    if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
         	    {
             		RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
         	    }
+		    switchLnf2Priv=0;
 		}
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
             }
             else {
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] This is a LNF SSID so no storing \n", __FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
-		if(!bounceXreFlag)
-		   bounceXreFlag=1;
+		if(!switchLnf2Priv)
+		   switchLnf2Priv=1;
             }
 
 
