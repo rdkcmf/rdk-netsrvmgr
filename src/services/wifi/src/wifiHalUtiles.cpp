@@ -149,6 +149,38 @@ static WiFiStatusCode_t get_WiFiStatusCode()
 {
     return gWifiAdopterStatus;
 }
+
+static bool get_WiFiStatusCodeAsString (WiFiStatusCode_t code, char* string)
+{
+    switch (code)
+    {
+    case WIFI_UNINSTALLED:
+        strcpy (string, "UNINSTALLED");
+        break;
+    case WIFI_DISABLED:
+        strcpy (string, "DISABLED");
+        break;
+    case WIFI_DISCONNECTED:
+        strcpy (string, "DISCONNECTED");
+        break;
+    case WIFI_PAIRING:
+        strcpy (string, "PAIRING");
+        break;
+    case WIFI_CONNECTING:
+        strcpy (string, "CONNECTING");
+        break;
+    case WIFI_CONNECTED:
+        strcpy (string, "CONNECTED");
+        break;
+    case WIFI_FAILED:
+        strcpy (string, "FAILED");
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
 #ifdef ENABLE_LOST_FOUND
 WiFiLNFStatusCode_t get_WiFiLNFStatusCode()
 {
@@ -1992,6 +2024,14 @@ void logs_Period1_Params()
 
         while(iter)
         {
+            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TELEMETRY_WIFI_CONNECTION_STATUS"))
+            {
+                char wifiStatus[32];
+                if (get_WiFiStatusCodeAsString (get_WiFiStatusCode(), wifiStatus)) {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s\n", (char *)iter->data, wifiStatus);
+                }
+            }
+
             /* Device.WiFi.EndPoint.{i}.Stats.LastDataDownlinkRate*/
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "LastDataDownlinkRate")) {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, endPointInfo.stats.lastDataDownlinkRate);
@@ -2020,11 +2060,11 @@ void logs_Period1_Params()
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.FCSErrorCount")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.fcsErrorCount);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.fcsErrorCount);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.Noise")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.noiseFloor);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.noiseFloor);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TransmitPower"))
@@ -2032,24 +2072,24 @@ void logs_Period1_Params()
                 INT output_INT = 0;
                 int radioIndex = 1;
                 if (wifi_getRadioTransmitPower( radioIndex,  &output_INT) == RETURN_OK) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n", (char *)iter->data , output_INT);
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n", (char *)iter->data , output_INT);
                 }
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsReceived")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.errorsReceived);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.errorsReceived);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsSent")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.errorsSent);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.errorsSent);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsReceived")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.packetsReceived);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, params.packetsReceived);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsSent")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.packetsSent);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, params.packetsSent);
             }
 
             iter = g_list_next(iter);
