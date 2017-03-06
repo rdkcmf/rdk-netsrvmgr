@@ -2,7 +2,6 @@
     "wifi_period1_time": 900,
 "wifi_parameter_list_period1":
     [
-        "TELEMETRY_WIFI_CONNECTION_STATUS",
         "Device.WiFi.EndPoint.1.Stats.LastDataDownlinkRate",
         "Device.WiFi.EndPoint.1.Stats.Retransmissions",
         "Device.WiFi.Endpoint.1.Stats.SignalStrength",

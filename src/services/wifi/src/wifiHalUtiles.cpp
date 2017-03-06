@@ -976,6 +976,8 @@ void *wifiConnStatusThread(void* arg)
     int ret = 0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     wifi_sta_stats_t stats;
+    WiFiStatusCode_t wifiStatusCode;
+    char wifiStatusAsString[32];
 
     while (true ) {
         pthread_mutex_lock(&mutexGo);
@@ -985,18 +987,28 @@ void *wifiConnStatusThread(void* arg)
 
             pthread_mutex_unlock(&mutexGo);
 
-            while(WIFI_CONNECTED == get_WiFiStatusCode()) {
-                //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
-                memset(&stats, 0, sizeof(wifi_sta_stats_t));
-                wifi_getStats(1, &stats);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
-                         stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
-                //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+            while (true) {
+                wifiStatusCode = get_WiFiStatusCode();
 
-                /*Telemetry Parameter logging*/
-                logs_Period1_Params();
+                if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
+                }
+                else {
+                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
+                }
 
-                logs_Period2_Params();
+                if (WIFI_CONNECTED == wifiStatusCode) {
+                    //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
+                    memset(&stats, 0, sizeof(wifi_sta_stats_t));
+                    wifi_getStats(1, &stats);
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
+                            stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
+                    //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+
+                    /*Telemetry Parameter logging*/
+                    logs_Period1_Params();
+                    logs_Period2_Params();
+                }
 
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
@@ -2024,14 +2036,6 @@ void logs_Period1_Params()
 
         while(iter)
         {
-            if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TELEMETRY_WIFI_CONNECTION_STATUS"))
-            {
-                char wifiStatus[32];
-                if (get_WiFiStatusCodeAsString (get_WiFiStatusCode(), wifiStatus)) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s\n", (char *)iter->data, wifiStatus);
-                }
-            }
-
             /* Device.WiFi.EndPoint.{i}.Stats.LastDataDownlinkRate*/
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "LastDataDownlinkRate")) {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, endPointInfo.stats.lastDataDownlinkRate);
