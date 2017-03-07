@@ -495,6 +495,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
+    bool xreBounceNotify=true;
     memset(&eventData, 0, sizeof(eventData));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -508,7 +509,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
 #if 0       /* Do not bounce for any network switch. Do it only from LF to private. */
-            if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
+            if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&xreBounceNotify))
             {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
