@@ -497,9 +497,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     bool notify = false;
     bool xreBounceNotify=true;
     memset(&eventData, 0, sizeof(eventData));
-
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #endif
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
@@ -996,6 +995,18 @@ void *wifiConnStatusThread(void* arg)
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
                     memset(&stats, 0, sizeof(wifi_sta_stats_t));
                     wifi_getStats(1, &stats);
+#ifdef ENABLE_XCAM_SUPPORT
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "XCAM - WIFI status - :%d, %s\n", stats.sta_Connection, stats.sta_SSID);
+                //check the connection status
+                if(stats.sta_Connection == 0) {
+                    wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
+                    wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_CONNECT);
+                } else {
+                    wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
+                    wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_DISCONNECT);
+                }
+                confProp.wifiProps.statsParam_PollInterval = 30;
+#endif
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
                             stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
@@ -1633,19 +1644,35 @@ void connectToLAF()
     else
     {
         retVal=lastConnectedSSID(&savedWiFiConnList);
+#ifndef ENABLE_XCAM_SUPPORT
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
         {
             sleep(confProp.wifiProps.lnfStartInSecs);
         }
+#endif
 
         /* If Device is activated and already connected to Private or any network,
             but defineltly not LF SSID. - No need to trigger LNF*/
         /* Here, 'getDeviceActivationState == true'*/
         lastConnectedSSID(&savedWiFiConnList);
 
-        if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus()))
-        {
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
+#ifdef ENABLE_XCAM_SUPPORT
+        //xcam - query wifi connection status
+        WiFi_EndPoint_Diag_Params endPointInfo;
+        getEndPointInfo(&endPointInfo);
+
+        if(endPointInfo.enable == 1) {
+            //Indicate that wifi is connected
+            wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
+            wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_CONNECT);
+
+        } else {
+            wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
+            wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_DISCONNECT);
+        }
+#endif
+        if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus())) {
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID %s\n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
         }
         else {
 #ifdef ENABLE_IARM
@@ -1945,7 +1972,16 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 
     wifi_getStats(radioIndex, &stats);
 
+#ifdef ENABLE_XCAM_SUPPORT
+    bool enable;
+    if(stats.sta_Connection == 0){
+        enable = true;
+    }else {
+        enable = false;
+    }
+#else
     bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
+#endif
     if (enable)
     {
         strncpy((char *)endPointInfo->status, "Enabled", (size_t)BUFF_LENGTH_64);
