@@ -31,7 +31,7 @@
 #include "NetworkMedium.h"
 
 
-bool mocaLogEnable=false;
+bool mocaLogEnable=true;
 unsigned int mocaLogDuration=3600;
 
 
