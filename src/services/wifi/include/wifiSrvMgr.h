@@ -55,6 +55,8 @@ public:
     static IARM_Result_t sysModeChange(void *arg);
     static IARM_Result_t getEndPointProps(void *args);
     static IARM_Result_t isStopLNFWhileDisconnected(void *arg);
+
+    static IARM_Result_t getCurrentConnectionType(void *arg);
 #ifdef ENABLE_LOST_FOUND
     static IARM_Result_t getLNFState(void *arg);
 #endif

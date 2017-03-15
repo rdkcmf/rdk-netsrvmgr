@@ -89,6 +89,7 @@ extern "C" {
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 #endif
 WiFiStatusCode_t get_WifiRadioStatus();
+WiFiConnectionTypeCode_t get_WifiConnectionType();
 bool ethernet_on();
 
 extern bool updateWiFiList();
@@ -101,7 +102,7 @@ bool shutdownWifi();
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
 INT wifi_disconnect_callback(INT , CHAR *ap, wifiStatusCode_t *err);
-bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int,char *,char *,char *,char *);
+bool connect_withSSID(int, char *, SsidSecurity, char *, char *, char *,int,char *,char *,char *,char *, int conType = 0);
 bool scan_Neighboring_WifiAP(char *);
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams);
 void monitor_WiFiStatus();

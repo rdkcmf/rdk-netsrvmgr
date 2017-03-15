@@ -57,6 +57,7 @@
 #define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /*!< Retrieve the paired status*/
 #define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"        /*!< Retrives the LNF state*/
 #define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected          "isStopLNFWhileDisconnected" 		/*!< Check if LNF is stopped */
+#define IARM_BUS_WIFI_MGR_API_getConnectionType     "getConnectionType"        /*!< Retrives the current state*/
 
 /*Diagnostic Apis */
 #define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /*!< Retrieve the get radio status properties*/
@@ -86,6 +87,15 @@ typedef enum _WiFiLNFStatusCode_t {
     DISCONNECTED_GET_LFAT_FAILED, // client wasn't able to acquire an LFAT
     DISCONNECTED_CANT_CONNECT_TO_PRIVATE // client could obtain LFAT, but couldn't connect to private network                                                       /* !< The device has encountered an unrecoverable error with the wifi adapter */
 } WiFiLNFStatusCode_t;
+
+typedef enum _WiFiConnectionTypeCode_t {
+    WIFI_CON_UNKNOWN,
+    WIFI_CON_WPS,
+    WIFI_CON_MANUAL,
+    WIFI_CON_LNF,
+    WIFI_CON_PRIVATE,
+    WIFI_CON_MAX,
+} WiFiConnectionTypeCode_t;
 
 /*! Error code: A recoverable, unexpected error occurred,
  * as defined by one of the following values */
@@ -187,6 +197,7 @@ typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
         WiFiConnection saveSSID;
         WiFiConnection clearSSID;
         WiFiConnectedSSIDInfo_t getConnectedSSID;
+        WiFiConnectionTypeCode_t connectionType;
         struct getPairedSSID {
             char ssid[SSID_SIZE];
         } getPairedSSID;

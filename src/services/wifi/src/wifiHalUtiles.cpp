@@ -21,6 +21,7 @@
 #include "netsrvmgrUtiles.h"
 
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
+static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
 pthread_t wifiStatusMonitorThread;
 #ifdef ENABLE_LOST_FOUND
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
@@ -52,6 +53,9 @@ extern netMgrConfigProps confProp;
 
 WiFiStatusCode_t get_WifiRadioStatus();
 void setLNFState(WiFiLNFStatusCode_t status);
+
+void set_WiFiConnectionType( WiFiConnectionTypeCode_t value);
+WiFiConnectionTypeCode_t get_WifiConnectionType();
 
 extern WiFiConnectionStatus savedWiFiConnList;
 extern char gWifiMacAddress[MAC_ADDR_BUFF_LEN];
@@ -201,6 +205,25 @@ WiFiStatusCode_t get_WifiRadioStatus()
     status = get_WiFiStatusCode();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit with state %d\n", MODULE_NAME,__FUNCTION__, __LINE__, status );
     return status;
+}
+
+void set_WiFiConnectionType( WiFiConnectionTypeCode_t value)
+{
+    if(value < 0 || value > WIFI_CON_MAX)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Trying to set invalid Wifi Connection Type %d \n", MODULE_NAME,__FUNCTION__, __LINE__, value );
+        return;
+    }
+
+    if(gWifiConnectionType != value)
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Wifi Connection Type changed to %d ..\n", MODULE_NAME,__FUNCTION__, __LINE__, value );
+
+    gWifiConnectionType = value;
+}
+
+WiFiConnectionTypeCode_t get_WifiConnectionType()
+{
+    return gWifiConnectionType;
 }
 
 #ifdef USE_HOSTIF_WIFI_HAL
@@ -382,8 +405,10 @@ bool connect_WpsPush()
         return ret;
     }
 
-
     if (WIFI_CONNECTED != get_WiFiStatusCode()) {
+
+        set_WiFiConnectionType(WIFI_CON_WPS);
+
         wpsStatus = wifi_setCliWpsButtonPush(ssidIndex);
 
         if(RETURN_OK == wpsStatus)
@@ -422,6 +447,8 @@ bool connect_WpsPush()
             while (start_time < timeout_period)
             {
                 if(WIFI_DISCONNECTED == gWifiAdopterStatus)  {
+                    set_WiFiConnectionType(WIFI_CON_WPS);
+
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully received Disconnect state \"%d\". \n", MODULE_NAME,__FUNCTION__, __LINE__, gWifiAdopterStatus);
                     ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
                     eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_DISCONNECTED;
@@ -448,6 +475,8 @@ bool connect_WpsPush()
 
         if(false == ret)
         {
+            set_WiFiConnectionType(WIFI_CON_WPS);
+
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Since failed to disconnect, so reconnecintg again. \"%d\". \n", MODULE_NAME,__FUNCTION__, __LINE__);
             ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
             eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
@@ -781,7 +810,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 }
 
 /*Connect using SSID Selection */
-bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mode, CHAR *ap_security_WEPKey, CHAR *ap_security_PreSharedKey, CHAR *ap_security_KeyPassphrase,int saveSSID,CHAR * eapIdentity,CHAR * carootcert,CHAR * clientcert,CHAR * privatekey)
+bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mode, CHAR *ap_security_WEPKey, CHAR *ap_security_PreSharedKey, CHAR *ap_security_KeyPassphrase,int saveSSID,CHAR * eapIdentity,CHAR * carootcert,CHAR * clientcert,CHAR * privatekey, int conType)
 {
     int ret = true;
     wifiSecurityMode_t securityMode;
@@ -795,6 +824,8 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
 
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d  \n",
              MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
+
+    set_WiFiConnectionType((WiFiConnectionTypeCode_t)conType);
 
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
 
@@ -1336,7 +1367,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     }
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] new = %d old = %d \n", MODULE_NAME,__FUNCTION__, __LINE__ ,(SsidSecurity)wificred->security_mode,wificred->security_mode);
 #ifdef USE_RDK_WIFI_HAL
-        retVal=connect_withSSID(ssidIndex, wificred->ssid, (SsidSecurity)wificred->security_mode, NULL,wificred->psk, wificred->passphrase,(int)(!bLNFConnect),wificred->identity,wificred->carootcert,wificred->clientcert,wificred->privatekey);
+        retVal=connect_withSSID(ssidIndex, wificred->ssid, (SsidSecurity)wificred->security_mode, NULL,wificred->psk, wificred->passphrase,(int)(!bLNFConnect),wificred->identity,wificred->carootcert,wificred->clientcert,wificred->privatekey, bLNFConnect ? WIFI_CON_LNF : WIFI_CON_PRIVATE);
 //    retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, wificred->psk);
 #endif
     if(false == retVal)
@@ -1528,7 +1559,7 @@ void *lafConnPrivThread(void* arg)
 //                  counter++;
                 if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
                 {
-                    retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL);
+                    retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL,WIFI_CON_PRIVATE);
                     if(false == retVal)
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s  failed \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid );

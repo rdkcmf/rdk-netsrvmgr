@@ -90,6 +90,7 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectedSSID, getConnectedSSID);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectionType, getCurrentConnectionType);
 
 #ifdef ENABLE_LOST_FOUND
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
@@ -236,6 +237,25 @@ IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
+
+IARM_Result_t WiFiNetworkMgr::getCurrentConnectionType(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+    param->status = true;
+
+    //if the ethernet is plugged in then report disabled
+    if( !ethernet_on() )
+        param->data.connectionType = get_WifiConnectionType();
+    else
+        param->data.connectionType = WIFI_CON_UNKNOWN;
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
+
 #ifdef ENABLE_LOST_FOUND
 IARM_Result_t WiFiNetworkMgr::isStopLNFWhileDisconnected(void *arg)
 {
@@ -303,7 +323,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             /*Now try to connect using saved SSID & PSK */
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey);
+            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }
@@ -321,7 +341,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
             /*Connect with Saved SSID */
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid, pass);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, pass,SAVE_SSID,eapIden,carootcert,clientcert,privatekey);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, pass,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }
@@ -330,7 +350,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) with Empty Passphrase.\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }
@@ -917,6 +937,11 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
             bool *param = (bool *)data;
             bStopLNFWhileDisconnected=*param;
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  event handler value of stopLNFWhileDisconnected %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
+            if((!bStopLNFWhileDisconnected) && (confProp.wifiProps.bEnableLostFound))
+            {
+               lnfConnectPrivCredentials();
+               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] starting LnF since stopLNFWhileDisconnected value is %d. \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
+            }
         }
         break;
         default:
