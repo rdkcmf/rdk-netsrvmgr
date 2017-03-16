@@ -2265,7 +2265,7 @@ int laf_set_lfat(laf_lfat_t* const lfat)
     std::string   str;
     gchar         *retStr;
 
-    str.assign(confProp.wifiProps.getLfatUrl,strlen(confProp.wifiProps.setLfatUrl));
+    str.assign(confProp.wifiProps.setLfatUrl,strlen(confProp.wifiProps.setLfatUrl));
     req_payload = cJSON_CreateObject();
     RDK_ASSERT_NOT_NULL(req_payload);
     cJSON_AddStringToObject(req_payload, "version", lfat->version);
