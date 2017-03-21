@@ -32,6 +32,7 @@
 extern "C" {
 #include "rdkc_api.h"
 }
+#define LFAT_TOKEN_FILE	"/opt/.lnfttoken"
 #endif
 
 #ifdef ENABLE_LOST_FOUND

@@ -550,6 +550,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
                 strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
                 savedWiFiConnList.conn_type = wifi_conn_type;
+#ifndef ENABLE_XCAM_SUPPORT
 		if(!switchPriv2Lnf)
 		   switchPriv2Lnf=1;
 		if(switchLnf2Priv)
@@ -565,12 +566,14 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
 		    switchLnf2Priv=0;
 		}
+#endif
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
             }
             else {
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is a LNF SSID so no storing \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
                 setLNFState(CONNECTED_LNF);
+#ifndef ENABLE_XCAM_SUPPORT
 		if(!switchLnf2Priv)
 		   switchLnf2Priv=1;
 		if(switchPriv2Lnf)
@@ -579,6 +582,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Switching from private to LnF get dhcp lease since there is a network change. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                    netSrvMgrUtiles::triggerDhcpLease();
 		}
+#endif
             }
 
             /*Write into file*/
@@ -844,7 +848,11 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
         if(!bLNFConnect)
         {
+#ifndef ENABLE_XCAM_SUPPORT
             set_WiFiStatusCode(WIFI_CONNECTING);
+#else
+            set_WiFiStatusCode(WIFI_CONNECTED);
+#endif
 #ifdef ENABLE_IARM
             eventData.data.wifiStateChange.state = WIFI_CONNECTING;
 #endif
@@ -2245,7 +2253,7 @@ void logs_Period2_Params()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
-
+#ifndef ENABLE_XCAM_SUPPORT
 /* get lfat from auth service */
 int laf_get_lfat(laf_lfat_t *lfat)
 {
@@ -2285,8 +2293,38 @@ int laf_get_lfat(laf_lfat_t *lfat)
     cJSON_Delete(response);
     return 0;
 }
-
-
+#else
+int laf_get_lfat(laf_lfat_t *lfat)
+{
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	FILE* fp_token;
+	int tokensize;
+	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
+	if(NULL == fp_token) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"Error in opening lfat token file");
+		return EBADF;
+	}else{
+		fseek(fp_token, 0L, SEEK_END);
+		tokensize = ftell(fp_token);
+		fseek(fp_token, 0, SEEK_SET);
+		lfat->len = tokensize-1;
+		RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token size is - %d\n",lfat->len);
+		lfat->token = (char *) malloc(lfat->len+1);
+		if(lfat->token == NULL)
+			return ENOMEM;
+		fread(lfat->token,lfat->len,1,fp_token);
+		lfat->token[lfat->len] = '\0';
+		strcpy(lfat->version, "1.0");
+		lfat->ttl = 31536000;
+		if(NULL != fp_token){
+			fclose(fp_token);
+			fp_token = NULL;
+		}
+	}
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+	return 0;
+}
+#endif
 /* store lfat with auth service */
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
