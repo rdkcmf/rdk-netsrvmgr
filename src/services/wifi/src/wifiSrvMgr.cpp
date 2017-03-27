@@ -323,7 +323,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             /*Now try to connect using saved SSID & PSK */
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
+            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL,savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }
@@ -341,7 +341,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
             /*Connect with Saved SSID */
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid, pass);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, pass,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL, pass, pass,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }
@@ -350,7 +350,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) with Empty Passphrase.\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, ssid, securityMode, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
+            connect_withSSID(ssidIndex, ssid, securityMode, NULL,savedWiFiConnList.ssidSession.passphrase , savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }

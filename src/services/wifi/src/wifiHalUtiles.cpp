@@ -102,7 +102,8 @@ SsidSecurity get_wifiSecurityModeFromString(char *secModeString)
     int len = sizeof(wifi_securityModes)/sizeof(_wifi_securityModes);
 
     for(int i = 0; i < len; i++) {
-        if(0 == strncasecmp(wifi_securityModes[i].modeString, secModeString, strlen(secModeString))) {
+	if(NULL != strcasestr(secModeString,wifi_securityModes[i].modeString)) {
+//        if(0 == strncasecmp(wifi_securityModes[i].modeString, secModeString, strlen(secModeString))) {
             mode = wifi_securityModes[i].securityMode;
             break;
         }
