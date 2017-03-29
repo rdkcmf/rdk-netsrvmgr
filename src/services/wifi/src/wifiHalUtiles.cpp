@@ -87,6 +87,38 @@ static WiFiStatusCode_t get_WiFiStatusCode()
 {
     return gWifiAdopterStatus;
 }
+
+static bool get_WiFiStatusCodeAsString (WiFiStatusCode_t code, char* string)
+{
+    switch (code)
+    {
+    case WIFI_UNINSTALLED:
+        strcpy (string, "UNINSTALLED");
+        break;
+    case WIFI_DISABLED:
+        strcpy (string, "DISABLED");
+        break;
+    case WIFI_DISCONNECTED:
+        strcpy (string, "DISCONNECTED");
+        break;
+    case WIFI_PAIRING:
+        strcpy (string, "PAIRING");
+        break;
+    case WIFI_CONNECTING:
+        strcpy (string, "CONNECTING");
+        break;
+    case WIFI_CONNECTED:
+        strcpy (string, "CONNECTED");
+        break;
+    case WIFI_FAILED:
+        strcpy (string, "FAILED");
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
 #ifdef ENABLE_LOST_FOUND
 WiFiLNFStatusCode_t get_WiFiLNFStatusCode()
 {
@@ -879,6 +911,8 @@ void *wifiConnStatusThread(void* arg)
     int ret = 0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     wifi_sta_stats_t stats;
+    WiFiStatusCode_t wifiStatusCode;
+    char wifiStatusAsString[32];
 
     while (true ) {
         pthread_mutex_lock(&mutexGo);
@@ -888,18 +922,28 @@ void *wifiConnStatusThread(void* arg)
 
             pthread_mutex_unlock(&mutexGo);
 
-            while(WIFI_CONNECTED == get_WiFiStatusCode()) {
-                //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
-                memset(&stats, 0, sizeof(wifi_sta_stats_t));
-                wifi_getStats(1, &stats);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
-                         stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
-                //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+            while (true) {
+                wifiStatusCode = get_WiFiStatusCode();
 
-                /*Telemetry Parameter logging*/
-                logs_Period1_Params();
+                if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
+                }
+                else {
+                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
+                }
 
-                logs_Period2_Params();
+                if (WIFI_CONNECTED == wifiStatusCode) {
+                    //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
+                    memset(&stats, 0, sizeof(wifi_sta_stats_t));
+                    wifi_getStats(1, &stats);
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
+                            stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
+                    //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+
+                    /*Telemetry Parameter logging*/
+                    logs_Period1_Params();
+                    logs_Period2_Params();
+                }
 
                 sleep(confProp.wifiProps.statsParam_PollInterval);
             }
@@ -1823,11 +1867,11 @@ void logs_Period1_Params()
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.FCSErrorCount")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.fcsErrorCount);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.fcsErrorCount);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.Noise")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.noiseFloor);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.noiseFloor);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TransmitPower"))
@@ -1835,24 +1879,24 @@ void logs_Period1_Params()
                 INT output_INT = 0;
                 int radioIndex = 1;
                 if (wifi_getRadioTransmitPower( radioIndex,  &output_INT) == RETURN_OK) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n", (char *)iter->data , output_INT);
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n", (char *)iter->data , output_INT);
                 }
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsReceived")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.errorsReceived);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.errorsReceived);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsSent")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.errorsSent);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.errorsSent);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsReceived")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.packetsReceived);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, params.packetsReceived);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsSent")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, params.packetsSent);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, params.packetsSent);
             }
 
             iter = g_list_next(iter);
