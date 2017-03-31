@@ -73,6 +73,7 @@ extern bool updateWiFiList();
 extern ssidList gSsidList;
 extern IARM_Bus_Daemon_SysMode_t sysModeParam;
 
+bool shutdownWifi();
 #ifdef USE_RDK_WIFI_HAL
 bool connect_WpsPush();
 INT wifi_connect_callback(INT , CHAR *ap, wifiStatusCode_t *err);

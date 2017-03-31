@@ -149,8 +149,8 @@ int  WiFiNetworkMgr::Start()
 int  WiFiNetworkMgr::Stop()
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-    IARM_Bus_Disconnect();
-    IARM_Bus_Term();
+    wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
+    shutdownWifi();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 }
 

@@ -14,7 +14,8 @@
 #include "wifiSrvMgr.h"
 #include "routeSrvMgr.h"
 #include "mocaSrvMgr.h"
-
+#include "netsrvmgrUtiles.h"
+#include "netsrvmgrIarm.h"
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
 
@@ -42,6 +43,11 @@ static void NetworkMgr_SignalHandler (int sigNum);
 static bool read_ConfigProps();
 void Read_Telemetery_Param_File();
 static bool update_telemetryParams_list(gchar *, telemetryParams *, gchar *, gchar *);
+static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+static IARM_Result_t getActiveInterface(void *arg);
+static IARM_Result_t getNetworkInterfaces(void *arg);
+static IARM_Result_t isInterfaceEnabled(void *arg);
+bool bIsInterfaceEnabled=false;
 void NetworkMgr_SignalHandler (int sigNum)
 {
     RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): Received signal %d \n",__FUNCTION__, sigNum);
@@ -147,6 +153,10 @@ int main(int argc, char *argv[])
 #endif
     }
     Read_Telemetery_Param_File();
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getActiveInterface, getActiveInterface);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getNetworkInterfaces, getNetworkInterfaces);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isInterfaceEnabled, isInterfaceEnabled);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED, _eventHandler);
     netSrvMgr_start();
     netSrvMgr_Loop();
 
@@ -155,7 +165,10 @@ int main(int argc, char *argv[])
 void netSrvMgr_start()
 {
     RouteNetworkMgr::getInstance()->Start();
+    bIsInterfaceEnabled=true;
+#ifdef USE_RDK_WIFI_HAL
     WiFiNetworkMgr::getInstance()->Start();
+#endif
 #ifdef USE_RDK_MOCA_HAL
     MocaNetworkMgr::getInstance()->Start();
 #endif
@@ -400,4 +413,99 @@ void teleParamList_free (gpointer val)
     }
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
 }
+IARM_Result_t getActiveInterface(void *arg)
+{
+        IARM_Result_t ret = IARM_RESULT_SUCCESS;
+        char devName[INTERFACE_SIZE];
+        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+        if(netSrvMgrUtiles::getRouteInterface(devName))
+           strcpy(param->activeIface,devName);
+        else
+           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Route Found.\n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Current Active Interface : [%s].\n", __FUNCTION__, __LINE__,param->activeIface);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_ACTIVE_INTERFACE:%s\n",param->activeIface);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+        return ret;
+}
+IARM_Result_t getNetworkInterfaces(void *arg)
+{
+        IARM_Result_t ret = IARM_RESULT_SUCCESS;
+        char devName[INTERFACE_LIST];
+        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+        char count = netSrvMgrUtiles::getAllNetworkInterface(devName);
+	if(count)
+           g_stpcpy(param->allNetworkInterfaces,devName);
+        else
+           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] list of Network Interface is empty.\n", __FUNCTION__, __LINE__);
+        param->interfaceCount=count;
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] list of Network Interface : [%s].\n", __FUNCTION__, __LINE__,param->allNetworkInterfaces);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+        return ret;
+}
+void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
+    if (strcmp(owner, IARM_BUS_NM_SRV_MGR_NAME)  == 0) {
+        switch (eventId) {
+        case IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t  *)data;
+            if (g_strcmp0(param->setInterface,"WIFI") == 0 )
+            {
+                if(param->isInterfaceEnabled)
+                {
+                    if(!bIsInterfaceEnabled)
+                    {
+#ifdef USE_RDK_WIFI_HAL
+                        WiFiNetworkMgr::getInstance()->Start();
+#endif
+			bIsInterfaceEnabled=true;
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] IARM Message to enable WIFI  \n",__FUNCTION__, __LINE__ );
+        		RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_ENABLE_WIFI.\n");
+                    }
+                    else
+                    {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] IARM Message to enable WIFI but WIFI already enabled  \n",__FUNCTION__, __LINE__ );
+                    }
+                }
+                else
+                {
+                    if(bIsInterfaceEnabled)
+                    {
+			bIsInterfaceEnabled=false;
+#ifdef USE_RDK_WIFI_HAL
+                        WiFiNetworkMgr::getInstance()->Stop();
+#endif
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] IARM Message to disable  WIFI  \n",__FUNCTION__, __LINE__ );
+        		RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_DISABLE_WIFI.\n");
+                    }
+                    else
+                    {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] IARM Message to disable WIFI but WIFI already disabled  \n",__FUNCTION__, __LINE__ );
+                    }
 
+                }
+
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+}
+IARM_Result_t isInterfaceEnabled(void *arg)
+{
+        IARM_Result_t ret = IARM_RESULT_SUCCESS;
+        char devName[INTERFACE_SIZE];
+        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	if (g_strcmp0(param->setInterface,"WIFI") == 0 )
+	   param->isInterfaceEnabled=bIsInterfaceEnabled;
+	else
+	   RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] THIS INTERFACE %s IS NOT SUPPORTED \n", __FUNCTION__, __LINE__,param->setInterface);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+        return ret;
+}
