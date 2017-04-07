@@ -39,4 +39,4 @@ private:
 void startMocaTelemetry();
 void *mocaTelemetryThread(void* arg);
 static void _mocaEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
-static void eventCallback(enum RMH_Event event, struct RMH_EventData *eventData, void* userContext);
+static void eventCallback(const enum RMH_Event event, const struct RMH_EventData *eventData, void* userContext);
