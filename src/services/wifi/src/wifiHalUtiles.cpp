@@ -19,8 +19,10 @@ pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
 pthread_t wifiStatusMonitorThread;
 pthread_t lafConnectThread;
 pthread_t lafConnectToPrivateThread;
+pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
 WiFiLNFStatusCode_t gWifiLNFStatus = LNF_UNITIALIZED;
 bool bDeviceActivated=false;
+bool bLnfActivationLoop=false;
 bool bLNFConnect=false;
 bool bStopLNFWhileDisconnected=false;
 bool isLAFCurrConnectedssid=false;
@@ -1351,6 +1353,7 @@ void *lafConnPrivThread(void* arg)
     int counter=0;
     bool retVal;
     int ssidIndex=1;
+    bool lnfReturnStatus=false;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 
@@ -1380,7 +1383,10 @@ void *lafConnPrivThread(void* arg)
                 }
 
                 bIsStopLNFWhileDisconnected=false;
-                if (!triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI))
+                pthread_mutex_trylock(&mutexTriggerLAF);
+                lnfReturnStatus=triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI);
+                pthread_mutex_unlock(&mutexTriggerLAF);
+                if (false == lnfReturnStatus)
 //                else if (!triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI) && counter < TOTAL_NO_OF_RETRY)
                 {
                     if (true == bStopLNFWhileDisconnected)
@@ -1421,9 +1427,11 @@ void *lafConnPrivThread(void* arg)
 void *lafConnThread(void* arg)
 {
     int ret = 0;
+    bool lnfReturnStatus=false;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     gWifiLNFStatus=LNF_IN_PROGRESS;
     while (false == bDeviceActivated) {
+        bLnfActivationLoop=true;
         while(gWifiLNFStatus != CONNECTED_LNF)
         {
             bIsStopLNFWhileDisconnected=false;
@@ -1433,6 +1441,9 @@ void *lafConnThread(void* arg)
                 {
                     gWifiLNFStatus=CONNECTED_PRIVATE;
                     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Connected through non LAF path\n", __FUNCTION__, __LINE__ );
+                    bIsStopLNFWhileDisconnected=true;
+                    bLnfActivationLoop=false;
+                    return NULL;
                 }
                 break;
             }
@@ -1440,15 +1451,20 @@ void *lafConnThread(void* arg)
             {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
                 bIsStopLNFWhileDisconnected=true;
+                bLnfActivationLoop=false;
                 return NULL;
             }
-            if (false == triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID))
+            pthread_mutex_trylock(&mutexTriggerLAF);
+            lnfReturnStatus=triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID);
+            pthread_mutex_unlock(&mutexTriggerLAF);
+            if (false == lnfReturnStatus)
             {
 
                 if (true == bStopLNFWhileDisconnected)
                 {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
                     bIsStopLNFWhileDisconnected=true;
+                    bLnfActivationLoop=false;
                     return NULL;
                 }
                 sleep(confProp.wifiProps.lnfRetryInSecs);
@@ -1468,10 +1484,12 @@ void *lafConnThread(void* arg)
         if (true == bStopLNFWhileDisconnected)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
+            bLnfActivationLoop=false;
             return NULL;
         }
 //        getDeviceActivationState();
     }
+    bLnfActivationLoop=false;
     if(gWifiLNFStatus == CONNECTED_LNF)
     {
         lnfConnectPrivCredentials();
@@ -1631,6 +1649,11 @@ bool isWifiConnected()
 void lnfConnectPrivCredentials()
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    if(bLnfActivationLoop)
+    {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Still in LnF Activation Loop so discarding getting private credentials \n",__FUNCTION__, __LINE__ );
+        return;
+    }
     pthread_mutex_lock(&mutexLAF);
     if(0 == pthread_cond_signal(&condLAF))
     {
@@ -2056,6 +2079,7 @@ bool shutdownWifi()
 #ifdef ENABLE_LOST_FOUND
     condLAF = PTHREAD_COND_INITIALIZER;
     mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+    mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
     gWifiLNFStatus = LNF_UNITIALIZED;
     bLNFConnect=false;
     isLAFCurrConnectedssid=false;
