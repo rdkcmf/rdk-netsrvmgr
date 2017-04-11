@@ -29,6 +29,7 @@ pthread_t lafConnectThread;
 pthread_t lafConnectToPrivateThread;
 pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier_laf_connect;
 static bool triggerLAF = false;
 WiFiLNFStatusCode_t gWifiLNFStatus = LNF_UNITIALIZED;
@@ -617,7 +618,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         }
         break;
     case WIFI_HAL_CONNECTING:
-        if((connCode_prev_state != connCode) && (!bLNFConnect)) {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting to AP in Progress... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             set_WiFiStatusCode(WIFI_CONNECTING);
 #ifdef ENABLE_IARM
@@ -626,7 +626,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventData.data.wifiStateChange.state = WIFI_CONNECTING;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTING\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTING);
 #endif
-        }
         break;
 
     case WIFI_HAL_DISCONNECTING:
@@ -753,7 +752,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         break;
     /* the connection failed due to invalid credentials */
     case WIFI_HAL_ERROR_INVALID_CREDENTIALS:
-        if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Invalid Credentials. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 
@@ -769,7 +767,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
 #endif
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_INVALID_CREDENTIALS\n");
-        }
         break;
     case WIFI_HAL_UNRECOVERABLE_ERROR:
         if(connCode_prev_state != connCode) {
@@ -1138,7 +1135,6 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     laf_device_info_t *dev_info = NULL;
     int err;
     bool bRet=true;
-
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     ops = (laf_ops_t*) malloc(sizeof(laf_ops_t));
     if(!ops)
@@ -1509,6 +1505,7 @@ void *lafConnPrivThread(void* arg)
     bool retVal;
     int ssidIndex=1;
     LAF_REQUEST_TYPE reqType;
+    bool lnfReturnStatus=false;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n",MODULE_NAME,__FUNCTION__, __LINE__ );
     ret = pthread_barrier_wait(&barrier_laf_connect);
@@ -1558,7 +1555,10 @@ void *lafConnPrivThread(void* arg)
             }
 
             bIsStopLNFWhileDisconnected=false;
-            if (!triggerLostFound(reqType))
+            pthread_mutex_trylock(&mutexTriggerLAF);
+            lnfReturnStatus=triggerLostFound(reqType);
+            pthread_mutex_unlock(&mutexTriggerLAF);
+            if (!lnfReturnStatus)
             {
                 if (true == bStopLNFWhileDisconnected)
                 {
@@ -1595,6 +1595,7 @@ void *lafConnPrivThread(void* arg)
 void *lafConnThread(void* arg)
 {
     int ret = 0;
+    bool lnfReturnStatus=false;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
@@ -1620,7 +1621,10 @@ void *lafConnThread(void* arg)
                 bIsStopLNFWhileDisconnected=true;
                 return NULL;
             }
-            if (false == triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID))
+            pthread_mutex_trylock(&mutexTriggerLAF);
+            lnfReturnStatus=triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID);
+            pthread_mutex_unlock(&mutexTriggerLAF);
+            if (false == lnfReturnStatus)
             {
 
                 if (true == bStopLNFWhileDisconnected)
@@ -1840,6 +1844,11 @@ bool isWifiConnected()
 void lnfConnectPrivCredentials()
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    if(!bDeviceActivated)
+    {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Device not activated not starting private LnF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        return;
+    }
     pthread_mutex_lock(&mutexLAF);
     triggerLAF = true;
     if (0 == pthread_cond_signal(&condLAF))
@@ -2395,6 +2404,7 @@ bool shutdownWifi()
 #ifdef ENABLE_LOST_FOUND
     condLAF = PTHREAD_COND_INITIALIZER;
     mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+    mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
     triggerLAF = false;
     gWifiLNFStatus = LNF_UNITIALIZED;
     bLNFConnect=false;
