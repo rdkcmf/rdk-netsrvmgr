@@ -34,6 +34,7 @@ pthread_barrier_t barrier_laf_connect;
 static bool triggerLAF = false;
 WiFiLNFStatusCode_t gWifiLNFStatus = LNF_UNITIALIZED;
 bool bDeviceActivated=false;
+bool bLnfActivationLoop=false;
 bool bLNFConnect=false;
 bool bStopLNFWhileDisconnected=false;
 bool isLAFCurrConnectedssid=false;
@@ -1602,6 +1603,7 @@ void *lafConnThread(void* arg)
 
     setLNFState(LNF_IN_PROGRESS);
     while (false == bDeviceActivated) {
+        bLnfActivationLoop=true;
         while(gWifiLNFStatus != CONNECTED_LNF)
         {
             bIsStopLNFWhileDisconnected=false;
@@ -1619,6 +1621,7 @@ void *lafConnThread(void* arg)
                 setLNFState(LNF_UNITIALIZED);
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 bIsStopLNFWhileDisconnected=true;
+                bLnfActivationLoop=false;
                 return NULL;
             }
             pthread_mutex_trylock(&mutexTriggerLAF);
@@ -1631,6 +1634,7 @@ void *lafConnThread(void* arg)
                 {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                     bIsStopLNFWhileDisconnected=true;
+                    bLnfActivationLoop=false;
                     return NULL;
                 }
                 sleep(confProp.wifiProps.lnfRetryInSecs);
@@ -1650,10 +1654,12 @@ void *lafConnThread(void* arg)
         if (true == bStopLNFWhileDisconnected)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            bLnfActivationLoop=false;
             return NULL;
         }
 //        getDeviceActivationState();
     }
+    bLnfActivationLoop=false;
     if(gWifiLNFStatus == CONNECTED_LNF)
     {
         lnfConnectPrivCredentials();
@@ -1844,9 +1850,9 @@ bool isWifiConnected()
 void lnfConnectPrivCredentials()
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    if(!bDeviceActivated)
+    if(bLnfActivationLoop)
     {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Device not activated not starting private LnF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Still in LnF Activation Loop so discarding getting private credentials \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return;
     }
     pthread_mutex_lock(&mutexLAF);
