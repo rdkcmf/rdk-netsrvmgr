@@ -43,6 +43,7 @@
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Get the paired SSID */
 #define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /*!< Retrieve the paired status*/
 #define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"        /*!< Retrives the LNF state*/
+#define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected          "isStopLNFWhileDisconnected" 		/*!< Check if LNF is stopped */
 
 /*Diagnostic Apis */
 #define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /*!< Retrieve the get radio status properties*/
@@ -307,7 +308,8 @@ typedef struct _IARM_BUS_WiFi_DiagsPropParam_t {
 } IARM_BUS_WiFi_DiagsPropParam_t;
 
 typedef enum _NetworkManager_EventId_t {
-        IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE,
+        IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE = 5,
+        IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED,
         IARM_BUS_NETWORK_MANAGER_EVENT_MAX,
 } IARM_Bus_NetworkManager_EventId_t;
 typedef struct _IARM_BUS_NetworkManager_EventData_t {

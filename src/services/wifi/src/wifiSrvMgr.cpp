@@ -31,6 +31,8 @@ extern bool bDeviceActivated;
 extern WiFiLNFStatusCode_t gWifiLNFStatus;
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 #endif
+extern bool bStopLNFWhileDisconnected;
+extern bool bIsStopLNFWhileDisconnected;
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
 WiFiConnectionStatus savedWiFiConnList;
@@ -75,6 +77,8 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
     IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED, _eventHandler);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected, isStopLNFWhileDisconnected);
 #endif
     /* Diagnostic Api's*/
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioProps, getRadioProps);
@@ -215,6 +219,16 @@ IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
     return ret;
 }
 #ifdef ENABLE_LOST_FOUND
+IARM_Result_t WiFiNetworkMgr::isStopLNFWhileDisconnected(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+ 
+    bool *param = (bool *)arg;
+    *param=bIsStopLNFWhileDisconnected;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
+    return ret;
+}
 IARM_Result_t WiFiNetworkMgr::getLNFState(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
@@ -873,6 +887,13 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]  Service Manager msg Box Activated \n", __FUNCTION__, __LINE__ );
                 bDeviceActivated = true;
             }
+        }
+        break;
+        case IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED:
+        {
+            bool *param = (bool *)data;
+	    bStopLNFWhileDisconnected=*param;
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]  event handler value of stopLNFWhileDisconnected %d \n", __FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
         }
         break;
         default:
