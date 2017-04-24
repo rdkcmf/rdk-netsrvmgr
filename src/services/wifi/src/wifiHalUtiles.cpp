@@ -1617,6 +1617,9 @@ void *lafConnThread(void* arg)
                 {
                     setLNFState(CONNECTED_PRIVATE);
                     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected through non LAF path\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    bIsStopLNFWhileDisconnected=true;
+                    bLnfActivationLoop=false;
+                    return NULL;
                 }
                 break;
             }
