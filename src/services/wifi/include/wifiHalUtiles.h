@@ -86,6 +86,8 @@ extern "C" {
 #define MODELNAME_SIZE  10
 #define MANUFACTURER_SIZE   40
 #define WIFIMAC_SIZE    20
+#define DEVICEID_SIZE 512
+#define PARTNERID_SIZE 128
 #ifdef ENABLE_IARM
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 #endif

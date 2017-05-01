@@ -23,6 +23,8 @@
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
 pthread_t wifiStatusMonitorThread;
+gchar deviceID[DEVICEID_SIZE];
+gchar partnerID[PARTNERID_SIZE];
 #ifdef ENABLE_LOST_FOUND
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
 pthread_t lafConnectThread;
@@ -1275,6 +1277,21 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
     mfrSerializedType_t mfrType;
 
     mfrType = mfrSERIALIZED_TYPE_SERIALNUMBER;
+    if(partnerID && !partnerID[0])
+    {
+      if(getDeviceActivationState() == false)
+      {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Partner ID Missing in url May be not activated \n", MODULE_NAME,__FUNCTION__, __LINE__);
+      }
+      else
+      {
+        g_stpcpy(dev_info->partnerId,partnerID);
+      }
+    }
+    else
+    {
+      g_stpcpy(dev_info->partnerId,partnerID);
+    }
     if(getMfrData(mfrSerialNum,mfrType))
     {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] mfrSerialNum = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrSerialNum->str,mfrType );
@@ -1794,10 +1811,8 @@ bool isLAFCurrConnectedssid()
 bool getDeviceActivationState()
 {
 #ifndef ENABLE_XCAM_SUPPORT
-    gchar *deviceID="";
     unsigned int count=0;
     std::string str;
-    GString* value=g_string_new(NULL);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if(! confProp.wifiProps.authServerURL)
     {
@@ -1810,13 +1825,13 @@ bool getDeviceActivationState()
     while(deviceID && !deviceID[0])
     {
         CurlObject authServiceURL(str);
-        deviceID=authServiceURL.getCurlData();
+        g_stpcpy(deviceID,authServiceURL.getCurlData());
         if ((!deviceID && deviceID[0]) || (count >= 3))
             break;
         sleep(5);
         count++;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] device id string is %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,deviceID);
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] device id string is %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,deviceID);
     gchar **tokens = g_strsplit_set(deviceID,"{}:,\"", -1);
     guint tokLength = g_strv_length(tokens);
     guint loopvar=0;
@@ -1827,18 +1842,31 @@ bool getDeviceActivationState()
             //"deviceId": "T00xxxxxxx" so omit 3 tokens ":" fromDeviceId
             if ((loopvar+3) < tokLength )
             {
-                g_string_assign(value, g_strstrip(tokens[loopvar+3]));
-                if(value->str[0] != '\0')
+                g_stpcpy(deviceID, g_strstrip(tokens[loopvar+3]));
+                if(deviceID[0] != '\0')
                 {
                     bDeviceActivated = true;
                 }
             }
         }
-    }
-    g_free(deviceID);
+      }
+      for (loopvar=0; loopvar<tokLength; loopvar++)
+      {
+        if (g_strrstr(g_strstrip(tokens[loopvar]), "partnerId"))
+        {
+            //"deviceId": "T00xxxxxxx" so omit 3 tokens ":" fromDeviceId
+            if ((loopvar+3) < tokLength )
+            {
+                g_stpcpy(partnerID, g_strstrip(tokens[loopvar+3]));
+                if(partnerID[0] != '\0')
+                {
+                  RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] partner id is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,partnerID);
+                }
+            }
+        }
+      }
     if(tokens)
         g_strfreev(tokens);
-    g_string_free(value,TRUE);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return bDeviceActivated;
 #else
