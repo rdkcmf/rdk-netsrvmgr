@@ -524,6 +524,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             {
                 isLAFCurrConnectedssid=false;
 		gWifiLNFStatus=CONNECTED_PRIVATE;
+		if(bStopLNFWhileDisconnected)
+		{
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enable LNF \n",__FUNCTION__, __LINE__ );
+		    bStopLNFWhileDisconnected=false;
+		}
                 if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
                     storeMfrWifiCredentials();
                 memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
@@ -532,11 +537,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 savedWiFiConnList.conn_type = wifi_conn_type;
 		if(switchLnf2Priv)
 		{
-		    if(bStopLNFWhileDisconnected)
-		    {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enable LNF \n",__FUNCTION__, __LINE__ );
-		        bStopLNFWhileDisconnected=false;
-		    }
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] get dhcp lease since there is a network change. \n",__FUNCTION__, __LINE__ );
                     netSrvMgrUtiles::triggerDhcpLease();
 		    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Connecting private ssid. Bouncing xre connection.\n",__FUNCTION__, __LINE__ );
