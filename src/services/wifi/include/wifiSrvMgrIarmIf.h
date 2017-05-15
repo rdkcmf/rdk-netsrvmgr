@@ -58,6 +58,10 @@
 #define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"        /*!< Retrives the LNF state*/
 #define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected          "isStopLNFWhileDisconnected" 		/*!< Check if LNF is stopped */
 #define IARM_BUS_WIFI_MGR_API_getConnectionType     "getConnectionType"        /*!< Retrives the current state*/
+#define IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults        "getSwitchToPrivateResults" 		/*!< get all switch to private results*/
+#define IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled          "isAutoSwitchToPrivateEnabled" 		/*!< informs whether switch to private is enabled */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo          "getPairedSSIDInfo" 		/*!< get last paired ssid info */
+
 
 /*Diagnostic Apis */
 #define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /*!< Retrieve the get radio status properties*/
@@ -147,6 +151,10 @@ typedef struct _wifiSsidData_t {
     size_t jdataLen;                      	/**< Length of the data buffer.                                  */
 } wifiSsidData_t;
 
+typedef struct _wifiLnfPrivateResults {
+    char jdata[MAX_SSIDLIST_BUF];                    		/**< Buffer containing the serialized data.                      */
+    size_t jdataLen;                      	/**< Length of the data buffer.                                  */
+} wifiLnfPrivateResults_t;
 
 typedef struct _setWiFiAdapter
 {
@@ -156,6 +164,8 @@ typedef struct _setWiFiAdapter
 typedef struct _WiFiConnection
 {
     char ssid[SSID_SIZE];
+    char bssid[SSID_SIZE];
+    char security[SSID_SIZE];
     char passphrase[PASSPHRASE_BUFF];
     SsidSecurity security_mode;
     char security_WEPKey[PASSPHRASE_BUFF];
@@ -182,11 +192,31 @@ typedef struct _WiFiConnectedSSIDInfo
     float signalStrength;					/* !< The RSSI value in dBm. */
 } WiFiConnectedSSIDInfo_t;
 
+typedef struct _WiFiPairedSSIDInfo
+{
+    unsigned char ssid[BUFF_LENGTH_64];		/* !< The name of connected SSID. */
+    unsigned char bssid[BUFF_LENGTH_64];	/* !< The the Basic Service Set ID (mac address). */
+    unsigned char security[BUFF_LENGTH_64];								/* !< security of AP */
+} WiFiPairedSSIDInfo_t;
+
+typedef struct _WiFiLnfSwitchPrivateResults
+{
+    unsigned char currTime[BUFF_LENGTH_32];
+    unsigned char lnfError;
+
+} WiFiLnfSwitchPrivateResults_t;
+
 /*! Get/Set Data associated with WiFi Service Manager */
 typedef struct _IARM_Bus_WiFiSrvMgr_SsidList_Param_t {
     wifiSsidData_t curSsids;
     bool status;
 } IARM_Bus_WiFiSrvMgr_SsidList_Param_t;
+
+typedef struct _IARM_Bus_WiFiSrvMgr_SwitchPrivateResults_Param {
+    wifiLnfPrivateResults_t switchPvtResults;
+    bool status;
+} IARM_Bus_WiFiSrvMgr_SwitchPrivateResults_Param_t;
+
 
 typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     union {
@@ -197,6 +227,7 @@ typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
         WiFiConnection saveSSID;
         WiFiConnection clearSSID;
         WiFiConnectedSSIDInfo_t getConnectedSSID;
+        WiFiPairedSSIDInfo_t getPairedSSIDInfo;
         WiFiConnectionTypeCode_t connectionType;
         struct getPairedSSID {
             char ssid[SSID_SIZE];
@@ -225,6 +256,7 @@ typedef enum _IARM_Bus_NMgr_WiFi_EventId_t {
     IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged,
     IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE,
     IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED,
+    IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED,
     IARM_BUS_WIFI_MGR_EVENT_MAX,           		/*!< Maximum event id*/
 } IARM_Bus_NMgr_WiFi_EventId_t;
 

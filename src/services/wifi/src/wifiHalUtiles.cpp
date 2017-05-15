@@ -26,6 +26,7 @@ pthread_t wifiStatusMonitorThread;
 gchar deviceID[DEVICEID_SIZE];
 gchar partnerID[PARTNERID_SIZE];
 #ifdef ENABLE_LOST_FOUND
+GList *lstLnfPvtResults=NULL;
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
 pthread_t lafConnectThread;
 pthread_t lafConnectToPrivateThread;
@@ -41,6 +42,8 @@ bool bLNFConnect=false;
 bool bStopLNFWhileDisconnected=false;
 bool isLAFCurrConnectedssid=false;
 bool bIsStopLNFWhileDisconnected=false;
+bool bAutoSwitchToPrivateEnabled=true;
+bool bSwitch2Private=false;
 #define TOTAL_NO_OF_RETRY 5
 #endif
 #ifdef USE_HOSTIF_WIFI_HAL
@@ -921,7 +924,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n*********** Start: SSID Scan List **************** \n");
     for (index = 0; index < output_array_size; index++ )
     {
-        char temp[500] = {'\0'};
+//        char temp[500] = {'\0'};
 
         ssid = neighbor_ap_array[index].ap_SSID;
         if(ssid[0] != '\0') {
@@ -968,11 +971,14 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
     char ap_ssid[SSID_SIZE];
     char ap_passphrase[PASSPHRASE_BUFF];
+    char ap_bssid[BUFF_LENGTH_32];
+    char ap_security[BUFF_LENGTH_32];
+    wifi_pairedSSIDInfo_t pairedSSIDInfo={0};
     bool ret = true;
     int retVal;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    retVal=wifi_lastConnected_Endpoint(ap_ssid,ap_passphrase);
+    retVal=wifi_lastConnected_Endpoint(&pairedSSIDInfo);
     if(retVal != RETURN_OK )
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in getting lost connected SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
@@ -980,11 +986,15 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     }
     else
     {
-        strncpy(ConnParams->ssidSession.ssid, ap_ssid, sizeof(ConnParams->ssidSession.ssid)-1);
+        strncpy(ConnParams->ssidSession.ssid, pairedSSIDInfo.ap_ssid, sizeof(ConnParams->ssidSession.ssid)-1);
         ConnParams->ssidSession.ssid[sizeof(ConnParams->ssidSession.ssid)-1]='\0';
-        strncpy(ConnParams->ssidSession.passphrase, ap_passphrase, sizeof(ConnParams->ssidSession.passphrase)-1);
+        strncpy(ConnParams->ssidSession.passphrase, pairedSSIDInfo.ap_passphrase, sizeof(ConnParams->ssidSession.passphrase)-1);
         ConnParams->ssidSession.passphrase[sizeof(ConnParams->ssidSession.passphrase)-1]='\0';
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%s:%d] last connected  ssid is  %s   \n", MODULE_NAME,__FUNCTION__, __LINE__,ConnParams->ssidSession.ssid);
+        strncpy(ConnParams->ssidSession.bssid, pairedSSIDInfo.ap_bssid, sizeof(ConnParams->ssidSession.bssid)-1);
+        ConnParams->ssidSession.bssid[sizeof(ConnParams->ssidSession.bssid)-1]='\0';
+        strncpy(ConnParams->ssidSession.security, pairedSSIDInfo.ap_security, sizeof(ConnParams->ssidSession.security)-1);
+        ConnParams->ssidSession.security[sizeof(ConnParams->ssidSession.security)-1]='\0';
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%s:%d] last connected  ssid is  %s  bssid is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,ConnParams->ssidSession.ssid,ConnParams->ssidSession.bssid);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
@@ -1140,6 +1150,8 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     laf_client_t* clnt = NULL;
     laf_ops_t *ops = NULL;
     laf_device_info_t *dev_info = NULL;
+    char currTime[BUFF_LENGTH_32];
+    static bool bLastLnfSuccess=false;
     int err;
     bool bRet=true;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter \n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -1190,7 +1202,21 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
             err = laf_start(clnt);
             if(err != 0) {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in lost and found client, error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,err );
-                bRet=false;
+                  bRet=false;
+            }
+            if(!bAutoSwitchToPrivateEnabled)
+            {
+	      if((!bRet) && (bLastLnfSuccess))
+	      {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] !AutoSwitchToPrivateEnabled + lastLnfSuccessful + currLnfFailure = clr switch2prv Results \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+		clearSwitchToPrivateResults();
+		bLastLnfSuccess=false;
+              }
+	      if(bRet)
+		bLastLnfSuccess=true;
+              netSrvMgrUtiles::getCurrentTime(currTime,(char *)TIME_FORMAT);
+              addSwitchToPrivateResults(err,currTime);
+  	      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added Time=%s lnf error=%d to list,length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,currTime,err,g_list_length(lstLnfPvtResults));
             }
         }
     }
@@ -1546,13 +1572,21 @@ void *lafConnPrivThread(void* arg)
         triggerLAF = false;
 
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
-        if(gWifiLNFStatus == CONNECTED_LNF)
+        if((bAutoSwitchToPrivateEnabled) || (bSwitch2Private))
         {
-            reqType = LAF_REQUEST_SWITCH_TO_PRIVATE;
+	  bSwitch2Private=false;
+          if(gWifiLNFStatus == CONNECTED_LNF)
+          {
+              reqType = LAF_REQUEST_SWITCH_TO_PRIVATE;
+          }
+          else
+          {
+              reqType = LAF_REQUEST_CONNECT_TO_PRIV_WIFI;
+          }
         }
         else
         {
-            reqType = LAF_REQUEST_CONNECT_TO_PRIV_WIFI;
+            reqType = LAF_REQUEST_CONNECT_TO_LFSSID;
         }
         setLNFState(LNF_IN_PROGRESS);
         retVal=false;
@@ -1560,7 +1594,7 @@ void *lafConnPrivThread(void* arg)
         if(retVal == false)
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n",MODULE_NAME, __FUNCTION__, __LINE__ );
 
-        while (gWifiLNFStatus != CONNECTED_PRIVATE)
+        do
         {
             if (true == bStopLNFWhileDisconnected)
             {
@@ -1607,7 +1641,7 @@ void *lafConnPrivThread(void* arg)
             }
 
             sleep(1);
-        }
+        }while ((gWifiLNFStatus != CONNECTED_PRIVATE) && (bAutoSwitchToPrivateEnabled));
         bIsStopLNFWhileDisconnected=true;
         sleep(1);
     }
@@ -2416,7 +2450,71 @@ int laf_set_lfat(laf_lfat_t* const lfat)
     return 0;
 }
 
+bool addSwitchToPrivateResults(int lnfError,char *currTime)
+{
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  WiFiLnfSwitchPrivateResults_t *WiFiLnfSwitchPrivateResultsData = g_new(WiFiLnfSwitchPrivateResults_t,1);
+  WiFiLnfSwitchPrivateResultsData->lnfError = lnfError;
+  strcpy((char *)WiFiLnfSwitchPrivateResultsData->currTime,currTime);
+  lstLnfPvtResults=g_list_append(lstLnfPvtResults,WiFiLnfSwitchPrivateResultsData);
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Time = %s lnf error = %d length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError,g_list_length(lstLnfPvtResults));
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+}
 
+bool convertSwitchToPrivateResultsToJson(char *buffer)
+{
+  cJSON *rootObj = NULL, *array_element = NULL, *array_obj = NULL;
+  UINT output_array_size = 0;
+  INT index;
+  char *out = NULL;
+  char privateResultsLength=0;
+  WiFiLnfSwitchPrivateResults_t *WiFiLnfSwitchPrivateResultsData=NULL;
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  rootObj = cJSON_CreateObject();
+  if(NULL == rootObj) {
+    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to create root json object.\n",  MODULE_NAME,__FUNCTION__, __LINE__);
+    return false;
+  }
+  cJSON_AddItemToObject(rootObj, "results", array_obj=cJSON_CreateArray());
+  GList *element = g_list_first(lstLnfPvtResults);
+  privateResultsLength=g_list_length(lstLnfPvtResults);
+
+  while ((element)&&(privateResultsLength > 0))
+  {
+    WiFiLnfSwitchPrivateResultsData = (WiFiLnfSwitchPrivateResults_t*)element->data;
+    cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
+    cJSON_AddStringToObject(array_element, "timestamp",(const char*)WiFiLnfSwitchPrivateResultsData->currTime);
+    cJSON_AddNumberToObject(array_element, "result", WiFiLnfSwitchPrivateResultsData->lnfError);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Time = %s lnf error = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError );
+    element = g_list_next(element);
+    privateResultsLength--;
+  }
+  out = cJSON_PrintUnformatted(rootObj);
+
+  if(out) {
+    strncpy(buffer, out, strlen(out)+1);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Buffer = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,buffer );
+  }
+  if(rootObj) {
+    cJSON_Delete(rootObj);
+  }
+  if(out) free(out);
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  return true;
+}
+bool clearSwitchToPrivateResults()
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    if((lstLnfPvtResults) && (g_list_length(lstLnfPvtResults) != 0))
+    {
+	g_list_free_full(lstLnfPvtResults,g_free);
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] switch to private results list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+}
 #endif
 bool shutdownWifi()
 {

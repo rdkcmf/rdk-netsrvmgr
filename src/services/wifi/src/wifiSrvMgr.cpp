@@ -46,6 +46,8 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
 #endif
 extern bool bStopLNFWhileDisconnected;
 extern bool bIsStopLNFWhileDisconnected;
+extern bool bAutoSwitchToPrivateEnabled;
+extern bool bSwitch2Private;
 #endif
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
@@ -97,7 +99,12 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED, _eventHandler);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED, _eventHandler);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected, isStopLNFWhileDisconnected);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled, isAutoSwitchToPrivateEnabled);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults, getSwitchToPrivateResults);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo, getPairedSSIDInfo);
+
 #endif
     /* Diagnostic Api's*/
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioProps, getRadioProps);
@@ -257,6 +264,83 @@ IARM_Result_t WiFiNetworkMgr::getCurrentConnectionType(void *arg)
 }
 
 #ifdef ENABLE_LOST_FOUND
+IARM_Result_t WiFiNetworkMgr::isAutoSwitchToPrivateEnabled(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    bool *param = (bool *)arg;
+    *param=bAutoSwitchToPrivateEnabled;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
+IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal = false;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+    memset(&param->data.getPairedSSIDInfo, '\0', sizeof(WiFiPairedSSIDInfo_t));
+#ifdef USE_RDK_WIFI_HAL
+    retVal=lastConnectedSSID(&savedWiFiConnList);
+#endif
+    if( retVal == true )
+    {
+        char *ssid = savedWiFiConnList.ssidSession.ssid;
+        memcpy(param->data.getPairedSSIDInfo.ssid, ssid, strlen(ssid));
+        char *bssid = savedWiFiConnList.ssidSession.bssid;
+        memcpy(param->data.getPairedSSIDInfo.bssid, bssid, strlen(bssid));
+        char *security = savedWiFiConnList.ssidSession.security;
+        memcpy(param->data.getPairedSSIDInfo.security, security, strlen(security));
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSIDInfo SSID (%s) : BSSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid,bssid);
+        param->status = true;
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in getting last ssid .\n", MODULE_NAME,__FUNCTION__, __LINE__);
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+}
+IARM_Result_t WiFiNetworkMgr::getSwitchToPrivateResults(void *arg)
+{
+  IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
+  bool status = true;
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+  IARM_Bus_WiFiSrvMgr_SwitchPrivateResults_Param_t *param = (IARM_Bus_WiFiSrvMgr_SwitchPrivateResults_Param_t *)arg;
+
+  char jbuff[MAX_SSIDLIST_BUF] = {'\0'};
+  int jBuffLen = 0;
+
+  status = convertSwitchToPrivateResultsToJson(jbuff);
+  jBuffLen = strlen(jbuff);
+  RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Switch Private Results list buffer size : \n\"%d\"\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);
+  if(status == false)
+  {
+      param->status = false;
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] No Switch private Results.\n", MODULE_NAME,__FUNCTION__, __LINE__);
+      return ret;
+  }
+
+
+  RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] json Message length : [%d].\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);
+
+  if(jBuffLen) {
+      strncpy(param->switchPvtResults.jdata, jbuff, jBuffLen);
+      param->switchPvtResults.jdataLen = jBuffLen;
+      param->status = true;
+      ret = IARM_RESULT_SUCCESS;
+  }
+  else {
+      param->status = false;
+  }
+  RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] json Data : %s \n", MODULE_NAME,__FUNCTION__, __LINE__,param->switchPvtResults.jdata);
+
+//    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] SSID List : [%s].\n", MODULE_NAME,__FUNCTION__, __LINE__, param->curSsids.jdata);
+
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  return ret;
+}
 IARM_Result_t WiFiNetworkMgr::isStopLNFWhileDisconnected(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
@@ -925,10 +1009,16 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
         case IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE:
         {
             IARM_BUS_NetworkManager_EventData_t *param = (IARM_BUS_NetworkManager_EventData_t *)data;
-            if (param->value == DEVICE_ACTIVATED)
+            if ((!bDeviceActivated)&&(param->value == DEVICE_ACTIVATED))
             {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  Service Manager msg Box Activated \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 bDeviceActivated = true;
+            }
+            if(!bAutoSwitchToPrivateEnabled)
+            {
+              RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] explicit call to switch to private \n", MODULE_NAME,__FUNCTION__, __LINE__);
+              bSwitch2Private=true;
+	      lnfConnectPrivCredentials();
             }
         }
         break;
@@ -942,6 +1032,12 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
                lnfConnectPrivCredentials();
                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] starting LnF since stopLNFWhileDisconnected value is %d. \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
             }
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED:
+        {
+            bool *param = (bool *)data;
+            bAutoSwitchToPrivateEnabled=*param;
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  event handler value of bAutoSwitchToPrivateEnabled %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bAutoSwitchToPrivateEnabled);
         }
         break;
         default:

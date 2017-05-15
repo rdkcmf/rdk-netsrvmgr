@@ -87,6 +87,7 @@ extern "C" {
 #define WIFIMAC_SIZE    20
 #define DEVICEID_SIZE 512
 #define PARTNERID_SIZE 128
+#define TIME_FORMAT "%Y-%m-%d %H:%M:%S"
 #ifdef ENABLE_IARM
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 #endif
@@ -124,6 +125,9 @@ bool getDeviceInfo(laf_device_info_t *dev_info);
 #ifdef ENABLE_IARM
 bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType);
 #endif
+bool addSwitchToPrivateResults(int lnfError,char *currTime);
+bool convertSwitchToPrivateResultsToJson(char *buffer);
+bool clearSwitchToPrivateResults();
 int laf_wifi_connect(laf_wifi_ssid_t* const wificred);
 int laf_wifi_disconnect(void);
 int laf_get_lfat(laf_lfat_t *lfat);
