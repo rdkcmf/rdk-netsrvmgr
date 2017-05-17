@@ -706,7 +706,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode)
         {
             notify = true;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connection Failed (%d) due to unknown reason. %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connection Failed (%d) due to unknown reason. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_FAILED;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
