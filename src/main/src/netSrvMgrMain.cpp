@@ -13,7 +13,9 @@
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
 #include "routeSrvMgr.h"
+#ifdef USE_RDK_MOCA_HAL
 #include "mocaSrvMgr.h"
+#endif
 #include "netsrvmgrUtiles.h"
 #include "netsrvmgrIarm.h"
 char configProp_FilePath[100] = {'\0'};;
