@@ -646,7 +646,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     char output_string[BUFF_MAX] = {'\0'};
     int output_INT = 0;
     unsigned long output_ulong = 0;
-    int radioIndex=1;
+    int radioIndex=0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     IARM_BUS_WiFi_DiagsPropParam_t *param = (IARM_BUS_WiFi_DiagsPropParam_t *)arg;

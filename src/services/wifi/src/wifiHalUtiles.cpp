@@ -1027,6 +1027,7 @@ void *wifiConnStatusThread(void* arg)
     wifi_sta_stats_t stats;
     WiFiStatusCode_t wifiStatusCode;
     char wifiStatusAsString[32];
+    int radioIndex = 0;
 
     while (true ) {
         pthread_mutex_lock(&mutexGo);
@@ -1049,7 +1050,7 @@ void *wifiConnStatusThread(void* arg)
                 if (WIFI_CONNECTED == wifiStatusCode) {
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
                     memset(&stats, 0, sizeof(wifi_sta_stats_t));
-                    wifi_getStats(1, &stats);
+                    wifi_getStats(radioIndex, &stats);
 #ifdef ENABLE_XCAM_SUPPORT
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "XCAM - WIFI status - :%d, %s\n", stats.sta_Connection, stats.sta_SSID);
                 //check the connection status
@@ -1119,7 +1120,7 @@ bool clearSSID_On_Disconnect_AP()
 void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
 {
     bool ret = true;
-    int radioIndex = 1;
+    int radioIndex = 0;
     wifi_sta_stats_t stats;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -2089,7 +2090,7 @@ bool eraseMfrWifiCredentials(void)
 void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 {
     bool ret = true;
-    int radioIndex = 1;
+    int radioIndex = 0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #ifdef USE_RDK_WIFI_HAL
     wifi_sta_stats_t stats;
@@ -2142,7 +2143,7 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 
 bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params)
 {
-    int radioIndex=1;
+    int radioIndex=0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     wifi_radioTrafficStats_t *trafficStats =(wifi_radioTrafficStats_t *) malloc(sizeof(wifi_radioTrafficStats_t));
@@ -2213,7 +2214,7 @@ void logs_Period1_Params()
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Channel")) {
                 unsigned long output_ulong = 0;
-                int radioIndex = 1;
+                int radioIndex = 0;
                 if (wifi_getRadioChannel(radioIndex, &output_ulong) == RETURN_OK) {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n", (char *)iter->data , output_ulong);
                 }
@@ -2230,7 +2231,7 @@ void logs_Period1_Params()
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TransmitPower"))
             {
                 INT output_INT = 0;
-                int radioIndex = 1;
+                int radioIndex = 0;
                 if (wifi_getRadioTransmitPower( radioIndex,  &output_INT) == RETURN_OK) {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n", (char *)iter->data , output_INT);
                 }
