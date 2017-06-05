@@ -43,7 +43,7 @@ GList* gwList = NULL;
 GList* gwRouteInfo = NULL;
 bool lastRouteSetV4=FALSE;
 char routeIf[15];
-bool signalUpnpDataReady=false;
+bool signalUpnpDataReady=true;
 
 RouteNetworkMgr* RouteNetworkMgr::instance = NULL;
 bool RouteNetworkMgr::instanceIsReady = false;
