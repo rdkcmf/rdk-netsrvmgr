@@ -14,6 +14,7 @@
 #include "libIBus.h"
 #include "libIARM.h"
 #include "libIARMCore.h"
+#define MODULE_NAME "ROUTE_MODULE"
 
 typedef struct _gwyDeviceData {
     GString* serial_num;
