@@ -23,7 +23,8 @@ Requires=iarmbusd.service network-online.target
 
 [Service]
 EnvironmentFile=/etc/device.properties
-ExecStart=/bin/sh -c 'source /lib/rdk/opt-override.sh;/usr/bin/netsrvmgr --debugconfig $DEBUGINIFILE --configFilePath $NETSRVMGRINIFILE'
+ExecStartPre=/bin/sh -c 'if [ "$BUILD_TYPE" != "prod" ];then /lib/rdk/opt-override.sh; fi'
+ExecStart=/usr/bin/netsrvmgr --debugconfig $DEBUGINIFILE --configFilePath $NETSRVMGRINIFILE
 ExecStop=/bin/kill -15 $MAINPID
 Restart=always
 
