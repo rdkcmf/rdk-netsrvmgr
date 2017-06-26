@@ -152,6 +152,7 @@ static void WIFI_MGR_API_connect()
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
     std::string ssid, passphrase, ans;
+    int securitymode;
 
     printf("[%s] Entering...\r\n", __FUNCTION__);
     memset(&param, 0, sizeof(param));
@@ -169,8 +170,12 @@ static void WIFI_MGR_API_connect()
         std::cin >> ssid;
         std::cout <<"	Enter passphrase	:	" ;
         std::cin >> passphrase;
+        std::cout <<"	Enter securitymode	:	" ;
+        std::cin >> securitymode;
         strcpy (param.data.connect.ssid, ssid.c_str());
         strcpy (param.data.connect.passphrase, passphrase.c_str());
+        param.data.connect.security_mode=(SsidSecurity)securitymode;
+	printf("\n ssid = %s  passphrase = %s  security mode = %d",param.data.connect.ssid,param.data.connect.passphrase,param.data.connect.security_mode);
     }
     else {
         printf( "\nNot selected any ssid & passphrase. so, connect\n" );

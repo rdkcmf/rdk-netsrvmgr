@@ -61,6 +61,47 @@ static void logs_Period1_Params();
 static void logs_Period2_Params();
 #endif
 
+
+struct _wifi_securityModes
+{
+    SsidSecurity 	securityMode;
+    const char          *modeString;
+} wifi_securityModes[] =
+{
+    { NET_WIFI_SECURITY_NONE,          		  	"No Security"                   },
+    { NET_WIFI_SECURITY_WEP_64, 	          	"WEP (Open & Shared)"        	},
+    { NET_WIFI_SECURITY_WPA_PSK_AES, 		  	"WPA-Personal, AES encryp."    	},
+    { NET_WIFI_SECURITY_WPA_PSK_TKIP, 		 	"WPA-Personal, TKIP encryp."   	},
+    { NET_WIFI_SECURITY_WPA2_PSK_AES,  			"WPA2-Personal, AES encryp."   	},
+    { NET_WIFI_SECURITY_WPA2_PSK_TKIP, 			"WPA2-Personal, TKIP encryp."  	},
+    { NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,		"WPA-ENTERPRISE, TKIP"		},
+    { NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,		"WPA-ENTERPRISE, AES"		},
+    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,		"WPA2-ENTERPRISE, TKIP"		},
+    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,		"WPA2-ENTERPRISE, AES"		},
+    { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
+};
+
+SsidSecurity get_wifiSecurityModeFromString(char *secModeString)
+{
+    SsidSecurity mode = NET_WIFI_SECURITY_NOT_SUPPORTED;
+
+    if(!secModeString) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to NULL. \n",__FUNCTION__, __LINE__ );
+        return NET_WIFI_SECURITY_NONE;
+    }
+
+    int len = sizeof(wifi_securityModes)/sizeof(_wifi_securityModes);
+
+    for(int i = 0; i < len; i++) {
+	if(NULL != strcasestr(secModeString,wifi_securityModes[i].modeString)) {
+//        if(0 == strncasecmp(wifi_securityModes[i].modeString, secModeString, strlen(secModeString))) {
+            mode = wifi_securityModes[i].securityMode;
+            break;
+        }
+    }
+    return mode;
+}
+
 int get_int(const char* ptr)
 {
     int *ret = (int *)ptr;
@@ -843,30 +884,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
                      MODULE_NAME,__FUNCTION__, __LINE__, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
 
             /* The type of encryption the neighboring WiFi SSID advertises.*/
-            if(0 == strncasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WEP", sizeof("WEP"))) {
-                encrptType = NET_WIFI_SECURITY_WEP_128;
-            }
-            else if (0 == strncasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WPA", sizeof("WPA"))) {
-                encrptType = NET_WIFI_SECURITY_WPA_PSK_TKIP;
-            }
-            else if (0 == strncasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WPA2", sizeof("WPA2"))) {
-                encrptType = NET_WIFI_SECURITY_WPA2_PSK_AES;
-            }
-            else if (0 == strcasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WPA-WPA2")) {
-                encrptType = NET_WIFI_SECURITY_WPA2_PSK_TKIP;
-            }
-            else if (0 == strcasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WPA-Enterprise")) {
-                encrptType = NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP;
-            }
-            else if (0 == strcasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WPA2-Enterprise")) {
-                encrptType = NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES;
-            }
-            else if (0 == strcasecmp(neighbor_ap_array[index].ap_EncryptionMode, "WPA-WPA2-Enterprise")) {
-                encrptType = NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP;
-            }
-            else {
-                encrptType = NET_WIFI_SECURITY_NOT_SUPPORTED;
-            }
+            encrptType = get_wifiSecurityModeFromString((char *)neighbor_ap_array[index].ap_EncryptionMode);
 
             cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
             cJSON_AddStringToObject(array_element, "ssid", ssid);
