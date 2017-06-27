@@ -670,9 +670,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
 #endif
-#ifdef ENABLE_LOST_FOUND
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+#ifdef ENABLE_LOST_FOUND
             if (! laf_is_lnfssid(ap_SSID))
             {
                 isLAFCurrConnectedssid=false;
@@ -770,8 +770,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_IARM
             notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
-#ifdef ENABLE_LOST_FOUND
             /* Event Id & Code */
+#ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
                 bPrivConnectionLost=true;
