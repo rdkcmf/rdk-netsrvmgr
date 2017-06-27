@@ -209,6 +209,7 @@ void* getGatewayRouteDataThrd(void* arg)
         {
             RouteNetworkMgr::delRouteList();
         }
+	gwRouteInfo = g_list_first(gwRouteInfo);
         if((g_list_length(gwRouteInfo) == 0) && ( access( DHCP_LEASE_FLAG, F_OK ) == -1 ))
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
@@ -386,11 +387,11 @@ gboolean RouteNetworkMgr::delGatewayList()
 {
     guint gwListLength=0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    gwList = g_list_first(gwList);
     gwListLength = g_list_length(gwList);
     if (gwListLength > 0)
     {
         GwyDeviceData *gwdata = NULL;
-        gwList = g_list_first(gwList);
         while (gwList && (gwListLength > 0))
         {
             gwdata = (GwyDeviceData*)gwList->data;
@@ -413,11 +414,11 @@ gboolean RouteNetworkMgr::delRouteList()
 {
     guint gwRouteLength=0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    gwRouteInfo = g_list_first(gwRouteInfo);
     gwRouteLength = g_list_length(gwRouteInfo);
     if (gwRouteLength > 0)
     {
         routeInfo *gwdata = NULL;
-        gwRouteInfo = g_list_first(gwRouteInfo);
         while (gwRouteInfo && (gwRouteLength > 0))
         {
             gwdata = (routeInfo*)gwRouteInfo->data;
@@ -472,6 +473,13 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] not a valid gateway %s \n", MODULE_NAME,__FUNCTION__, __LINE__,cJSON_GetObjectItem(gwData, "sno")->valuestring );
                     }
                 }
+                gwList = g_list_first(gwList);
+                if( g_list_length(gwList) == 0)
+		{
+                    retVal=FALSE;
+                    delRouteList();
+		}
+
             }
             else
             {
@@ -728,10 +736,10 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
     gint retType;
     gboolean retVal=false;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    gwRouteInfo=g_list_first(gwRouteInfo);
     gwRouteLength = g_list_length(gwRouteInfo);
     if (gwRouteLength > 0)
     {
-        gwRouteInfo=g_list_first(gwRouteInfo);
         gwRouteInfo=g_list_find_custom(gwRouteInfo,ipAddr,(GCompareFunc)g_list_find_ip);
         if( gwRouteInfo != NULL)
         {
@@ -815,6 +823,7 @@ gboolean RouteNetworkMgr::checkExistingRouteValid()
     GList* tmpGWList;
     char tempIP[46];
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    gwRouteInfo=g_list_first(gwRouteInfo);
     gwRouteLength = g_list_length(gwRouteInfo);
     tempGwRouteLength = gwRouteLength;
     if (gwRouteLength > 0)
