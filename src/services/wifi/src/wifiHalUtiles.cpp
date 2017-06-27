@@ -548,6 +548,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+#ifdef ENABLE_LOST_FOUND
             if (! laf_is_lnfssid(ap_SSID))
             {
                 setLNFState(CONNECTED_PRIVATE);
@@ -594,6 +595,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
             }
 
+#endif //ENABLE_LOST_FOUND
             /*Write into file*/
 //            WiFiConnectionStatus wifiParams;
 
@@ -646,10 +648,12 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
             /* Event Id & Code */
+#ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
                 lnfConnectPrivCredentials();
             }
+#endif
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
@@ -696,10 +700,12 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
             set_WiFiStatusCode(WIFI_DISCONNECTED);
+#ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
                 lnfConnectPrivCredentials();
             }
+#endif
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
@@ -761,10 +767,12 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Invalid Credentials. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 
+#ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
                 lnfConnectPrivCredentials();
             }
+#endif
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
@@ -851,7 +859,9 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s  with passphrase %s \n",
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
+#ifdef ENABLE_LOST_FOUND
         if(!bLNFConnect)
+#endif
         {
 #ifndef ENABLE_XCAM_SUPPORT
             set_WiFiStatusCode(WIFI_CONNECTING);
@@ -865,7 +875,9 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
         ret = true;
     }
 
+#ifdef ENABLE_LOST_FOUND
     if(!bLNFConnect)
+#endif
     {
 #ifdef ENABLE_IARM
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
@@ -1108,11 +1120,13 @@ bool clearSSID_On_Disconnect_AP()
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
                 MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+#ifdef ENABLE_LOST_FOUND
         if ( false == isLAFCurrConnectedssid )
         {
             memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
             eraseMfrWifiCredentials();
         }
+#endif
     }
     return ret;
 }
@@ -2340,6 +2354,7 @@ void logs_Period2_Params()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
+#ifdef ENABLE_LOST_FOUND
 #ifndef ENABLE_XCAM_SUPPORT
 /* get lfat from auth service */
 int laf_get_lfat(laf_lfat_t *lfat)
@@ -2516,6 +2531,7 @@ bool clearSwitchToPrivateResults()
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
+#endif
 #endif
 bool shutdownWifi()
 {
