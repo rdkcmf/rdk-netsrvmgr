@@ -1650,8 +1650,16 @@ void *lafConnPrivThread(void* arg)
             }
             else
             {
-                setLNFState(CONNECTED_PRIVATE);
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] pressed coming out of LNF since box is connected to private \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+                if (LAF_REQUEST_CONNECT_TO_LFSSID == reqType)
+                {
+                    setLNFState(CONNECTED_LNF);
+                    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Connected to LNF\n",MODULE_NAME, __FUNCTION__, __LINE__ );
+                }
+                else
+                {
+                    setLNFState(CONNECTED_PRIVATE);
+                    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] pressed coming out of LNF since box is connected to private \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+                }
                 break;
             }
 
