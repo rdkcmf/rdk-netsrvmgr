@@ -422,11 +422,15 @@ gboolean RouteNetworkMgr::delRouteList()
         while (gwRouteInfo && (gwRouteLength > 0))
         {
             gwdata = (routeInfo*)gwRouteInfo->data;
-            gwRouteInfo = g_list_next(gwRouteInfo);
             checkRemoveRouteInfo(gwdata->ipStr->str,gwdata->isIPv4);
+            gwRouteInfo = g_list_next(gwRouteInfo);
             gwRouteLength--;
         }
-        g_list_free(gwRouteInfo);
+        if(gwRouteInfo)
+        {
+          g_list_free(gwRouteInfo);
+          gwRouteInfo=NULL;
+        }
     }
     else
     {
@@ -777,6 +781,10 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Existing route exist in the new list \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
+    }
+    else
+    {
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Saved gw list is empty \n", MODULE_NAME,__FUNCTION__,__LINE__);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
