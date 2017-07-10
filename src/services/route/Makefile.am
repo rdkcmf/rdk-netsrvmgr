@@ -21,10 +21,10 @@ DIST_SUBDIRS =
 
 AM_CXXFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) -I$(top_srcdir)/src/main/include \
 		-I$(top_srcdir)/src/services/route/include $(GLIB_CFLAGS) $(G_THREAD_CFLAGS) \
-		-I$(RDK_FSROOT_PATH)/usr/local/include
+		-I$(RDK_FSROOT_PATH)/usr/local/include $(NLMONITOR_CFLAGS) $(NL_CFLAGS)
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
-        $(G_THREAD_LIBS) -ldbus-1  -lIARMBus -lcjson
+        $(G_THREAD_LIBS) -ldbus-1  -lIARMBus -lcjson $(NLMONITOR_LINK)
 
 
 noinst_LTLIBRARIES = librouteservices.la

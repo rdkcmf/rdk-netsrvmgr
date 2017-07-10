@@ -49,6 +49,9 @@ AC_CHECK_HEADERS([stdlib.h unistd.h])
 #PKG_CHECK_MODULES([GTHREAD], [gthread-2.0 >= 2.24.0])
 RDKWIFIHAL=" "
 RDKMOCAHAL=" "
+NLMONITOR_CFLAGS=" "
+NLMONITOR_LINK=" "
+
 
 AC_ARG_ENABLE([rdk-moca-hal],
         AS_HELP_STRING([--enable-rdk-moca-hal],[This will enable/disable rdk moca hal.]),
@@ -125,6 +128,21 @@ AC_ARG_ENABLE([xcam-support],
          [echo "xcam-support is disabled"])
 AM_CONDITIONAL([XCAM_SUPPORT], [test x$XCAM_SUPPORT = xtrue])
 
+AC_ARG_ENABLE([nlmonitor],
+        AS_HELP_STRING([--enable-nlmonitor],[This will enable/disable netlink monitor support.]),
+        [
+          case "${enableval}" in
+           yes) NLMONITOR_CFLAGS="-std=c++14 -DENABLE_NLMONITOR"
+                PKG_CHECK_MODULES([NL], [libnl-3.0 >= 3.2.22])
+                NLMONITOR_LINK="-lnlmonitor";;
+           no) NLMONITOR_CFLAGS=" "
+               NLMONITOR_LINK=" ";;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-nlmonitor ]) ;;
+           esac
+           ],
+         [echo "Network Monitor Support is enabled"])
+
+
 AC_SUBST(RDKWIFIHAL)
 AC_SUBST(RDKMOCAHAL)
 AC_SUBST(LOSTFOUND)
@@ -132,6 +150,9 @@ AC_SUBST(ROUTE_SUPPORT)
 AC_SUBST(IARM_CFLAGS)
 AC_SUBST(IARM_LFLAGS)
 AC_SUBST(XCAM_SUPPORT)
+AC_SUBST(NLMONITOR_CFLAGS)
+AC_SUBST(NLMONITOR_LINK)
+
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 
