@@ -23,12 +23,19 @@
 #include "NetworkMgrMain.h"
 #include "NetworkMedium.h"
 #include "netsrvmgrUtiles.h"
+#include <fstream>
+
+#ifdef ENABLE_NLMONITOR
+#include "netlinkifc.h"
+#endif //ENABLE_NLMONITOR
+
 
 #define ROUTE_PRIORITY 50
 #define GW_SETUP_FILE "/lib/rdk/gwSetup.sh"
 #define MAX_CJSON_EMPTY_LENGTH 40
 #define IP_SIZE 46
 #define DHCP_LEASE_FLAG "/tmp/usingdhcp"
+#define PREFERRED_GATEWAY_FILE		"/opt/prefered-gateway"
 
 
 int messageLength;
@@ -40,6 +47,9 @@ bool signalUpnpDataReady=false;
 
 RouteNetworkMgr* RouteNetworkMgr::instance = NULL;
 bool RouteNetworkMgr::instanceIsReady = false;
+
+static bool gwSelected = false;
+static bool xb3Selected = false;
 
 pthread_cond_t condRoute = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexRoute = PTHREAD_MUTEX_INITIALIZER;
@@ -63,6 +73,26 @@ int  RouteNetworkMgr::Start()
     bool retVal=false;
     IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME,IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE,_evtHandler);
     IARM_Bus_RegisterCall(IARM_BUS_ROUTE_MGR_API_getCurrentRouteData, getCurrentRouteData);
+
+#ifdef ENABLE_NLMONITOR
+    NetLinkIfc* netifc = NetLinkIfc::get_instance();
+    netifc->initialize();
+    netifc->run(false);
+
+    //Check to see the preferred Gateway contents.
+    ifstream cfgFile(PREFERRED_GATEWAY_FILE);
+    std::string prefgw;
+    if (cfgFile.is_open())
+    {
+       cfgFile>>prefgw;
+       if (prefgw == "XB3")
+       {
+          xb3Selected = true;
+       }
+       cfgFile.close();
+    }
+#endif
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     getGatewayRouteData();
@@ -214,6 +244,34 @@ void* getGatewayRouteDataThrd(void* arg)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
             netSrvMgrUtiles::triggerDhcpLease();
+#ifdef ENABLE_NLMONITOR
+            if (gwSelected)
+            {
+               list<std::string> ifcList;
+               if (getenv("WIFI_INTERFACE") != NULL)
+               {
+                  ifcList.push_back(getenv("WIFI_INTERFACE"));
+               }
+
+               if (getenv("MOCA_INTERFACE") != NULL)
+               {
+                  ifcList.push_back(getenv("MOCA_INTERFACE"));
+               }
+               gwSelected = false;
+               for (auto const& i : ifcList)
+               {
+                  std::string ifcStr = i;
+                  std::string cmd = "/lib/rdk/enableIpv6Autoconf.sh ";
+                  cmd += ifcStr;
+                  //Invoke API to cleanup Global IPs assigned.
+                  NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
+                  NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
+                  //Call script to enable SLAAC ra support.
+                  system(cmd.c_str());
+               }
+               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] No Gateway Detected, SLAAC Support is enabled\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            }
+#endif//ENABLE_NLMONITOR
         }
 //        }
 //	else
@@ -591,6 +649,37 @@ gboolean RouteNetworkMgr::setRoute() {
         }
         if(setRoute)
         {
+#ifdef ENABLE_NLMONITOR
+            if ((!gwSelected) && (!xb3Selected))
+            {
+               list<std::string> ifcList;
+               if (getenv("WIFI_INTERFACE") != NULL)
+               {
+                  ifcList.push_back(getenv("WIFI_INTERFACE"));
+               }
+
+               if (getenv("MOCA_INTERFACE") != NULL)
+               {
+                  ifcList.push_back(getenv("MOCA_INTERFACE"));
+               }
+               gwSelected = true;
+
+                for (auto const& i : ifcList)
+                {
+                  //Call script to disable SLAAC ra support.
+                  std::string ifcStr = i;
+                  std::string cmd = "/lib/rdk/disableIpv6Autoconf.sh ";
+                  cmd += ifcStr;
+                  system(cmd.c_str());
+
+                  //Invoke API to cleanup Global IPs assigned.
+                  NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
+                  NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
+                }
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Gateway Detecetd, SLAAC Support is disabled.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            }
+#endif //ENABLE_NLMONITOR
+
             GString *GwRouteParam=g_string_new(NULL);
             g_string_printf(GwRouteParam,"%s" ,GW_SETUP_FILE);
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->gwyip->str);
