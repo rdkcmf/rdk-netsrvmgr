@@ -539,9 +539,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
-
+#ifndef ENABLE_XCAM_SUPPORT
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
-
+#else
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
+#endif
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
             /* one condition variable is signaled */
@@ -607,8 +609,13 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTED);
 #endif
             pthread_mutex_lock(&mutexGo);
-            if(0 == pthread_cond_signal(&condGo))
+            if(0 == pthread_cond_signal(&condGo)) {
+#ifndef ENABLE_XCAM_SUPPORT
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#else
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#endif
+            }
             pthread_mutex_unlock(&mutexGo);
         } else if (ACTION_ON_DISCONNECT == action) {
             set_WiFiStatusCode(WIFI_DISCONNECTED);
@@ -698,7 +705,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     /* the SSID of the network changed */
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
+#ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
+#endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
@@ -713,7 +722,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
 #endif
+#ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_SSID_CHANGED\n");
+#endif
         }
         break;
     /* the connection to the network was lost */
@@ -1053,7 +1064,9 @@ void *wifiConnStatusThread(void* arg)
                 wifiStatusCode = get_WiFiStatusCode();
 
                 if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
+#ifndef ENABLE_XCAM_SUPPORT
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
+#endif
                 }
                 else {
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
@@ -1064,7 +1077,7 @@ void *wifiConnStatusThread(void* arg)
                     memset(&stats, 0, sizeof(wifi_sta_stats_t));
                     wifi_getStats(radioIndex, &stats);
 #ifdef ENABLE_XCAM_SUPPORT
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "XCAM - WIFI status - :%d, %s\n", stats.sta_Connection, stats.sta_SSID);
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "XCAM - WIFI status - :%d, %s\n", stats.sta_Connection, stats.sta_SSID);
                 //check the connection status
                 if(stats.sta_Connection == 0) {
                     wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
@@ -1074,7 +1087,7 @@ void *wifiConnStatusThread(void* arg)
                     wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_DISCONNECT);
                 }
                 confProp.wifiProps.statsParam_PollInterval = 30;
-#endif
+#else
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
                             stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
@@ -1082,6 +1095,7 @@ void *wifiConnStatusThread(void* arg)
                     /*Telemetry Parameter logging*/
                     logs_Period1_Params();
                     logs_Period2_Params();
+#endif
                 }
 
                 sleep(confProp.wifiProps.statsParam_PollInterval);
@@ -1369,6 +1383,11 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
         bRet = false;
         goto out;
     }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] dummy auth token update \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
+    strcpy(dev_info->auth_token,"xact_token");
+
 out:
     g_string_free(mfrSerialNum,TRUE);
     g_string_free(mfrMake,TRUE);
@@ -1380,12 +1399,63 @@ out:
 
 #else
 
+#ifdef ENABLE_XCAM_SUPPORT
+int get_token_length(unsigned int &tokenlength)
+{
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	FILE* fp_token;
+	int tokensize;
+	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
+	if(NULL == fp_token) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_token_length - Error in opening lfat token file");
+		return EBADF;
+	}else{
+		fseek(fp_token, 0L, SEEK_END);
+		tokensize = ftell(fp_token);
+		fseek(fp_token, 0, SEEK_SET);
+		tokenlength = tokensize-1;
+		RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "get_token_length - token size is - %d\n",tokenlength);
+		if(NULL != fp_token){
+			fclose(fp_token);
+			fp_token = NULL;
+		}
+	}
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+	return 0;
+}
+
+int get_laf_token(char* token,unsigned int tokenlength)
+{
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	FILE* fp_token;
+	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
+	if(NULL == fp_token) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Error in opening lfat token file");
+		return EBADF;
+	}else{
+		if(NULL != token)
+		{
+			fread(token,tokenlength,1,fp_token);
+		}else {
+			RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Token NULL");
+		}
+		if(NULL != fp_token){
+			fclose(fp_token);
+			fp_token = NULL;
+		}
+	}
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+	return 0;
+}
+#endif
+
 bool getDeviceInfo( laf_device_info_t *dev_info )
 {
     bool ret = false;
 #ifdef ENABLE_XCAM_SUPPORT
     struct basic_info xcam_dev_info;
-
+    unsigned int tokenlength=0;
+    int readtoken=0;
     memset((void*)&xcam_dev_info, 0, sizeof(struct basic_info));
     if (!rdkc_get_device_basic_info(&xcam_dev_info))
     {
@@ -1393,12 +1463,27 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
         strncpy(dev_info->mac, xcam_dev_info.mac_addr, MAX_DEV_MAC_LEN);
         strncpy(dev_info->model, xcam_dev_info.model, MAX_DEV_MODEL_LEN);
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] serial_no=%s\n", MODULE_NAME, __FUNCTION__, __LINE__, dev_info->serial_num);
-        ret = true;
     }
     else
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] rdkc_get_device_basic_info failed\n", MODULE_NAME, __FUNCTION__, __LINE__);
+        return ret;
     }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] auth token update for xcam\n", MODULE_NAME,__FUNCTION__, __LINE__);
+    memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
+    readtoken = get_token_length(tokenlength);
+    if(readtoken != 0) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "getDeviceInfo - Error in token read \n");
+        return false;
+    }
+    readtoken = get_laf_token(dev_info->auth_token,tokenlength);
+    if(readtoken != 0 ) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - Token read error\n", MODULE_NAME, __FUNCTION__, __LINE__);
+        return false;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - token is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__,dev_info->auth_token);
+    ret = true;
 #endif
     return ret;
 }
@@ -2407,34 +2492,29 @@ int laf_get_lfat(laf_lfat_t *lfat)
 int laf_get_lfat(laf_lfat_t *lfat)
 {
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-	FILE* fp_token;
-	int tokensize;
-	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
-	if(NULL == fp_token) {
-		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"Error in opening lfat token file");
-		return EBADF;
-	}else{
-		fseek(fp_token, 0L, SEEK_END);
-		tokensize = ftell(fp_token);
-		fseek(fp_token, 0, SEEK_SET);
-		lfat->len = tokensize-1;
-		RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token size is - %d\n",lfat->len);
-		lfat->token = (char *) malloc(lfat->len+1);
-		if(lfat->token == NULL)
-			return ENOMEM;
-		fread(lfat->token,lfat->len,1,fp_token);
-		lfat->token[lfat->len] = '\0';
-		strcpy(lfat->version, "1.0");
-		lfat->ttl = 31536000;
-		if(NULL != fp_token){
-			fclose(fp_token);
-			fp_token = NULL;
-		}
+	int ret=0;
+	unsigned int tokenlength=0;
+	ret = get_token_length(tokenlength);
+	if(ret != 0) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "laf_get_lfat - Error in token read \n");
+		return ret;
 	}
+	lfat->token = (char *) malloc(tokenlength+1);
+	if(lfat->token == NULL)
+		return ENOMEM;
+	ret = get_laf_token(lfat->token,tokenlength);
+	lfat->len = tokenlength;
+	lfat->token[tokenlength] = '\0';
+	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token size is - %d\n",lfat->len);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token is - %s\n",lfat->token);
+	strcpy(lfat->version, "1.0");
+	lfat->ttl = 31536000;
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
-	return 0;
+	return ret;
 }
 #endif
+
+#ifndef ENABLE_XCAM_SUPPORT
 /* store lfat with auth service */
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
@@ -2473,6 +2553,23 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 
     return 0;
 }
+#else
+int laf_set_lfat(laf_lfat_t* const lfat)
+{
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+  char buffer[512];
+  memset(buffer, 0, 512);
+  if(NULL != lfat->token){
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Updating lfat token after token expiry\n");
+      sprintf(buffer,"echo \"%s\" > %s",lfat->token,LFAT_TOKEN_FILE);
+      system(buffer);
+  }else {
+       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "LFAT Token is Null");
+       return -1;
+  }
+  return 0;
+}
+#endif
 
 bool addSwitchToPrivateResults(int lnfError,char *currTime)
 {
