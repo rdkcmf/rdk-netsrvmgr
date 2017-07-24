@@ -132,7 +132,7 @@ AC_ARG_ENABLE([nlmonitor],
         AS_HELP_STRING([--enable-nlmonitor],[This will enable/disable netlink monitor support.]),
         [
           case "${enableval}" in
-           yes) NLMONITOR_CFLAGS="-std=c++14 -DENABLE_NLMONITOR"
+           yes) NLMONITOR_CFLAGS="-std=c++1y -DENABLE_NLMONITOR"
                 PKG_CHECK_MODULES([NL], [libnl-3.0 >= 3.2.22])
                 NLMONITOR_LINK="-lnlmonitor";;
            no) NLMONITOR_CFLAGS=" "
