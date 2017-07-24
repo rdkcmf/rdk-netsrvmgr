@@ -791,34 +791,31 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    set_WiFiConnectionType((WiFiConnectionTypeCode_t)conType);
     securityMode=(wifiSecurityMode_t)ap_security_mode;
-
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d  \n",
              MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
-
+    if(!bLNFConnect)
+    {
+        set_WiFiStatusCode(WIFI_CONNECTING);
+        eventData.data.wifiStateChange.state = WIFI_CONNECTING;
+        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+    }
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
-    set_WiFiConnectionType((WiFiConnectionTypeCode_t)conType);
-
     if(ret)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in connecting to ssid %s  with passphrase %s \n",
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
         eventData.data.wifiStateChange.state = WIFI_FAILED;
+        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
         ret = false;
     }
     else
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s  with passphrase %s \n",
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
-        if(!bLNFConnect)
-        {
-            set_WiFiStatusCode(WIFI_CONNECTING);
-            eventData.data.wifiStateChange.state = WIFI_CONNECTING;
-        }
         ret = true;
     }
-    if(!bLNFConnect)
-        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
