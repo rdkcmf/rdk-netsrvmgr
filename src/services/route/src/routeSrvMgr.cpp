@@ -260,6 +260,7 @@ void* getGatewayRouteDataThrd(void* arg)
                   //Call script to enable SLAAC ra support.
                   system(cmd.c_str());
                }
+               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] No Gateway Detected, SLAAC Support is enabled\n", MODULE_NAME,__FUNCTION__, __LINE__ );
             }
 #endif//ENABLE_NLMONITOR
         }
@@ -666,6 +667,7 @@ gboolean RouteNetworkMgr::setRoute() {
                   NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                   NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
                 }
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Gateway Detecetd, SLAAC Support is disabled.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
             }
 #endif //ENABLE_NLMONITOR
 
