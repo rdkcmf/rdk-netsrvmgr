@@ -259,7 +259,6 @@ void* getGatewayRouteDataThrd(void* arg)
                   NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
                   //Call script to enable SLAAC ra support.
                   system(cmd.c_str());
-                  NetLinkIfc::get_instance()->activatelink(ifcStr);
                }
             }
 #endif//ENABLE_NLMONITOR
@@ -666,7 +665,6 @@ gboolean RouteNetworkMgr::setRoute() {
                   //Invoke API to cleanup Global IPs assigned.
                   NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                   NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
-                  NetLinkIfc::get_instance()->activatelink(ifcStr);
                 }
             }
 #endif //ENABLE_NLMONITOR
