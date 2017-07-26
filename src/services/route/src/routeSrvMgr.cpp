@@ -30,6 +30,7 @@
 #include "NetworkMgrMain.h"
 #include "NetworkMedium.h"
 #include "netsrvmgrUtiles.h"
+#include <fstream>
 
 #ifdef ENABLE_NLMONITOR
 #include "netlinkifc.h"
@@ -41,6 +42,7 @@
 #define MAX_CJSON_EMPTY_LENGTH 40
 #define IP_SIZE 46
 #define DHCP_LEASE_FLAG "/tmp/usingdhcp"
+#define PREFERRED_GATEWAY_FILE		"/opt/prefered-gateway"
 
 
 int messageLength;
@@ -54,6 +56,7 @@ RouteNetworkMgr* RouteNetworkMgr::instance = NULL;
 bool RouteNetworkMgr::instanceIsReady = false;
 
 static bool gwSelected = false;
+static bool xb3Selected = false;
 
 pthread_cond_t condRoute = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexRoute = PTHREAD_MUTEX_INITIALIZER;
@@ -82,6 +85,19 @@ int  RouteNetworkMgr::Start()
     NetLinkIfc* netifc = NetLinkIfc::get_instance();
     netifc->initialize();
     netifc->run(false);
+
+    //Check to see the preferred Gateway contents.
+    ifstream cfgFile(PREFERRED_GATEWAY_FILE);
+    std::string prefgw;
+    if (cfgFile.is_open())
+    {
+       cfgFile>>prefgw;
+       if (prefgw == "XB3")
+       {
+          xb3Selected = true;
+       }
+       cfgFile.close();
+    }
 #endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -641,7 +657,7 @@ gboolean RouteNetworkMgr::setRoute() {
         if(setRoute)
         {
 #ifdef ENABLE_NLMONITOR
-            if (!gwSelected)
+            if ((!gwSelected) && (!xb3Selected))
             {
                list<std::string> ifcList;
                if (getenv("WIFI_INTERFACE") != NULL)
