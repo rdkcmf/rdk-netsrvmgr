@@ -398,7 +398,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
     char * clientcert = param->data.connect.clientcert;
     char * privatekey = param->data.connect.privatekey;
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connect with SSID (%s) & Passphrase (%s) security mode (%d)\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid, pass,securityMode);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connect with SSID (%s)  security mode (%d)\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid,securityMode);
     /* If param data receives as Empty, then use the saved SSIDConnection */
     if (!ssid_len)
     {
@@ -422,7 +422,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         if(ssid_len && pass_len)
         {
             /*Connect with Saved SSID */
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s) & Passphrase (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid, pass);
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Received valid SSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
 #ifdef USE_RDK_WIFI_HAL
             connect_withSSID(ssidIndex, ssid, securityMode, NULL, pass, pass,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
