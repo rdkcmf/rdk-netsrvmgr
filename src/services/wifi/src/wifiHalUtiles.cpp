@@ -795,11 +795,13 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     securityMode=(wifiSecurityMode_t)ap_security_mode;
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d  \n",
              MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
-    if(!bLNFConnect)
+    if(saveSSID)
     {
         set_WiFiStatusCode(WIFI_CONNECTING);
         eventData.data.wifiStateChange.state = WIFI_CONNECTING;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s  with passphrase %s \n",
+                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
     }
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
     if(ret)
@@ -812,8 +814,6 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s  with passphrase %s \n",
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
         ret = true;
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
