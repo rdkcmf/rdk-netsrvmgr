@@ -68,10 +68,22 @@ AC_ARG_ENABLE([lost-found],
 AM_CONDITIONAL([LOSTFOUND], [test x$LOSTFOUND = xtrue])
 
 
+AC_ARG_ENABLE([xcam-support],
+        AS_HELP_STRING([--enable-xcam-support],[This will enable/disable xcam device.]),
+        [
+          case "${enableval}" in
+           yes) XCAM_SUPPORT=true ;;
+           no) XCAM_SUPPORT=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-xcam-support ]) ;;
+           esac
+           ],
+         [echo "xcam-support is disabled"])
+AM_CONDITIONAL([XCAM_SUPPORT], [test x$XCAM_SUPPORT = xtrue])
+
 AC_SUBST(RDKWIFIHAL)
 AC_SUBST(RDKMOCAHAL)
 AC_SUBST(LOSTFOUND)
-
+AC_SUBST(XCAM_SUPPORT)
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 

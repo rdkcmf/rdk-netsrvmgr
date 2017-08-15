@@ -43,7 +43,7 @@
 #include "netsrvmgrUtiles.h"
 
 #define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
-
+#define MAX_TIME_LENGTH 32
 using namespace netSrvMgrUtiles;
 
 /**
@@ -135,6 +135,7 @@ char* netSrvMgrUtiles::get_IfName_devicePropsFile(void)
 void netSrvMgrUtiles::triggerDhcpLease(void)
 {
     static gint retType;
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     retType=system(TRIGGER_DHCP_LEASE_FILE);
     if(retType == SYSTEM_COMMAND_ERROR)
     {
@@ -152,6 +153,7 @@ void netSrvMgrUtiles::triggerDhcpLease(void)
     {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] unknown error   %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
     }
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
 }
 
 bool netSrvMgrUtiles::getRouteInterface(char* devname)
@@ -160,6 +162,7 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
     char line[100] , *ptr , *ctr, *sptr;
     int ret;
     FILE *fp;
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     fp = fopen("/proc/net/ipv6_route","r");
     if(fp!=NULL) {
         while((ret=fscanf(fp,"%s %*x %*s %*x %s %*x %*x %*x %*x %s",
@@ -171,13 +174,13 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
             }
             if((strcmp(dst,gw) == 0) && (strcmp(devname,"sit0") != 0) && (strcmp(devname,"lo") != 0) )
             {
-                
+
 		readDevFile(devname);
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__,devname);
                 return true;
-            } 
-        }    
-    } 
+            }
+        }
+    }
 
     fclose(fp);
     fp = fopen("/proc/net/route" , "r");
@@ -185,7 +188,7 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
     {
         ptr = strtok_r(line , " \t", &sptr);
         ctr = strtok_r(NULL , " \t", &sptr);
-    
+
         if(ptr!=NULL && ctr!=NULL)
         {
             if(strcmp(ctr , "00000000") == 0)
@@ -198,6 +201,7 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
         }
     }
     fclose(fp);
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return false;
 }
 
@@ -207,11 +211,12 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
     gboolean                result = FALSE;
     gchar* devfilebuffer = NULL;
     const gchar* deviceFile = "//etc/device.properties";
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     if(!deviceName)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] device name is null  \n", __FUNCTION__, __LINE__);
 	return result;
-    }	
+    }
     result = g_file_get_contents (deviceFile, &devfilebuffer, NULL, &error);
     if (result == FALSE)
     {
@@ -257,6 +262,7 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
         }
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Network Type  %s  \n", __FUNCTION__, __LINE__,deviceName);
     }
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return result;
 }
 
@@ -269,6 +275,7 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
     getifaddrs(&ifAddrStruct);
     tmpAddrPtr = ifAddrStruct;
     GString *device = g_string_new(NULL);
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
 
     while (tmpAddrPtr)
     {
@@ -279,7 +286,7 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
 	    if((readDevFile(tempInterface)) && (!g_strrstr(device->str,tempInterface)))
 	    {
 	       if(firstInterface)
-	       {	
+	       {
                  g_string_append_printf(device,"%s",",");
                }
 	       else
@@ -296,6 +303,27 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
     freeifaddrs(ifAddrStruct);
     strcpy(devAllInterface,device->str);
     g_string_free(device,TRUE);
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return count;
 }
 
+bool netSrvMgrUtiles::getCurrentTime(char* currTime, const char *timeFormat)
+{
+  time_t cTime;
+  struct tm *tmp;
+  RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+  time(&cTime);
+  tmp=localtime(&cTime);
+  if(tmp == NULL)
+  {
+    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error getting local time  \n", __FUNCTION__, __LINE__);
+    return false;
+  }
+  if(strftime(currTime,MAX_TIME_LENGTH,timeFormat,tmp) == 0)
+  {
+    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] strftime failed in getting time format format %s  \n", __FUNCTION__, __LINE__,timeFormat);
+    return false;
+  }
+  RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+  return true;
+}

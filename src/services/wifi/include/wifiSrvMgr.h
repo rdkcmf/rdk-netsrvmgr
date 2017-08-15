@@ -28,7 +28,7 @@ public:
 
     int Start();
     int Stop();
-
+    static IARM_Result_t getPairedSSIDInfo(void *arg);
     static IARM_Result_t getAvailableSSIDs(void *arg);
     static IARM_Result_t getCurrentState(void *arg);
     static IARM_Result_t setEnabled(void *arg);
@@ -47,6 +47,9 @@ public:
     static IARM_Result_t sysModeChange(void *arg);
     static IARM_Result_t getEndPointProps(void *args);
     static IARM_Result_t isStopLNFWhileDisconnected(void *arg);
+    static IARM_Result_t getSwitchToPrivateResults(void *arg);
+    static IARM_Result_t isAutoSwitchToPrivateEnabled(void *arg);
+
 
     static IARM_Result_t getCurrentConnectionType(void *arg);
 #ifdef ENABLE_LOST_FOUND
