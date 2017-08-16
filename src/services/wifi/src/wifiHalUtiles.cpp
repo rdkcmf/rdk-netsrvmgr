@@ -66,6 +66,7 @@ static void logs_Period1_Params();
 static void logs_Period2_Params();
 #endif
 
+#define RDK_ASSERT_NOT_NULL(P)          if ((P) == NULL) return EINVAL
 
 struct _wifi_securityModes
 {
@@ -1114,6 +1115,8 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     ops->laf_log_message = log_message;
     ops->laf_wifi_connect = laf_wifi_connect;
     ops->laf_wifi_disconnect = laf_wifi_disconnect;
+    ops->laf_get_lfat = laf_get_lfat; 
+    ops->laf_set_lfat = laf_set_lfat;
 
     bRet = getDeviceInfo(dev_info);
     if (bRet == false) {
@@ -2207,6 +2210,88 @@ void logs_Period2_Params()
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
+
+
+/* get lfat from auth service */
+int laf_get_lfat(laf_lfat_t *lfat)
+{
+  long          http_err_code;
+  cJSON         *response;
+  std::string   str;
+  gchar         *retStr;
+
+  str.assign(confProp.wifiProps.getLfatUrl,strlen(confProp.wifiProps.getLfatUrl));
+
+  CurlObject getLfatUrl(str);
+  retStr  = getLfatUrl.getCurlData();
+  http_err_code = getLfatUrl.gethttpcode();
+
+  if((http_err_code != 200) || (strlen(retStr ) <= 1)){
+    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "get lfat from auth service failed with error code %d ", http_err_code);
+    if(http_err_code == 0)
+      http_err_code = 404;
+    return http_err_code;
+  }
+
+  /* parse json response */
+  RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "Response from authservice to get lfat %s", retStr);
+  response = cJSON_Parse(retStr);
+  RDK_ASSERT_NOT_NULL(response);
+  RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "version"));
+  strcpy(lfat->version, cJSON_GetObjectItem(response, "version")->valuestring);
+  RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "expires"));
+  lfat->ttl = cJSON_GetObjectItem(response, "expires")->valueint;
+  RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "LFAT"));
+  lfat->len = strlen(cJSON_GetObjectItem(response, "LFAT")->valuestring);
+  lfat->token = (char *) malloc(lfat->len+1);
+  if(lfat->token == NULL)
+    return ENOMEM;
+  strcpy(lfat->token, cJSON_GetObjectItem(response, "LFAT")->valuestring);
+  lfat->token[lfat->len] = '\0';
+  cJSON_Delete(response);
+  return 0;
+}
+
+
+/* store lfat with auth service */
+int laf_set_lfat(laf_lfat_t* const lfat)
+{
+    cJSON         *req_payload;
+    char          *data;
+    long          http_err_code;
+    std::string   str;
+    gchar         *retStr;
+
+    str.assign(confProp.wifiProps.setLfatUrl,strlen(confProp.wifiProps.setLfatUrl));
+    req_payload = cJSON_CreateObject();
+    RDK_ASSERT_NOT_NULL(req_payload);
+    cJSON_AddStringToObject(req_payload, "version", lfat->version);
+    cJSON_AddNumberToObject(req_payload, "expires", lfat->ttl);
+    cJSON_AddStringToObject(req_payload, "lfat", lfat->token);
+
+    data = cJSON_Print(req_payload);
+    RDK_ASSERT_NOT_NULL(data);
+    CurlObject setLfatUrl(str,data);
+    retStr  = setLfatUrl.getCurlData();
+    http_err_code = setLfatUrl.gethttpcode();
+
+    if(http_err_code != 200) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "set lfat to auth service failed with error code %d message %s", http_err_code);
+        cJSON_Delete(req_payload);
+        if(data)
+            free(data);
+        if(http_err_code == 0)
+            http_err_code = 404;
+        return http_err_code;
+    }
+  cJSON_Delete(req_payload);
+  if(data)
+    free(data);
+
+  return 0;
+}
+
+
 #endif
 
 

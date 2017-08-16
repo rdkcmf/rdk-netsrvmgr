@@ -47,10 +47,13 @@ extern "C" {
 
 #define MAX_TIMEOUT_ON_DISCONNECT       "MAX_TIMEOUT_ON_DISCONNECT"
 #define STATS_POLL_INTERVAL          	"STATS_POLL_INTERVAL"
-#define ENABLE_LOST_FOUND_RUN              "ENABLE_LOST_FOUND"
-#define LAF_CONNECT_RETRY_INTERVAL        "LAF_CONNECT_RETRY_INTERVAL"
-#define LAF_CONNECT_START_INTERVAL 	  "LAF_CONNECT_START_INTERVAL"
-#define AUTHSERVER_URL        "AUTHSERVER_URL"
+#define ENABLE_LOST_FOUND_RUN           "ENABLE_LOST_FOUND"
+#define LAF_CONNECT_RETRY_INTERVAL      "LAF_CONNECT_RETRY_INTERVAL"
+#define LAF_CONNECT_START_INTERVAL 	"LAF_CONNECT_START_INTERVAL"
+#define AUTHSERVER_URL                  "AUTHSERVER_URL"
+#define GET_AUTHTOKEN_URL               "GET_AUTHTOKEN_URL"
+#define GET_LFAT_URL                    "GET_LFAT_URL"
+#define SET_LFAT_URL                    "SET_LFAT_URL"
 #define DISABLE_WPS_XRE			"disableWpsXRE"
 
 #define WIFI_BCK_PATHNAME				"/opt/persistent/wifi"
@@ -96,6 +99,9 @@ typedef struct  _wifiMgrConfigProps
     unsigned short lnfStartInSecs;
     char authServerURL[BUFFER_SIZE_128];
     bool disableWpsXRE;
+    char getAuthTokenUrl[BUFFER_SIZE_128];
+    char getLfatUrl[BUFFER_SIZE_128];
+    char setLfatUrl[BUFFER_SIZE_128];
 } wifiMgrConfigProps;
 
 typedef struct  _netMgrConfigProps
