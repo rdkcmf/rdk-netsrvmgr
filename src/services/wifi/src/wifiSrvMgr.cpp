@@ -1013,6 +1013,7 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] starting LnF since stopLNFWhileDisconnected value is %d. \n",MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
             }
         }
+        break;
         case IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED:
         {
             bool *param = (bool *)data;
