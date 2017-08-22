@@ -108,7 +108,22 @@ int  WiFiNetworkMgr::Start()
     /*Check for WiFi Capability */
     isWiFiCapable();
 
+    /*Get WiFi interface Mac*/
+    {
+        // get wifi mac address
+        char *ifName = netSrvMgrUtiles::get_IfName_devicePropsFile();
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The interface  use is '%s'\n", __FUNCTION__, __LINE__, ifName);
+        if (netSrvMgrUtiles::getMacAddress_IfName(ifName, gWifiMacAddress)) {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The '%s' Mac Addr :%s \n", __FUNCTION__, __LINE__, ifName, gWifiMacAddress);
+        }
+        else {
+            RDK_LOG( RDK_LOG_WARN, LOG_NMGR, "[%s:%d] Failed to get wifi mac address. \n", __FUNCTION__, __LINE__);
+        }
+    }
+
 #ifdef USE_RDK_WIFI_HAL
+    monitor_WiFiStatus();
+
     if(wifi_init() == RETURN_OK) {
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully wifi_init() done. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     } else  {
@@ -118,9 +133,6 @@ int  WiFiNetworkMgr::Start()
     /*Register connect and disconnect call back */
     wifi_connectEndpoint_callback_register(wifi_connect_callback);
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
-
-
-    monitor_WiFiStatus();
 #endif
 
 
@@ -141,19 +153,6 @@ int  WiFiNetworkMgr::Start()
         }
     }
 #endif
-    /*Get WiFi interface Mac*/
-    {
-        // get wifi mac address
-        char *ifName = netSrvMgrUtiles::get_IfName_devicePropsFile();
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The interface  use is '%s'\n", __FUNCTION__, __LINE__, ifName);
-        if(netSrvMgrUtiles::getMacAddress_IfName(ifName, gWifiMacAddress)) {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The '%s' Mac Addr :%s \n", __FUNCTION__, __LINE__, ifName, gWifiMacAddress);
-        }
-	else
-	{
-            RDK_LOG( RDK_LOG_WARN, LOG_NMGR, "[%s:%d] Failed to get wifi mac address. \n", __FUNCTION__, __LINE__);
-	}
-    }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
