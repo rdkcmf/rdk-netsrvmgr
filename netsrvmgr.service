@@ -1,7 +1,7 @@
 [Unit]
 Description= Network Manager Services (wifi, moca and bluetooth) Daemon
-After= iarmbusd.service mfrmgr.service authservice.service tr69hostif.service
-Requires=iarmbusd.service
+After= iarmbusd.service mfrmgr.service authservice.service tr69hostif.service network-online.target
+Requires=iarmbusd.service network-online.target
 
 [Service]
 EnvironmentFile=/etc/device.properties
