@@ -14,9 +14,10 @@
 #ifndef _WIFINETWORKMGR_H_
 #define _WIFINETWORKMGR_H_
 
+#ifdef ENABLE_IARM
 #include "libIBus.h"
 #include "libIARM.h"
-
+#endif
 
 
 class WiFiNetworkMgr/*: public NetworkMedium*/
@@ -28,6 +29,7 @@ public:
 
     int Start();
     int Stop();
+#ifdef ENABLE_IARM
     static IARM_Result_t getPairedSSIDInfo(void *arg);
     static IARM_Result_t getAvailableSSIDs(void *arg);
     static IARM_Result_t getCurrentState(void *arg);
@@ -54,6 +56,7 @@ public:
     static IARM_Result_t getCurrentConnectionType(void *arg);
 #ifdef ENABLE_LOST_FOUND
     static IARM_Result_t getLNFState(void *arg);
+#endif
 #endif
 private:
 

@@ -4,7 +4,7 @@ SUBDIRS =
 DIST_SUBDIRS =
 
 AM_CXXFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)  -I$(top_srcdir)/src/main/include -I$(top_srcdir)/src/services/route/include \
-	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb  $(GLIB_CFLAGS) $(G_THREAD_CFLAGS) $(NLMONITOR_CFLAGS) $(NL_CFLAGS)
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb  $(GLIB_CFLAGS) $(G_THREAD_CFLAGS) $(NLMONITOR_CFLAGS) $(NL_CFLAGS) -I$(RDK_FSROOT_PATH)/usr/local/include
 
 AM_CFLAGS = -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb
 

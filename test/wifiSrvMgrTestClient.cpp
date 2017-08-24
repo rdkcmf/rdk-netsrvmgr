@@ -15,9 +15,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <iostream>
+#ifdef ENABLE_IARM
 #include "libIBus.h"
 #include "libIBusDaemon.h"
 #include "wifiSrvMgrIarmIf.h"
+#endif
 #include "NetworkMgrMain.h"
 
 #define NM_MGR_WIFI_CLIENT "NetworkMgrWiFiClientApps"
@@ -46,6 +48,7 @@ enum {
 
 static void WIFI_MGR_API_getAvailableSSIDs()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_SsidList_Param_t param;
     memset(&param, 0, sizeof(param));
@@ -63,10 +66,12 @@ static void WIFI_MGR_API_getAvailableSSIDs()
         printf("%s : \"Empty\" with message size: \'%d\'). \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, param.curSsids.jdataLen);
     }
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_getCurrentState()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
 
@@ -83,11 +88,13 @@ static void WIFI_MGR_API_getCurrentState()
         printf(" \"getCurrentState\" : %d \n", param.data.wifiStatus );
     }
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 #ifdef ENABLE_LOST_FOUND
 static void WIFI_MGR_API_getLAFState()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
 
@@ -104,10 +111,12 @@ static void WIFI_MGR_API_getLAFState()
         printf(" \"getLAFState\" : %d \n", param.data.wifiLNFStatus );
     }
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 #endif
 static void WIFI_MGR_API_setEnabled()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
     printf("[%s] Entering...\r\n", __FUNCTION__);
@@ -120,11 +129,13 @@ static void WIFI_MGR_API_setEnabled()
         printf("[%s] to \'%d\'.  \n", IARM_BUS_WIFI_MGR_API_setEnabled, param.data.setwifiadapter.enable );
     }
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 
 static void WIFI_MGR_API_getPairedSSID()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
     char *ssid = NULL;
@@ -145,10 +156,12 @@ static void WIFI_MGR_API_getPairedSSID()
     }
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_connect()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
     std::string ssid, passphrase, ans;
@@ -186,10 +199,12 @@ static void WIFI_MGR_API_connect()
     printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_connect, ((retVal == IARM_RESULT_SUCCESS && param.status)?"Success":"Failure"));
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_initiateWPSPairing()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
     printf("[%s] Entering...\r\n", __FUNCTION__);
@@ -200,10 +215,12 @@ static void WIFI_MGR_API_initiateWPSPairing()
     printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_initiateWPSPairing, ((param.status)?"true":"false"));
     printf("\n***********************************\n");
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_saveSSID()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     std::string ssid, passphrase, ans;
     IARM_Bus_WiFiSrvMgr_Param_t param;
@@ -226,10 +243,12 @@ static void WIFI_MGR_API_saveSSID()
 
     printf("\n%s : %s \n", IARM_BUS_WIFI_MGR_API_saveSSID, ((retVal == IARM_RESULT_SUCCESS && param.status)?"Successfully saved the SSID":"failed to save SSID"));
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_clearSSID()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
 
@@ -244,10 +263,12 @@ static void WIFI_MGR_API_clearSSID()
     printf("\n***********************************\n");
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_isPaired()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
 
@@ -263,9 +284,11 @@ static void WIFI_MGR_API_isPaired()
     printf("%s \n", (param.data.isPaired)?"Paied.":"Not paired.");
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_getConnectedSSID() {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_Bus_WiFiSrvMgr_Param_t param;
 
@@ -292,9 +315,12 @@ static void WIFI_MGR_API_getConnectedSSID() {
            param.data.getConnectedSSID.signalStrength);
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
-static void WIFI_MGR_API_getEndPointProps() {
+static void WIFI_MGR_API_getEndPointProps() 
+{
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_BUS_WiFi_DiagsPropParam_t param;
 
@@ -318,11 +344,13 @@ static void WIFI_MGR_API_getEndPointProps() {
            param.data.endPointInfo.stats.lastDataDownlinkRate, param.data.endPointInfo.stats.lastDataUplinkRate);
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 
 static void WIFI_MGR_API_getSSIDProps()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_BUS_WiFi_DiagsPropParam_t param;
 
@@ -343,11 +371,13 @@ static void WIFI_MGR_API_getSSIDProps()
     std::cout << "ssid : " << param.data.ssid.params.ssid << std::endl;
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 
 static void WIFI_MGR_API_getRadioProps()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_BUS_WiFi_DiagsPropParam_t param;
 
@@ -380,10 +410,12 @@ static void WIFI_MGR_API_getRadioProps()
     std::cout << "regulatoryDomain : " << param.data.radio.params.regulatoryDomain << std::endl;
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 static void WIFI_MGR_API_getRadioStatsProps()
 {
+#ifdef ENABLE_IARM
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
     IARM_BUS_WiFi_DiagsPropParam_t param;
 
@@ -410,11 +442,13 @@ static void WIFI_MGR_API_getRadioStatsProps()
     std::cout << "PacketsOtherReceived : " << param.data.radio_stats.params.packetsOtherReceived << std::endl;
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
 }
 
 
 int main()
 {
+#ifdef ENABLE_IARM
     int input;
     bool loop = true;
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
@@ -512,6 +546,6 @@ int main()
     IARM_Bus_Term();
 //    printf("[%s] Exiting... \'%s\' Client Exiting\r\n", __FUNCTION__, IARM_BUS_NM_SRV_MGR_NAME );
 
-
+#endif
 }
 

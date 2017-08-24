@@ -130,11 +130,13 @@ bool ethernet_on()
         return true;
 }
 
+#ifdef ENABLE_IARM
 static IARM_Result_t WiFi_IARM_Bus_BroadcastEvent(const char *ownerName, IARM_EventId_t eventId, void *data, size_t len)
 {
     if( !ethernet_on() )
         IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
 }
+#endif
 
 static void set_WiFiStatusCode( WiFiStatusCode_t status)
 {
@@ -199,38 +201,11 @@ WiFiStatusCode_t get_WifiRadioStatus()
     WiFiStatusCode_t status = WIFI_UNINSTALLED;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n",MODULE_NAME, __FUNCTION__, __LINE__ );
 
-#ifdef USE_HOSTIF_WIFI_HAL
-    HOSTIF_MsgData_t wifiParam = {0};
-    memset(&wifiParam, '\0', sizeof(HOSTIF_MsgData_t));
 
-    strncpy(wifiParam.paramName, WIFI_ADAPTER_ENABLE_PARAM, strlen(WIFI_ADAPTER_ENABLE_PARAM) +1);
-    wifiParam.instanceNum = 1;
-    wifiParam.paramtype = hostIf_BooleanType;
-    wifiParam.reqType = HOSTIF_GET;
-
-    ret = gpvFromTR069hostif(&wifiParam);
-    if(ret)
-    {
-        bool radioStatus = get_boolean(wifiParam.paramValue);
-
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Retrieved values from tr69hostif as \'%s\':\'%d\'.\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_ADAPTER_ENABLE_PARAM, radioStatus);
-        if(true == radioStatus)
-        {
-            /*Check for Wpa status */
-            set_WiFiStatusCode(WIFI_CONNECTED);
-            set_WiFiStatusCode(getWpaStatus());
-        }
-        else
-        {
-            set_WiFiStatusCode((WIFI_CONNECTED == gWifiAdopterStatus)?WIFI_DISCONNECTED:WIFI_DISABLED);
-        }
-    }
-
-    status = gWifiAdopterStatus;
-#else
     status = get_WiFiStatusCode();
-#endif
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n",MODULE_NAME, __FUNCTION__, __LINE__ );
+
     return status;
 }
 
@@ -257,6 +232,7 @@ WiFiConnectionTypeCode_t get_WifiConnectionType()
 bool updateWiFiList()
 {
     bool ret = false;
+#ifdef ENABLE_IARM
     HOSTIF_MsgData_t wifiParam = {0};
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -315,6 +291,7 @@ bool updateWiFiList()
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#endif
     return ret;
 }
 
@@ -324,7 +301,7 @@ bool updateWiFiList()
 //---------------------------------------------------------
 // generic Api for get HostIf parameters through IARM_TR69Bus
 // --------------------------------------------------------
-
+#ifdef ENABLE_IARM
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
@@ -351,7 +328,7 @@ bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 }
-
+#endif
 static WiFiStatusCode_t getWpaStatus()
 {
     WiFiStatusCode_t ret = WIFI_UNINSTALLED;
@@ -417,6 +394,7 @@ bool connect_WpsPush()
     bool ret = false;
     INT ssidIndex = 1;
     INT wpsStatus = RETURN_OK;
+#ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
 
@@ -510,6 +488,7 @@ bool connect_WpsPush()
             }
         }
     }
+#endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
@@ -539,6 +518,7 @@ INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *con
 void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned short action)
 {
     static unsigned int switchLnf2Priv=0;
+#ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
@@ -791,15 +771,18 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast Event id \'%d\'. \n", MODULE_NAME,__FUNCTION__, __LINE__, eventId);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#endif
 }
 
 /*Connect using SSID Selection */
 bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mode, CHAR *ap_security_WEPKey, CHAR *ap_security_PreSharedKey, CHAR *ap_security_KeyPassphrase,int saveSSID,CHAR * eapIdentity,CHAR * carootcert,CHAR * clientcert,CHAR * privatekey,int conType)
 {
     int ret = true;
-    IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     wifiSecurityMode_t securityMode;
+#ifdef ENABLE_IARM
+    IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
+#endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     set_WiFiConnectionType((WiFiConnectionTypeCode_t)conType);
@@ -808,18 +791,22 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     if(saveSSID)
     {
         set_WiFiStatusCode(WIFI_CONNECTING);
+#ifdef ENABLE_IARM
         eventData.data.wifiStateChange.state = WIFI_CONNECTING;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+#endif
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s  with passphrase %s \n",
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
     }
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
     if(ret)
     {
+#ifdef ENABLE_IARM
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in connecting to ssid %s  with passphrase %s \n",
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
         eventData.data.wifiStateChange.state = WIFI_FAILED;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
+#endif
         ret = false;
     }
     else
@@ -921,6 +908,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
+
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
     char ap_ssid[SSID_SIZE];
@@ -1112,10 +1100,11 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     static bool bLastLnfSuccess=false;
     int err;
     bool bRet=true;
-    mfrSerializedType_t mfrType;
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#ifdef ENABLE_IARM
     IARM_Bus_MFRLib_GetSerializedData_Param_t param;
+#endif
     ops = (laf_ops_t*) malloc(sizeof(laf_ops_t));
     if(!ops)
     {
@@ -1220,7 +1209,8 @@ bool getmacaddress(gchar* ifname,GString *data)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return true;
 }
-#if 1   // when rdk-c is moved to stable2 they need to put the correct #define
+
+#ifdef ENABLE_IARM
 bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType)
 {
     bool bRet;
@@ -1324,7 +1314,54 @@ out:
 }
 
 #else
-
+#ifdef ENABLE_XCAM_SUPPORT
+int get_token_length(unsigned int &tokenlength)
+{
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	FILE* fp_token;
+	int tokensize;
+	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
+	if(NULL == fp_token) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_token_length - Error in opening lfat token file");
+		return EBADF;
+	}else{
+		fseek(fp_token, 0L, SEEK_END);
+		tokensize = ftell(fp_token);
+		fseek(fp_token, 0, SEEK_SET);
+		tokenlength = tokensize-1;
+		RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "get_token_length - token size is - %d\n",tokenlength);
+		if(NULL != fp_token){
+			fclose(fp_token);
+			fp_token = NULL;
+		}
+	}
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+	return 0;
+}
+int get_laf_token(char* token,unsigned int tokenlength)
+{
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	FILE* fp_token;
+	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
+	if(NULL == fp_token) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Error in opening lfat token file");
+		return EBADF;
+	}else{
+		if(NULL != token)
+		{
+			fread(token,tokenlength,1,fp_token);
+		}else {
+			RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Token NULL");
+		}
+		if(NULL != fp_token){
+			fclose(fp_token);
+			fp_token = NULL;
+		}
+	}
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+	return 0;
+}
+#endif
 bool getDeviceInfo( laf_device_info_t *dev_info )
 {
 #ifdef ENABLE_XCAM_SUPPORT
@@ -1687,7 +1724,11 @@ void connectToLAF()
     pthread_attr_t attr;
     bool retVal=false;
     char lfssid[33] = {'\0'};
-    if((getDeviceActivationState() == false) && (IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam))
+    if((getDeviceActivationState() == false)
+#ifdef ENABLE_IARM
+        && (IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
+#endif
+)
     {
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -1712,7 +1753,9 @@ void connectToLAF()
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
         }
         else {
+#ifdef ENABLE_IARM
             if(IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
+#endif
             {
                 pthread_mutex_lock(&mutexLAF);
                 if(0 == pthread_cond_signal(&condLAF))
@@ -1832,7 +1875,9 @@ bool getDeviceActivationState()
         g_strfreev(tokens);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return bDeviceActivated;
-
+#else
+   return true;
+#endif
 }
 bool isWifiConnected()
 {
@@ -1860,6 +1905,8 @@ void lnfConnectPrivCredentials()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 #endif
+
+#ifdef ENABLE_IARM
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
@@ -1909,6 +1956,8 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retValue;
 }
+#endif
+
 void put_boolean(char *ptr, bool val)
 {
     bool *tmp = (bool *)ptr;
@@ -1919,6 +1968,7 @@ bool storeMfrWifiCredentials(void)
 {
     bool retVal=false;
 #ifdef USE_RDK_WIFI_HAL
+#ifdef ENABLE_IARM
     IARM_BUS_MFRLIB_API_WIFI_Credentials_Param_t param = {0};
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     retVal=lastConnectedSSID(&savedWiFiConnList);
@@ -1979,6 +2029,7 @@ bool storeMfrWifiCredentials(void)
         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] IARM error in storing wifi credentials mfr error code \n",MODULE_NAME,__FUNCTION__,__LINE__ ,param.returnVal);
     }
 #endif
+#endif
     return retVal;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
@@ -1989,6 +2040,7 @@ bool eraseMfrWifiCredentials(void)
     bool retVal=false;
 #ifdef USE_RDK_WIFI_HAL
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#ifdef ENABLE_IARM
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_EraseAllData,0,0))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in erasing wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
@@ -1999,6 +2051,7 @@ bool eraseMfrWifiCredentials(void)
         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] failure in erasing  wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#endif
 #endif
     return retVal;
 }
@@ -2248,7 +2301,8 @@ void logs_Period2_Params()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
-
+#ifdef ENABLE_LOST_FOUND
+#ifndef ENABLE_XCAM_SUPPORT
 /* get lfat from auth service */
 int laf_get_lfat(laf_lfat_t *lfat)
 {
@@ -2289,7 +2343,33 @@ int laf_get_lfat(laf_lfat_t *lfat)
   return 0;
 }
 
+#else
+int laf_get_lfat(laf_lfat_t *lfat)
+{
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	int ret=0;
+	unsigned int tokenlength=0;
+	ret = get_token_length(tokenlength);
+	if(ret != 0) {
+		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "laf_get_lfat - Error in token read \n");
+		return ret;
+	}
+	lfat->token = (char *) malloc(tokenlength+1);
+	if(lfat->token == NULL)
+		return ENOMEM;
+	ret = get_laf_token(lfat->token,tokenlength);
+	lfat->len = tokenlength;
+	lfat->token[tokenlength] = '\0';
+	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token size is - %d\n",lfat->len);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token is - %s\n",lfat->token);
+	strcpy(lfat->version, "1.0");
+	lfat->ttl = 31536000;
+	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+	return ret;
+}
+#endif
 
+#ifndef ENABLE_XCAM_SUPPORT
 /* store lfat with auth service */
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
@@ -2328,8 +2408,24 @@ int laf_set_lfat(laf_lfat_t* const lfat)
   return 0;
 }
 
-
+#else
+int laf_set_lfat(laf_lfat_t* const lfat)
+{
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+  char buffer[512];
+  memset(buffer, 0, 512);
+  if(NULL != lfat->token){
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Updating lfat token after token expiry\n");
+      sprintf(buffer,"echo \"%s\" > %s",lfat->token,LFAT_TOKEN_FILE);
+      system(buffer);
+  }else {
+       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "LFAT Token is Null");
+       return -1;
+  }
+  return 0;
+}
 #endif
+
 
 
 bool addSwitchToPrivateResults(int lnfError,char *currTime)
@@ -2398,6 +2494,8 @@ bool clearSwitchToPrivateResults()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 #endif
+#endif
+
 bool shutdownWifi()
 {
     bool result=true;
