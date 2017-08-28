@@ -49,7 +49,7 @@ pthread_mutex_t mutexGo = PTHREAD_MUTEX_INITIALIZER;
 extern netMgrConfigProps confProp;
 
 WiFiStatusCode_t get_WifiRadioStatus();
-
+void setLNFState(WiFiLNFStatusCode_t status);
 
 void set_WiFiConnectionType( WiFiConnectionTypeCode_t value);
 WiFiConnectionTypeCode_t get_WifiConnectionType();
@@ -139,7 +139,6 @@ static void set_WiFiStatusCode( WiFiStatusCode_t status)
     pthread_mutex_lock(&wifiStatusLock);
     if(gWifiAdopterStatus != status)
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Wifi Status changed to %d \n", MODULE_NAME,__FUNCTION__, __LINE__, status );
-
     gWifiAdopterStatus = status;
     pthread_mutex_unlock(&wifiStatusLock);
 }
@@ -215,13 +214,13 @@ WiFiStatusCode_t get_WifiRadioStatus()
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Retrieved values from tr69hostif as \'%s\':\'%d\'.\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_ADAPTER_ENABLE_PARAM, radioStatus);
         if(true == radioStatus)
         {
-            gWifiAdopterStatus = WIFI_CONNECTED;
             /*Check for Wpa status */
-            gWifiAdopterStatus = getWpaStatus();
+            set_WiFiStatusCode(WIFI_CONNECTED);
+            set_WiFiStatusCode(getWpaStatus());
         }
         else
         {
-            gWifiAdopterStatus = (WIFI_CONNECTED == gWifiAdopterStatus)?WIFI_DISCONNECTED:WIFI_DISABLED;
+            set_WiFiStatusCode((WIFI_CONNECTED == gWifiAdopterStatus)?WIFI_DISCONNECTED:WIFI_DISABLED);
         }
     }
 
@@ -598,8 +597,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 isLAFCurrConnectedssid=true;
 		if(!switchLnf2Priv)
 		   switchLnf2Priv=1;
+                setLNFState(CONNECTED_LNF);
             }
-
 
             /*Write into file*/
 //            WiFiConnectionStatus wifiParams;
@@ -645,6 +644,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
             /* Event Id & Code */
+            if(confProp.wifiProps.bEnableLostFound)
+            {
+                lnfConnectPrivCredentials();
+            }
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_NO_SSID;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
@@ -962,7 +965,7 @@ bool isWiFiCapable()
 #endif
 
     if(numRadioEntries)	{
-        gWifiAdopterStatus = WIFI_DISCONNECTED;
+        set_WiFiStatusCode(WIFI_DISCONNECTED);
         isCapable = true;
     }
     return isCapable;
@@ -1355,6 +1358,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already WPS flow has intiated so skipping the request the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return EPERM;
     }
+    setLNFState(LNF_IN_PROGRESS);
     if (laf_is_lnfssid(wificred->ssid))
     {
         bLNFConnect=true;
@@ -1390,6 +1394,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     /* Bounce xre session only if switching from LF to private */
     if(! laf_is_lnfssid(wificred->ssid))
     {
+        setLNFState(CONNECTED_PRIVATE);
         notify = true;
 //        sleep(10); //waiting for default route before bouncing the xre connection
 //        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -1424,6 +1429,7 @@ int laf_wifi_disconnect(void)
 #ifdef USE_RDK_WIFI_HAL
     retVal = clearSSID_On_Disconnect_AP();
 #endif
+    setLNFState(LNF_IN_PROGRESS);
     if(retVal == false) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Tried to disconnect before connect and it failed \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return EPERM;
@@ -1478,6 +1484,15 @@ void log_message(laf_loglevel_t level, char const* function, int line, char cons
 {
     RDK_LOG( map_to_rdkloglevel(level), LOG_NMGR, "[%s:%s:%s:%d] %s\n",MODULE_NAME,SUB_MODULE_NAME, function, line, msg );
 }
+
+void setLNFState(WiFiLNFStatusCode_t status)
+{
+   if(gWifiLNFStatus != status)
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] LNF Status changed to %d\n", __FUNCTION__, __LINE__, status );
+   
+   gWifiLNFStatus = status;
+}
+
 void *lafConnPrivThread(void* arg)
 {
     int ret = 0;
@@ -1497,7 +1512,7 @@ void *lafConnPrivThread(void* arg)
             retVal=lastConnectedSSID(&savedWiFiConnList);
             if(retVal == false)
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n",MODULE_NAME, __FUNCTION__, __LINE__ );
-            gWifiLNFStatus=LNF_IN_PROGRESS;
+            setLNFState(LNF_IN_PROGRESS);
             pthread_mutex_unlock(&mutexLAF);
             do
             {
@@ -1520,13 +1535,14 @@ void *lafConnPrivThread(void* arg)
                 if (true == bStopLNFWhileDisconnected)
                 {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
+                    setLNFState(LNF_UNITIALIZED);
                     break;
                 }
 
                 if((gWifiAdopterStatus == WIFI_CONNECTED) && (false == isLAFCurrConnectedssid))
                 {
                     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
-                    gWifiLNFStatus=CONNECTED_PRIVATE;
+                    setLNFState(CONNECTED_PRIVATE);
                     break;
                 }
 
@@ -1540,6 +1556,7 @@ void *lafConnPrivThread(void* arg)
                     if (true == bStopLNFWhileDisconnected)
                     {
                         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
+                        setLNFState(LNF_UNITIALIZED);
                         break;
                     }
 //                  counter++;
@@ -1555,6 +1572,7 @@ void *lafConnPrivThread(void* arg)
                 }
                 else
                 {
+                    setLNFState(CONNECTED_PRIVATE);
                     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
                     break;
                 }
@@ -1576,7 +1594,7 @@ void *lafConnThread(void* arg)
     int ret = 0;
     bool lnfReturnStatus=false;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    gWifiLNFStatus=LNF_IN_PROGRESS;
+    setLNFState(LNF_IN_PROGRESS);
     while (false == bDeviceActivated) {
         bLnfActivationLoop=true;
         while(gWifiLNFStatus != CONNECTED_LNF)
@@ -1586,7 +1604,7 @@ void *lafConnThread(void* arg)
             {
                 if (false == isLAFCurrConnectedssid)
                 {
-                    gWifiLNFStatus=CONNECTED_PRIVATE;
+                    setLNFState(CONNECTED_PRIVATE);
                     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected through non LAF path\n", MODULE_NAME,__FUNCTION__, __LINE__ );
                     bIsStopLNFWhileDisconnected=true;
                     bLnfActivationLoop=false;
@@ -1599,6 +1617,7 @@ void *lafConnThread(void* arg)
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 bIsStopLNFWhileDisconnected=true;
                 bLnfActivationLoop=false;
+                setLNFState(LNF_UNITIALIZED);
                 return NULL;
             }
             pthread_mutex_trylock(&mutexTriggerLAF);
@@ -1619,7 +1638,7 @@ void *lafConnThread(void* arg)
             }
             else
             {
-                gWifiLNFStatus=CONNECTED_LNF;
+                setLNFState(CONNECTED_LNF);
                 RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connection to LAF success\n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 break;
             }
