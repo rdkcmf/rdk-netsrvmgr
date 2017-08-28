@@ -845,8 +845,8 @@ bool scan_Neighboring_WifiAP(char *buffer)
     char *pFreq = NULL;
 
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    if(RETURN_OK != wifi_disconnectEndpoint(1,NULL))
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ ); 
+    if((isWifiConnected()) && (RETURN_OK != wifi_disconnectEndpoint(1,NULL)))
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
     }
