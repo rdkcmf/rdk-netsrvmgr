@@ -21,6 +21,14 @@
 #include "hostIf_tr69ReqHandler.h"
 #endif
 
+#ifndef ENABLE_XCAM_SUPPORT
+// added for create_wpa_supplicant_conf_from_netapp_db
+#include <string.h>
+#include <unistd.h>
+#include "sqlite3.h"
+#include "cJSON.h"
+#endif // ENABLE_XCAM_SUPPORT
+
 #define SAVE_SSID 1
 
 #ifdef USE_RDK_WIFI_HAL
@@ -58,6 +66,162 @@ WiFiNetworkMgr* WiFiNetworkMgr::getInstance()
     return instance;
 }
 
+#ifndef ENABLE_XCAM_SUPPORT
+/**
+ * 1. Extract "SSID", "BSSID", "Password", "Security" from specified netapp_db_file.
+ * 2. Write into specified wpa_supplicant_conf_file in following format:
+ *        network={
+ *            ssid="<SSID>"
+ *            scan_ssid=1
+ *            bssid=<BSSID>
+ *            psk="<Password"
+ *            key_mgmt=<Security>
+ *            auth_alg=OPEN
+ *            }
+ *    example:
+ *        network={
+ *            ssid="tukken-axb3-5GHz"
+ *            scan_ssid=1
+ *            bssid=5C:B0:66:00:4D:10
+ *            psk="Comcast2015"
+ *            key_mgmt=Wpa2PskAes
+ *            auth_alg=OPEN
+ *            }
+ */
+int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_supplicant_conf_file, const char* netapp_db_file)
+{
+    int ret = 1;
+    sqlite3 *db = NULL;
+
+    if (-1 != access (wpa_supplicant_conf_file, F_OK))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: wpa_supplicant_conf_file [%s] already exists. Will not overwrite.\n",
+                __FUNCTION__, wpa_supplicant_conf_file);
+    }
+    else if (SQLITE_OK != sqlite3_open_v2 (netapp_db_file, &db, SQLITE_OPEN_READONLY, NULL))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: Failed to open netapp_db_file [%s]. Error = [%s]\n",
+                __FUNCTION__, netapp_db_file, sqlite3_errmsg(db));
+    }
+    else
+    {
+        char zSql[256];
+        sprintf (zSql, "SELECT value FROM EAV where entity = 'NETAPP_DB_IFACE_WIRELESS' and attribute = 'NETAPP_DB_A_CURRENT_APINFO'");
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "%s: NetApp DB query = [%s]\n", __FUNCTION__, zSql);
+
+        sqlite3_stmt *res = NULL;
+        char *value = NULL;
+        cJSON *root_json = NULL;
+        FILE *f = NULL;
+
+        if (SQLITE_OK != sqlite3_prepare_v2 (db, zSql, -1, &res, 0))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: NetApp DB query prepare statement error = [%s]\n",
+                    __FUNCTION__, sqlite3_errmsg(db));
+        }
+        else if (SQLITE_ROW != sqlite3_step (res))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: NetApp DB query returned no rows.\n", __FUNCTION__);
+        }
+        else if (NULL == (value = (char *) sqlite3_column_text (res, 0)))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: NetApp DB query returned NULL value.\n", __FUNCTION__);
+        }
+        else if (NULL == (root_json = cJSON_Parse (value)))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: NetApp DB query returned non-JSON value = [%s]. Error = [%s]\n",
+                    __FUNCTION__, value, cJSON_GetErrorPtr());
+        }
+        else if (NULL == (f = fopen (wpa_supplicant_conf_file, "w")))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: Error opening wpa_supplicant_conf_file [%s] for write\n",
+                    __FUNCTION__, wpa_supplicant_conf_file);
+        }
+        else
+        {
+            RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "%s: NetApp DB query returned value = [%s]\n", __FUNCTION__, value);
+
+            cJSON *json = NULL;
+            const char *ssid = (json = cJSON_GetObjectItem (root_json, "SSID")) ? json->valuestring : "";
+            const char *bssid = (json = cJSON_GetObjectItem (root_json, "BSSID")) ? json->valuestring : "";
+            const char *password = (json = cJSON_GetObjectItem (root_json, "Password")) ? json->valuestring : "";
+            const char *security = (json = cJSON_GetObjectItem (root_json, "Security")) ? json->valuestring : "";
+
+            RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "%s: NetApp DB parameters: ssid = [%s], bssid = [%s], password = [%s], security = [%s]\n",
+                    __FUNCTION__, ssid, bssid, password, security);
+
+            if (!*ssid)     RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONF_FROM_DB_SSID_EMPTY\n");
+            if (!*bssid)    RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONF_FROM_DB_BSSID_EMPTY\n");
+            if (!*password) RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONF_FROM_DB_PASSWORD_EMPTY\n");
+            if (!*security) RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONF_FROM_DB_MODE_EMPTY\n");
+
+            const char *security_mode_map[][2] = {
+                {"Open", "OPEN"},
+                {"Wep", "NONE"},
+                {"WpaPskAes", "WPA-PSK"},
+                {"WpaPskTkip", "WPA-PSK"},
+                {"Wpa2PskAes", "WPA-PSK"},
+                {"Wpa2PskTkip", "WPA-PSK"},
+                {"WpaEnterprise", "WPA-EAP"},
+                {"Wpa2Enterprise", "WPA-EAP"},
+            };
+
+            const char *wpa_security_mode = ""; // default to empty string
+            int n = sizeof (security_mode_map) / sizeof (security_mode_map[0]);
+            int i = 0;
+            for (; i < n; i++)
+            {
+                if (0 == strcasecmp (security, security_mode_map[i][0]))
+                {
+                    wpa_security_mode = security_mode_map[i][1];
+                    break;
+                }
+            }
+            if (i == n) // security mode mapping not found
+            {
+                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONF_FROM_DB_MODE_UNMAPPABLE\n");
+            }
+
+            fprintf (f, "ctrl_interface=/var/run/wpa_supplicant\n");
+            fprintf (f, "update_config=1\n");
+            fprintf (f, "\n");
+            fprintf (f, "network={\n");
+            fprintf (f, "    ssid=\"%s\"\n", ssid);
+            fprintf (f, "    scan_ssid=1\n");
+            fprintf (f, "    bssid=%s\n", bssid);
+            fprintf (f, "    psk=\"%s\"\n", password);
+            fprintf (f, "    key_mgmt=%s\n", wpa_security_mode);
+            fprintf (f, "    auth_alg=OPEN\n");
+            fprintf (f, "    }\n");
+
+            fclose(f);
+
+            ret = 0;
+
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "%s: Successfully created wpa_supplicant_conf_file [%s].\n",
+                    __FUNCTION__, wpa_supplicant_conf_file);
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CREATED_CONF_FROM_DB\n");
+        }
+
+        if (root_json)
+        {
+            cJSON_Delete (root_json);
+        }
+
+        if (res)
+        {
+            sqlite3_finalize (res);
+        }
+    }
+
+    if (db)
+    {
+        sqlite3_close (db);
+    }
+
+    return ret;
+}
+#endif // ENABLE_XCAM_SUPPORT
 
 int  WiFiNetworkMgr::Start()
 {
@@ -120,6 +284,10 @@ int  WiFiNetworkMgr::Start()
             RDK_LOG( RDK_LOG_WARN, LOG_NMGR, "[%s:%d] Failed to get wifi mac address. \n", __FUNCTION__, __LINE__);
         }
     }
+
+#ifndef ENABLE_XCAM_SUPPORT
+    create_wpa_supplicant_conf_from_netapp_db ("/opt/wifi/wpa_supplicant.conf", "/opt/wifi/NetApp.db");
+#endif // ENABLE_XCAM_SUPPORT
 
 #ifdef USE_RDK_WIFI_HAL
     monitor_WiFiStatus();
