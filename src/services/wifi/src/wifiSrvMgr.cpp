@@ -1192,9 +1192,14 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
         case IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED:
         {
             bool *param = (bool *)data;
+            if(*param == bStopLNFWhileDisconnected)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  Discarding stopLNFWhileDisconnected event since there is no change in value existing %d new %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected,*param);
+                break;
+            }
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  event handler of stopLNFWhileDisconnected old value %d current value %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected,*param);
             bStopLNFWhileDisconnected=*param;
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  event handler value of stopLNFWhileDisconnected %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
-            if((!bStopLNFWhileDisconnected) && (confProp.wifiProps.bEnableLostFound))
+            if((!bStopLNFWhileDisconnected) && (confProp.wifiProps.bEnableLostFound) && (gWifiLNFStatus != CONNECTED_PRIVATE))
             {
                lnfConnectPrivCredentials();
                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] starting LnF since stopLNFWhileDisconnected value is %d. \n", MODULE_NAME,__FUNCTION__, __LINE__,bStopLNFWhileDisconnected);
@@ -1204,8 +1209,19 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
         case IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED:
         {
             bool *param = (bool *)data;
+            if(*param == bAutoSwitchToPrivateEnabled)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  Discarding  event bAutoSwitchToPrivateEnabled  since there is no change in value existing %d new %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bAutoSwitchToPrivateEnabled,*param);
+                break;
+            }
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  event handler  of bAutoSwitchToPrivateEnabled old value %d current value %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bAutoSwitchToPrivateEnabled,*param);
             bAutoSwitchToPrivateEnabled=*param;
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  event handler value of bAutoSwitchToPrivateEnabled %d \n", MODULE_NAME,__FUNCTION__, __LINE__,bAutoSwitchToPrivateEnabled);
+            if((gWifiLNFStatus != CONNECTED_PRIVATE) && bAutoSwitchToPrivateEnabled)
+            {
+               lnfConnectPrivCredentials();
+               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] starting LnF since AutoSwitchToPrivateEnabled value is %d. \n", MODULE_NAME,__FUNCTION__, __LINE__,bAutoSwitchToPrivateEnabled);
+
+            }
         }
         break;
         default:
