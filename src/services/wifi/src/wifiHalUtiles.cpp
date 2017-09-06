@@ -67,6 +67,8 @@ static void logs_Period2_Params();
 #endif
 
 #define RDK_ASSERT_NOT_NULL(P)          if ((P) == NULL) return EINVAL
+#define SECURITY_MODE_WPA_EAP           "WPA-EAP"
+#define SECURITY_MODE_WPA_PSK           "WPA-PSK"
 
 struct _wifi_securityModes
 {
@@ -573,7 +575,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enable LNF \n",__FUNCTION__, __LINE__ );
 		    bStopLNFWhileDisconnected=false;
 		}
-                if(strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
+                if(g_strcmp0(g_strstrip(savedWiFiConnList.ssidSession.ssid),g_strstrip(ap_SSID)) != 0)
                     storeMfrWifiCredentials();
                 memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
@@ -802,8 +804,7 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     set_WiFiConnectionType((WiFiConnectionTypeCode_t)conType);
     securityMode=(wifiSecurityMode_t)ap_security_mode;
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d  \n",
-             MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_passphrase : %s; ap_security_mode : %d; saveSSID = %d  \n",MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID,ap_security_KeyPassphrase,(int)ap_security_mode, saveSSID );
     if(saveSSID)
     {
         set_WiFiStatusCode(WIFI_CONNECTING);
@@ -939,15 +940,30 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     }
     else
     {
-        strncpy(ConnParams->ssidSession.ssid, pairedSSIDInfo.ap_ssid, sizeof(ConnParams->ssidSession.ssid)-1);
+        strncpy(ConnParams->ssidSession.ssid,g_strstrip(pairedSSIDInfo.ap_ssid), sizeof(ConnParams->ssidSession.ssid)-1);
         ConnParams->ssidSession.ssid[sizeof(ConnParams->ssidSession.ssid)-1]='\0';
-        strncpy(ConnParams->ssidSession.passphrase, pairedSSIDInfo.ap_passphrase, sizeof(ConnParams->ssidSession.passphrase)-1);
+        strncpy(ConnParams->ssidSession.passphrase, g_strstrip(pairedSSIDInfo.ap_passphrase), sizeof(ConnParams->ssidSession.passphrase)-1);
         ConnParams->ssidSession.passphrase[sizeof(ConnParams->ssidSession.passphrase)-1]='\0';
-        strncpy(ConnParams->ssidSession.bssid, pairedSSIDInfo.ap_bssid, sizeof(ConnParams->ssidSession.bssid)-1);
+        strncpy(ConnParams->ssidSession.bssid, g_strstrip(pairedSSIDInfo.ap_bssid), sizeof(ConnParams->ssidSession.bssid)-1);
         ConnParams->ssidSession.bssid[sizeof(ConnParams->ssidSession.bssid)-1]='\0';
-        strncpy(ConnParams->ssidSession.security, pairedSSIDInfo.ap_security, sizeof(ConnParams->ssidSession.security)-1);
+        strncpy(ConnParams->ssidSession.security, g_strstrip(pairedSSIDInfo.ap_security), sizeof(ConnParams->ssidSession.security)-1);
         ConnParams->ssidSession.security[sizeof(ConnParams->ssidSession.security)-1]='\0';
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%s:%d] last connected  ssid is  %s  bssid is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,ConnParams->ssidSession.ssid,ConnParams->ssidSession.bssid);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,ConnParams->ssidSession.ssid,ConnParams->ssidSession.passphrase,ConnParams->ssidSession.bssid,ConnParams->ssidSession.security);
+        if(g_strcmp0(g_strstrip(ConnParams->ssidSession.security),SECURITY_MODE_WPA_PSK) == 0 )
+        {
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_PSK \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_PSK_AES;
+        }
+        else if(g_strcmp0(g_strstrip(ConnParams->ssidSession.security),SECURITY_MODE_WPA_EAP) == 0)
+        {
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_EAP \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES;
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_NONE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_NONE;
+        }
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
@@ -1562,7 +1578,8 @@ void *lafConnPrivThread(void* arg)
 //                  counter++;
                     if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
                     {
-                        retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL,WIFI_CON_PRIVATE);
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Trying Manual Connect with ssid %s security %d since not able to connect through LNF \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode);
+                        retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode, NULL, savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL,WIFI_CON_PRIVATE);
                         if(false == retVal)
                         {
                             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s  failed \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid );
@@ -1919,7 +1936,7 @@ bool storeMfrWifiCredentials(void)
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
-        if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) == 0 ) && (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) == 0))
+        if((g_strcmp0(g_strstrip(param.wifiCredentials.cSSID),g_strstrip(savedWiFiConnList.ssidSession.ssid)) == 0 ) && (g_strcmp0(g_strstrip(param.wifiCredentials.cPassword),g_strstrip(savedWiFiConnList.ssidSession.passphrase)) == 0))
         {
             RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
             return true;
@@ -1941,7 +1958,7 @@ bool storeMfrWifiCredentials(void)
         if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
         {
             RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
-            if((g_strcmp0(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid) == 0 ) && (g_strcmp0(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase) == 0 ))
+            if((g_strcmp0(g_strstrip(param.wifiCredentials.cSSID),g_strstrip(savedWiFiConnList.ssidSession.ssid)) == 0 ) && (g_strcmp0(g_strstrip(param.wifiCredentials.cPassword),g_strstrip(savedWiFiConnList.ssidSession.passphrase)) == 0 ))
             {
                 retVal=true;
                 RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] Successfully stored the credentails and verified stored ssid %s current ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
