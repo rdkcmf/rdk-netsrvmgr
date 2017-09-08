@@ -903,8 +903,8 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
 
     if(ret)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in connecting to ssid %s  with passphrase %s \n",
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in connecting to ssid %s  \n",
+                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID);
 #ifdef ENABLE_IARM
         eventData.data.wifiStateChange.state = WIFI_FAILED;
 #endif
@@ -912,8 +912,8 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s  with passphrase %s \n",
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s \n",
+                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID);
 #ifdef ENABLE_LOST_FOUND
         if(!bLNFConnect)
 #endif
