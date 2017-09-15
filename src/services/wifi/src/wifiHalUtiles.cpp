@@ -10,12 +10,12 @@
 
 #include "wifiHalUtiles.h"
 #include "netsrvmgrUtiles.h"
-
-
+#define WIFI_HAL_VERSION_SIZE   6
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
 gchar deviceID[DEVICEID_SIZE];
 gchar partnerID[PARTNERID_SIZE];
+static char wifiHALVer[WIFI_HAL_VERSION_SIZE]={0};
 #ifdef ENABLE_LOST_FOUND
 GList *lstLnfPvtResults=NULL;
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
@@ -69,12 +69,15 @@ static void logs_Period2_Params();
 #define RDK_ASSERT_NOT_NULL(P)          if ((P) == NULL) return EINVAL
 #define SECURITY_MODE_WPA_EAP           "WPA-EAP"
 #define SECURITY_MODE_WPA_PSK           "WPA-PSK"
+#define WIFI_HAL_VERSION                "1.0.0"
 
-struct _wifi_securityModes
+typedef struct _wifi_securityModes
 {
     SsidSecurity 	securityMode;
     const char          *modeString;
-} wifi_securityModes[] =
+}wifi_securityModes; 
+
+wifi_securityModes wifi_securityModesMap_Netapp[] =
 {
     { NET_WIFI_SECURITY_NONE,          		  	"No Security"                   },
     { NET_WIFI_SECURITY_WEP_64, 	          	"WEP (Open & Shared)"        	},
@@ -89,22 +92,61 @@ struct _wifi_securityModes
     { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
 };
 
-SsidSecurity get_wifiSecurityModeFromString(char *secModeString)
+wifi_securityModes wifi_securityModesMap[] =
+{
+    { NET_WIFI_SECURITY_NONE,          		  	"None"                   },
+    { NET_WIFI_SECURITY_WEP_64, 	          	"WEP"        	},
+    { NET_WIFI_SECURITY_WPA_PSK_TKIP, 		 	"WPA"   	},
+    { NET_WIFI_SECURITY_WPA_PSK_AES, 		  	"WPA"    	},
+    { NET_WIFI_SECURITY_WPA2_PSK_TKIP, 			"WPA2"  	},
+    { NET_WIFI_SECURITY_WPA2_PSK_AES,  			"WPA2"   	},
+    { NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,		"WPA-ENTERPRISE"		},
+    { NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,		"WPA-ENTERPRISE"		},
+    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,		"WPA2-ENTERPRISE"		},
+    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,		"WPA2-ENTERPRISE"		},
+    { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
+};
+bool getHALVersion()
+{
+    if(wifiHALVer[0] == 0)
+    {
+        wifi_getHalVersion(wifiHALVer);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] WiFi HAL Version is %s \n",MODULE_NAME,__FUNCTION__, __LINE__,wifiHALVer);
+    }
+}
+SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryptionType)
 {
     SsidSecurity mode = NET_WIFI_SECURITY_NOT_SUPPORTED;
-
     if(!secModeString) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to NULL. \n",__FUNCTION__, __LINE__ );
         return NET_WIFI_SECURITY_NONE;
     }
-
-    int len = sizeof(wifi_securityModes)/sizeof(_wifi_securityModes);
-
-    for(int i = 0; i < len; i++) {
-	if(NULL != strcasestr(secModeString,wifi_securityModes[i].modeString)) {
-//        if(0 == strncasecmp(wifi_securityModes[i].modeString, secModeString, strlen(secModeString))) {
-            mode = wifi_securityModes[i].securityMode;
-            break;
+    if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
+    {
+        
+        int len = sizeof(wifi_securityModesMap_Netapp)/sizeof(wifi_securityModes);
+        for(int i = 0; i < len; i++) {
+	    if(NULL != strcasestr(secModeString,wifi_securityModesMap_Netapp[i].modeString)) {
+                mode = wifi_securityModesMap_Netapp[i].securityMode;
+                break;
+            }
+        }
+    }
+    else
+    {
+        int len = sizeof(wifi_securityModesMap)/sizeof(wifi_securityModes);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] securitymode = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,secModeString);
+        for(int i = 0; i < len; i++) {
+	    if(NULL != strcasestr(secModeString,wifi_securityModesMap[i].modeString)) {
+	        if((encryptionType != NULL) && (NULL != strcasestr(encryptionType,"AES"))) {
+                    mode = wifi_securityModesMap[++i].securityMode;
+                }
+                else
+                {
+                    mode = wifi_securityModesMap[i].securityMode;
+                }
+                break;
+            }   
         }
     }
     return mode;
@@ -942,9 +984,15 @@ bool scan_Neighboring_WifiAP(char *buffer)
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] [%d] => SSID : \"%s\"  | SignalStrength : \"%d\" | frequency : \"%f\" | EncryptionMode : \"%s\" \n",\
                      MODULE_NAME,__FUNCTION__, __LINE__, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
 
+            if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
+            {
             /* The type of encryption the neighboring WiFi SSID advertises.*/
-            encrptType = get_wifiSecurityModeFromString((char *)neighbor_ap_array[index].ap_EncryptionMode);
-
+                encrptType = get_wifiSecurityModeFromString((char *)neighbor_ap_array[index].ap_EncryptionMode,NULL);
+            }
+            else
+            {
+                encrptType = get_wifiSecurityModeFromString((char *)neighbor_ap_array[index].ap_SecurityModeEnabled,(char *)neighbor_ap_array[index].ap_EncryptionMode);
+            }
             cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
             cJSON_AddStringToObject(array_element, "ssid", ssid);
             cJSON_AddNumberToObject(array_element, "security", encrptType);
