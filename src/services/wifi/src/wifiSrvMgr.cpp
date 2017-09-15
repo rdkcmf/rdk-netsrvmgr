@@ -315,7 +315,7 @@ int  WiFiNetworkMgr::Start()
     } else  {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in wifi_init(). \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
-
+    getHALVersion();
     /*Register connect and disconnect call back */
     wifi_connectEndpoint_callback_register(wifi_connect_callback);
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);

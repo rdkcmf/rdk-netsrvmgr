@@ -125,6 +125,7 @@ bool getDeviceInfo(laf_device_info_t *dev_info);
 #ifdef ENABLE_IARM
 bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType);
 #endif
+bool getHALVersion();
 bool addSwitchToPrivateResults(int lnfError,char *currTime);
 bool convertSwitchToPrivateResultsToJson(char *buffer);
 bool clearSwitchToPrivateResults();
