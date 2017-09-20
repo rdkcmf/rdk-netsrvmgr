@@ -12,12 +12,15 @@
 
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
+#ifdef ENABLE_ROUTE_SUPPORT
 #include "routeSrvMgr.h"
+#endif
 #ifdef USE_RDK_MOCA_HAL
 #include "mocaSrvMgr.h"
 #endif
 #include "netsrvmgrUtiles.h"
 #include "netsrvmgrIarm.h"
+
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
 
@@ -45,10 +48,12 @@ static void NetworkMgr_SignalHandler (int sigNum);
 static bool read_ConfigProps();
 void Read_Telemetery_Param_File();
 static bool update_telemetryParams_list(gchar *, telemetryParams *, gchar *, gchar *);
+#ifdef ENABLE_IARM
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 static IARM_Result_t getActiveInterface(void *arg);
 static IARM_Result_t getNetworkInterfaces(void *arg);
 static IARM_Result_t isInterfaceEnabled(void *arg);
+#endif
 bool bIsInterfaceEnabled=false;
 void NetworkMgr_SignalHandler (int sigNum)
 {
@@ -74,8 +79,9 @@ int main(int argc, char *argv[])
     const char* debugConfigFile = NULL;
     const char* configFilePath = NULL;
     int itr=0;
+#ifdef ENABLE_IARM
     IARM_Result_t err = IARM_RESULT_IPCCORE_FAIL;
-
+#endif
     /* Signal handler */
     signal (SIGHUP, NetworkMgr_SignalHandler);
     signal (SIGINT, NetworkMgr_SignalHandler);
@@ -115,6 +121,7 @@ int main(int argc, char *argv[])
         }
         itr++;
     }
+#ifdef ENABLE_IARM
     err = IARM_Bus_Init(IARM_BUS_NM_SRV_MGR_NAME);
     if(IARM_RESULT_SUCCESS != err)
     {
@@ -127,13 +134,17 @@ int main(int argc, char *argv[])
         //LOG("Error connecting to IARM.. error code : %d\n",err);
         return err;
     }
+#endif
 
 #ifdef RDK_LOGGER_ENABLED
     if(rdk_logger_init(debugConfigFile) == 0) b_rdk_logger_enabled = 1;
     if(configFilePath) {
         memcpy(configProp_FilePath, configFilePath, strlen(configFilePath))
     }
+#ifdef ENABLE_IARM
     IARM_Bus_RegisterForLog(logCallback);
+#endif
+
 #else
     rdk_logger_init(debugConfigFile);
 #endif
@@ -155,10 +166,12 @@ int main(int argc, char *argv[])
 #endif
     }
     Read_Telemetery_Param_File();
+#ifdef ENABLE_IARM
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getActiveInterface, getActiveInterface);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getNetworkInterfaces, getNetworkInterfaces);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isInterfaceEnabled, isInterfaceEnabled);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED, _eventHandler);
+#endif
     netSrvMgr_start();
     netSrvMgr_Loop();
 
@@ -166,7 +179,9 @@ int main(int argc, char *argv[])
 
 void netSrvMgr_start()
 {
+#ifdef ENABLE_ROUTE_SUPPORT
     RouteNetworkMgr::getInstance()->Start();
+#endif
     bIsInterfaceEnabled=true;
 #ifdef USE_RDK_WIFI_HAL
     WiFiNetworkMgr::getInstance()->Start();
@@ -428,6 +443,7 @@ void teleParamList_free (gpointer val)
     }
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
 }
+#ifdef ENABLE_IARM
 IARM_Result_t getActiveInterface(void *arg)
 {
         IARM_Result_t ret = IARM_RESULT_SUCCESS;
@@ -524,3 +540,4 @@ IARM_Result_t isInterfaceEnabled(void *arg)
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
         return ret;
 }
+#endif

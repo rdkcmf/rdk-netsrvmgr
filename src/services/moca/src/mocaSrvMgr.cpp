@@ -52,10 +52,12 @@ int  MocaNetworkMgr::Start()
 {
     bool retVal=false;
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+#ifdef ENABLE_IARM
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG, _mocaEventHandler);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG_DURATION, _mocaEventHandler);
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus, mocaTelemetryLogEnable);
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration, mocaTelemetryLogDuration);
+#endif
     RMH_SetEventCallbacks(rmh, RMH_EVENT_LINK_STATUS_CHANGED | RMH_EVENT_MOCA_VERSION_CHANGED);
     startMocaTelemetry();
 }
@@ -244,6 +246,7 @@ void MocaNetworkMgr::printMocaTelemetry()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
+#ifdef ENABLE_IARM
 static void _mocaEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
@@ -269,7 +272,6 @@ static void _mocaEventHandler(const char *owner, IARM_EventId_t eventId, void *d
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
-
 IARM_Result_t MocaNetworkMgr::mocaTelemetryLogEnable(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
@@ -292,6 +294,7 @@ IARM_Result_t MocaNetworkMgr::mocaTelemetryLogDuration(void *arg)
     return ret;
 }
 
+#endif
 static void eventCallback(const enum RMH_Event event, const struct RMH_EventData *eventData, void* userContext) {
     switch(event) {
     case RMH_EVENT_LINK_STATUS_CHANGED:

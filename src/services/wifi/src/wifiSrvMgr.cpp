@@ -18,8 +18,18 @@
 #include "netsrvmgrUtiles.h"
 
 #ifdef USE_HOSTIF_WIFI_HAL
+#ifdef ENABLE_IARM
 #include "hostIf_tr69ReqHandler.h"
 #endif
+#endif
+
+#ifndef ENABLE_XCAM_SUPPORT
+// added for create_wpa_supplicant_conf_from_netapp_db
+#include <string.h>
+#include <unistd.h>
+#include "sqlite3.h"
+#include "cJSON.h"
+#endif // ENABLE_XCAM_SUPPORT
 
 #ifndef ENABLE_XCAM_SUPPORT
 // added for create_wpa_supplicant_conf_from_netapp_db
@@ -32,12 +42,17 @@
 #define SAVE_SSID 1
 
 #ifdef USE_RDK_WIFI_HAL
+#ifdef ENABLE_IARM
 static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif
 #endif /* USE_RDK_WIFI_HAL */
+
 #ifdef ENABLE_LOST_FOUND
 extern bool bDeviceActivated;
 extern WiFiLNFStatusCode_t gWifiLNFStatus;
+#ifdef ENABLE_IARM
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif
 extern bool bStopLNFWhileDisconnected;
 extern bool bIsStopLNFWhileDisconnected;
 extern bool bAutoSwitchToPrivateEnabled;
@@ -47,7 +62,10 @@ ssidList gSsidList;
 extern netMgrConfigProps confProp;
 WiFiConnectionStatus savedWiFiConnList;
 char gWifiMacAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
+
+#ifdef ENABLE_IARM
 IARM_Bus_Daemon_SysMode_t sysModeParam;
+#endif
 
 WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
 bool WiFiNetworkMgr::instanceIsReady = false;
@@ -226,7 +244,9 @@ int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_s
 int  WiFiNetworkMgr::Start()
 {
     bool retVal=false;
+    #ifdef ENABLE_IARM
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
 
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, getAvailableSSIDs);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getCurrentState, getCurrentState);
@@ -267,7 +287,7 @@ int  WiFiNetworkMgr::Start()
 
     /* Notification RPC:*/
     IARM_Bus_RegisterEvent(IARM_BUS_WIFI_MGR_EVENT_MAX);
-
+#endif //ENABLE_XCAM
     memset(&gSsidList, '\0', sizeof(ssidList));
     /*Check for WiFi Capability */
     isWiFiCapable();
@@ -333,7 +353,7 @@ int  WiFiNetworkMgr::Stop()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
-
+#ifdef ENABLE_IARM
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
@@ -1132,6 +1152,7 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
 }
 
 #ifdef ENABLE_LOST_FOUND
+#ifdef ENABLE_IARM
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -1211,6 +1232,7 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 #endif
+#endif
 
 /**
  * @brief This function is used to get the system modes (EAS, NORMAL and WAREHOUSE)
@@ -1261,3 +1283,4 @@ IARM_Result_t WiFiNetworkMgr::getEndPointProps(void *arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
 }
+#endif

@@ -36,9 +36,11 @@ extern "C" {
 
 #include "rdk_debug.h"
 #include "NetworkMedium.h"
+#ifdef ENABLE_IARM
 #include "irMgr.h"
 #include "comcastIrKeyCodes.h"
 #include "libIARM.h"
+#endif
 
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 

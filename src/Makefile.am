@@ -1,11 +1,12 @@
 ## Copyright (c) 2013 Comcast. All rights reserved.
 
-AUTOMAKE_OPTIONS = subdir-objects
+#AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS =  services
 DIST_SUBDIRS = services
 
 AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) \
 	-I$(top_srcdir)/src/main/include \
+	-I$(RDK_FSROOT_PATH)/usr/local/include \
 	-I$(top_srcdir)/src/services/wifi/include \
 	-I$(top_srcdir)/src/services/route/include \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
@@ -24,10 +25,14 @@ AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
 sysconf_DATA = $(top_srcdir)/conf/netsrvmgr.conf
 endif
 
+if ROUTE_SUPPORT
+AM_CXXFLAGS += -DENABLE_ROUTE_SUPPORT
+endif
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
-	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) ${DIRECTFB_LIBS} \
-	-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus -lpthread -lcjson
+	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) -lpthread -lcjson
+
+AM_LDFLAGS += $(IARM_LFLAGS)
 
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal
@@ -58,7 +63,10 @@ netsrvmgr_LDADD =
 if RDKWIFIHAL
 netsrvmgr_LDADD += $(top_builddir)/src/services/wifi/libwifiservices.la
 endif
-netsrvmgr_LDADD += $(top_builddir)/src/services/route/librouteservices.la
+
+if ROUTE_SUPPORT
+netsrvmgr_LDADD +=  $(top_builddir)/src/services/route/librouteservices.la
+endif
 
 if RDKMOCAHAL
 netsrvmgr_LDADD +=  $(top_builddir)/src/services/moca/libmocaservices.la

@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.69])
+#AC_PREREQ([2.69])
 AC_INIT([nm-generic], [1.0], [rajnish_dey2@cable.comcast.com])
 AC_CONFIG_SRCDIR([nm])
 AC_CONFIG_MACRO_DIR([cfg])
@@ -69,7 +69,34 @@ AC_ARG_ENABLE([lost-found],
            ],
          [echo " lost-found is enable"])
 AM_CONDITIONAL([LOSTFOUND], [test x$LOSTFOUND = xtrue])
+ROUTE_SUPPORT=" "
+AC_ARG_ENABLE([route-support],
+        AS_HELP_STRING([--enable-route-support],[This will enable/disable lost and found.]),
+        [
+          case "${enableval}" in
+           yes) ROUTE_SUPPORT=true ;;
+           no) ROUTE_SUPPORT=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-route-support ]) ;;
+           esac
+           ],
+         [echo "route-support is enable"])
+AM_CONDITIONAL([ROUTE_SUPPORT], [test x$ROUTE_SUPPORT = xtrue])
 
+IARM_CFLAGS=" "
+IARM_LFLAGS=" "
+AC_ARG_ENABLE([iarm],
+              AS_HELP_STRING([--enable-iarm],[enable iarm (default is yes)]),
+              [
+                case "${enableval}" in
+                 yes) IARM_CFLAGS="-DENABLE_IARM"
+                      IARM_LFLAGS="-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus " ;;
+                 no)  IARM_CFLAGS=" "
+                      IARM_LFLAGS=" " ;;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-iarm]) ;;
+                esac
+              ],
+              [echo "iarm is enabled"])
+#AM_CONDITIONAL([ENABLE_IARM], [test x$iarm = xtrue])
 
 AC_ARG_ENABLE([xcam-support],
         AS_HELP_STRING([--enable-xcam-support],[This will enable/disable xcam device.]),
@@ -104,7 +131,9 @@ AC_SUBST(LOSTFOUND)
 AC_SUBST(XCAM_SUPPORT)
 AC_SUBST(NLMONITOR_CFLAGS)
 AC_SUBST(NLMONITOR_LINK)
-
+AC_SUBST(ROUTE_SUPPORT)
+AC_SUBST(IARM_CFLAGS)
+AC_SUBST(IARM_LFLAGS)
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 

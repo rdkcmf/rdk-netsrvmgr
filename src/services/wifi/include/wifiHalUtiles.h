@@ -17,7 +17,9 @@
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgrIarmIf.h"
 
+#ifdef ENABLE_IARM
 #include "hostIf_tr69ReqHandler.h"
+#endif
 
 #ifdef ENABLE_XCAM_SUPPORT
 extern "C" {
@@ -26,7 +28,9 @@ extern "C" {
 #endif
 
 #ifdef ENABLE_LOST_FOUND
+#ifdef ENABLE_IARM
 #include "authserviceIARM.h"
+#endif
 #endif
 
 #ifdef USE_RDK_WIFI_HAL
@@ -48,9 +52,12 @@ extern "C" {
 #define WIFI_DEFAULT_INTERFACE "wlan0"
 
 #endif
+
+#ifdef ENABLE_IARM
 #include "mfrMgr.h"
 #include "sysMgr.h"
 #include "libIBusDaemon.h"
+#endif
 
 #define ACTION_ON_CONNECT 	1
 #define ACTION_ON_DISCONNECT 	0
@@ -74,14 +81,18 @@ extern "C" {
 #define DEVICEID_SIZE 512
 #define PARTNERID_SIZE 128
 #define TIME_FORMAT "%Y-%m-%d %H:%M:%S"
+#ifdef ENABLE_IARM
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
+#endif
 WiFiStatusCode_t get_WifiRadioStatus();
 WiFiConnectionTypeCode_t get_WifiConnectionType();
 bool ethernet_on();
 
 extern bool updateWiFiList();
 extern ssidList gSsidList;
+#ifdef ENABLE_IARM
 extern IARM_Bus_Daemon_SysMode_t sysModeParam;
+#endif
 
 bool shutdownWifi();
 #ifdef USE_RDK_WIFI_HAL
@@ -105,22 +116,28 @@ WiFiLNFStatusCode_t get_WiFiLNFStatusCode();
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType);
 bool getmacaddress(gchar* ifname,GString *data);
 bool getDeviceInfo(laf_device_info_t *dev_info);
-bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType);
 bool addSwitchToPrivateResults(int lnfError,char *currTime);
 bool convertSwitchToPrivateResultsToJson(char *buffer);
 bool clearSwitchToPrivateResults();
+#ifdef ENABLE_IARM
+bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType);
+#endif
 int laf_wifi_connect(laf_wifi_ssid_t* const wificred);
 int laf_wifi_disconnect(void);
 int laf_get_lfat(laf_lfat_t *lfat);
 int laf_set_lfat(laf_lfat_t* const lfat);
 void log_message(laf_loglevel_t level, char const* function, int line, char const* msg);
+#ifdef ENABLE_IARM
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif
 bool getDeviceActivationState();
 void lnfConnectPrivCredentials();
 #endif
 bool isWiFiCapable();
 void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
+#ifdef ENABLE_IARM
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value);
+#endif
 void put_boolean(char *ptr, bool val);
 bool storeMfrWifiCredentials(void);
 bool eraseMfrWifiCredentials(void);

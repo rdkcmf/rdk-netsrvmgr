@@ -14,7 +14,9 @@
 #define _WIFIMGR_IARMIF_H
 
 //#include "libIBus.h"
+#ifdef ENABLE_IARM
 #include "libIARM.h"
+#endif
 
 #define MODULE_NAME "WIFI_MODULE"
 #define SUB_MODULE_NAME "LNF"

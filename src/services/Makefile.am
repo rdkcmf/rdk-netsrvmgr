@@ -1,7 +1,12 @@
 ## Copyright (c) 2013 Comcast. All rights reserved.
 
-SUBDIRS =   route
-DIST_SUBDIRS =  route
+SUBDIRS =
+DIST_SUBDIRS =
+
+if ROUTE_SUPPORT
+SUBDIRS +=   route
+DIST_SUBDIRS += route
+endif
 if RDKWIFIHAL
 SUBDIRS +=   wifi
 DIST_SUBDIRS +=  wifi
