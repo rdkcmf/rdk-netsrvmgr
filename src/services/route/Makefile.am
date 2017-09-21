@@ -11,6 +11,7 @@ AM_CFLAGS = -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
         $(G_THREAD_LIBS) -ldbus-1  -lIARMBus -lcjson $(NLMONITOR_LINK)
 
+AM_CXXFLAGS += $(IARM_CFLAGS)
 
 noinst_LTLIBRARIES = librouteservices.la
 librouteservices_la_SOURCES =    src/routeSrvMgr.cpp 

@@ -21,17 +21,13 @@ AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
 AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
 endif
 
-if XCAM_SUPPORT
-AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
-AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
-endif
-
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal
 endif
 if LOSTFOUND
 AM_LDFLAGS += -llaf
 endif
+
 if RDKWIFIHAL
 noinst_LTLIBRARIES = libwifiservices.la
 libwifiservices_la_SOURCES = src/wifiSrvMgr.cpp src/wifiHalUtiles.cpp
