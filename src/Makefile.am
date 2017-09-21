@@ -25,9 +25,12 @@ AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
 sysconf_DATA = $(top_srcdir)/conf/netsrvmgr.conf
 endif
 
+
 if ROUTE_SUPPORT
 AM_CXXFLAGS += -DENABLE_ROUTE_SUPPORT
 endif
+
+AM_CXXFLAGS += $(IARM_CFLAGS)
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) -lpthread -lcjson
