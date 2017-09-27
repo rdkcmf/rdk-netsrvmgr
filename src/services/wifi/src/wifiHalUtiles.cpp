@@ -517,30 +517,39 @@ INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *con
 
 void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned short action)
 {
+    const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
+    char command[128]= {'\0'};
     static unsigned int switchLnf2Priv=0;
 #ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
-    char command[128]= {'\0'};
-    const char *connStr = (action == ACTION_ON_CONNECT)?"Connect": "Disconnect";
     memset(&eventData, 0, sizeof(eventData));
+#endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#ifndef ENABLE_XCAM_SUPPORT
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] WiFi Code %d \n", __FUNCTION__, __LINE__ ,connCode);
+#else
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] WiFi Code %d \n", __FUNCTION__, __LINE__ ,connCode);
+#endif
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
-
+#ifndef ENABLE_XCAM_SUPPORT
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
-
+#else
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
+#endif
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
+#ifdef ENABLE_IARM
             notify = true;
 #if 0       /* Do not bounce for any network switch. Do it only from LF to private. */
             if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
             {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
+#endif
 #endif
             /* one condition variable is signaled */
 
@@ -561,6 +570,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
                 strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
                 savedWiFiConnList.conn_type = wifi_conn_type;
+#ifndef ENABLE_XCAM_SUPPORT
 		if(switchLnf2Priv)
 		{
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] get dhcp lease since there is a network change. \n",__FUNCTION__, __LINE__ );
@@ -573,12 +583,15 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 		    switchLnf2Priv=0;
 		}
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
+#endif
             }
             else {
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is a LNF SSID so no storing \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
+#ifndef ENABLE_XCAM_SUPPORT
 		if(!switchLnf2Priv)
 		   switchLnf2Priv=1;
+#endif
                 setLNFState(CONNECTED_LNF);
             }
 
@@ -586,43 +599,57 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 //            WiFiConnectionStatus wifiParams;
 
             /*Generate Event for Connect State*/
+#ifdef ENABLE_IARM
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_CONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTED);
+#endif
             pthread_mutex_lock(&mutexGo);
-            if(0 == pthread_cond_signal(&condGo))
+            if(0 == pthread_cond_signal(&condGo)) {
+#ifndef ENABLE_XCAM_SUPPORT
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#else
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#endif
+            }
             pthread_mutex_unlock(&mutexGo);
         } else if (ACTION_ON_DISCONNECT == action) {
-            notify = true;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
 
+#ifdef ENABLE_IARM
+            notify = true;
             /*Generate Event for Disconnect State*/
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_DISCONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_DISCONNECTED);
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
+#endif        
         }
         break;
     case WIFI_HAL_CONNECTING:
-            notify = true;
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting to AP in Progress... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             set_WiFiStatusCode(WIFI_CONNECTING);
+#ifdef ENABLE_IARM
+            notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_CONNECTING;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTING\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTING);
+#endif
         break;
 
     case WIFI_HAL_DISCONNECTING:
         if(connCode_prev_state != connCode) {
+#ifdef ENABLE_IARM
             notify = true;
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Disconnecting from AP in Progress... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#endif
         }
         break;
     case WIFI_HAL_ERROR_NOT_FOUND:
         if(connCode_prev_state != connCode) {
+#ifdef ENABLE_IARM
             notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
             /* Event Id & Code */
@@ -632,9 +659,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             }
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_NO_SSID;
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
+#endif
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
         break;
 
@@ -642,53 +670,66 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., Timeout expired). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
         /* Event Id & Code */
         if(connCode_prev_state != connCode) {
+#ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_UNKNOWN;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'FAILED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
         break;
 
     case WIFI_HAL_ERROR_DEV_DISCONNECT:
         if(connCode_prev_state != connCode) {
+#ifdef ENABLE_IARM
             notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
         break;
     /* the SSID of the network changed */
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
-            notify = true;
+#ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
-            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-            eventData.data.wifiError.code = WIFI_SSID_CHANGED;
+#endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             if(confProp.wifiProps.bEnableLostFound)
             {
                 lnfConnectPrivCredentials();
             }
+#ifdef ENABLE_IARM
+            notify = true;
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_SSID_CHANGED;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
+#ifndef ENABLE_XCAM_SUPPORT
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_SSID_CHANGED\n");
+#endif
         }
         break;
     /* the connection to the network was lost */
     case WIFI_HAL_ERROR_CONNECTION_LOST:
         if(connCode_prev_state != connCode) {
-            notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to  CONNECTION LOST (%d) from %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode, ap_SSID);
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
+#ifdef ENABLE_IARM
+            notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_LOST\n");
         }
         break;
@@ -696,73 +737,83 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     case WIFI_HAL_ERROR_CONNECTION_FAILED:
         if(connCode_prev_state != connCode)
         {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connection Failed (%d) due to unknown reason.. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
+#ifdef ENABLE_IARM
             notify = true;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connection Failed (%d) due to unknown reason. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_FAILED;
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_FAILED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_FAILED\n");
         }
         break;
     /* the connection was interrupted */
     case WIFI_HAL_ERROR_CONNECTION_INTERRUPTED:
         if(connCode_prev_state != connCode) {
-            notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Connection Interrupted (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
+#ifdef ENABLE_IARM
+            notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_INTERRUPTED;
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_INTERRUPTED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_INTERRUPTED\n");
         }
         break;
     /* the connection failed due to invalid credentials */
     case WIFI_HAL_ERROR_INVALID_CREDENTIALS:
-            notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Invalid Credentials. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
-            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-            eventData.data.wifiError.code = WIFI_INVALID_CREDENTIALS;
             set_WiFiStatusCode(WIFI_DISCONNECTED);
-
             if(confProp.wifiProps.bEnableLostFound)
             {
                 lnfConnectPrivCredentials();
             }
+#ifdef ENABLE_IARM
+            notify = true;
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_INVALID_CREDENTIALS;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'INVALID_CREDENTIALS\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_INVALID_CREDENTIALS\n");
         break;
     case WIFI_HAL_UNRECOVERABLE_ERROR:
         if(connCode_prev_state != connCode) {
-            notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to UNRECOVERABLE ERROR. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            set_WiFiStatusCode(WIFI_FAILED);
+#ifdef ENABLE_IARM
+            notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_FAILED;
-            set_WiFiStatusCode(WIFI_FAILED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged (%d)' with state as \'FAILED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiStateChange.state);
+#endif
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_UNRECOVERABLE_ERROR\n");
         }
         break;
     case WIFI_HAL_ERROR_UNKNOWN:
     default:
         if(connCode_prev_state != connCode) {
-            notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with WiFi Error Code %d (i.e., WIFI_HAL_ERROR_UNKNOWN). \n", MODULE_NAME,__FUNCTION__, __LINE__, connStr, connCode );
+#ifdef ENABLE_IARM
+            notify = true;
             /* Event Id & Code */
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_UNKNOWN;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'UNKNOWN\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+#endif
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_UNKNOWN\n");
         }
         break;
     }
 
     connCode_prev_state = connCode;
+#ifdef ENABLE_IARM
     if(notify && ((eventId >= IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged) && (eventId < IARM_BUS_WIFI_MGR_EVENT_MAX)))
     {
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
@@ -770,8 +821,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                                      (void *)&eventData, sizeof(eventData));
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast Event id \'%d\'. \n", MODULE_NAME,__FUNCTION__, __LINE__, eventId);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #endif
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
 /*Connect using SSID Selection */
@@ -790,7 +841,12 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_passphrase : %s; ap_security_mode : %d; saveSSID = %d  \n",MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID,ap_security_KeyPassphrase,(int)ap_security_mode, saveSSID );
     if(saveSSID)
     {
+#ifndef ENABLE_XCAM_SUPPORT
         set_WiFiStatusCode(WIFI_CONNECTING);
+#else
+	set_WiFiStatusCode(WIFI_CONNECTED);
+#endif
+
 #ifdef ENABLE_IARM
         eventData.data.wifiStateChange.state = WIFI_CONNECTING;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
@@ -801,9 +857,9 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
     if(ret)
     {
-#ifdef ENABLE_IARM
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in connecting to ssid %s  with passphrase %s \n",
                  MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
+#ifdef ENABLE_IARM
         eventData.data.wifiStateChange.state = WIFI_FAILED;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
 #endif
@@ -998,7 +1054,9 @@ void *wifiConnStatusThread(void* arg)
                 wifiStatusCode = get_WiFiStatusCode();
 
                 if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
+#ifndef ENABLE_XCAM_SUPPORT
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
+#endif
                 }
                 else {
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
@@ -1008,6 +1066,18 @@ void *wifiConnStatusThread(void* arg)
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
                     memset(&stats, 0, sizeof(wifi_sta_stats_t));
                     wifi_getStats(radioIndex, &stats);
+#ifdef ENABLE_XCAM_SUPPORT
+                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "XCAM - WIFI status - :%d, %s\n", stats.sta_Connection, stats.sta_SSID);
+                //check the connection status
+                if(stats.sta_Connection == 0) {
+                    wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
+                    wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_CONNECT);
+                } else {
+                    wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
+                    wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_DISCONNECT);
+                }
+                confProp.wifiProps.statsParam_PollInterval = 30;
+#else
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
                             stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
@@ -1015,6 +1085,7 @@ void *wifiConnStatusThread(void* arg)
                     /*Telemetry Parameter logging*/
                     logs_Period1_Params();
                     logs_Period2_Params();
+#endif
                 }
 
                 sleep(confProp.wifiProps.statsParam_PollInterval);
@@ -1304,6 +1375,11 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
         bRet = false;
         goto out;
     }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] dummy auth token update \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
+    strcpy(dev_info->auth_token,"xact_token");
+
 out:
     g_string_free(mfrSerialNum,TRUE);
     g_string_free(mfrMake,TRUE);
@@ -1364,29 +1440,41 @@ int get_laf_token(char* token,unsigned int tokenlength)
 #endif
 bool getDeviceInfo( laf_device_info_t *dev_info )
 {
+    bool ret = false;
 #ifdef ENABLE_XCAM_SUPPORT
-    int ret = 0;
-    struct basic_info *xcam_dev_info;
-
-    xcam_dev_info = (struct basic_info*)malloc(sizeof(xcam_dev_info));
-    if (xcam_dev_info)
+    struct basic_info xcam_dev_info;
+    unsigned int tokenlength=0;
+    int readtoken=0;
+    memset((void*)&xcam_dev_info, 0, sizeof(struct basic_info));
+    if (!rdkc_get_device_basic_info(&xcam_dev_info))
     {
-        ret = rdkc_get_device_basic_info(xcam_dev_info);
-        if (ret == 0)
-        {
-            strcpy(dev_info->serial_num, xcam_dev_info->serial_number);
-            strcpy(dev_info->mac, xcam_dev_info->mac_addr);
-            strcpy(dev_info->model, xcam_dev_info->model);
-            return true;
-        }
+        strncpy(dev_info->serial_num, xcam_dev_info.serial_number, MAX_DEV_SERIAL_LEN-1);
+        strncpy(dev_info->mac, xcam_dev_info.mac_addr, MAX_DEV_MAC_LEN);
+        strncpy(dev_info->model, xcam_dev_info.model, MAX_DEV_MODEL_LEN);
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] serial_no=%s\n", MODULE_NAME, __FUNCTION__, __LINE__, dev_info->serial_num);
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] basic_info malloc failed\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] rdkc_get_device_basic_info failed\n", MODULE_NAME, __FUNCTION__, __LINE__);
+        return ret;
     }
-#endif
 
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] auth token update for xcam\n", MODULE_NAME,__FUNCTION__, __LINE__);
+    memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
+    readtoken = get_token_length(tokenlength);
+    if(readtoken != 0) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "getDeviceInfo - Error in token read \n");
     return false;
+}
+    readtoken = get_laf_token(dev_info->auth_token,tokenlength);
+    if(readtoken != 0 ) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - Token read error\n", MODULE_NAME, __FUNCTION__, __LINE__);
+        return false;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - token is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__,dev_info->auth_token);
+    ret = true;
+#endif
+    return ret;
 }
 
 #endif
@@ -1737,16 +1825,35 @@ void connectToLAF()
     else
     {
         retVal=lastConnectedSSID(&savedWiFiConnList);
+#ifndef ENABLE_XCAM_SUPPORT
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
         {
             sleep(confProp.wifiProps.lnfStartInSecs);
         }
+#endif
 
         /* If Device is activated and already connected to Private or any network,
             but defineltly not LF SSID. - No need to trigger LNF*/
         /* Here, 'getDeviceActivationState == true'*/
         laf_get_lfssid(lfssid);
         lastConnectedSSID(&savedWiFiConnList);
+
+#ifdef ENABLE_XCAM_SUPPORT
+        //xcam - query wifi connection status
+        WiFi_EndPoint_Diag_Params endPointInfo;
+        getEndPointInfo(&endPointInfo);
+
+        if(endPointInfo.enable == 1) {
+            //Indicate that wifi is connected
+            wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
+            wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_CONNECT);
+
+        } else {
+            wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
+            wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_DISCONNECT);
+        }
+#endif
+
 
         if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus()))
         {
@@ -2068,7 +2175,16 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 
     wifi_getStats(radioIndex, &stats);
 
+#ifdef ENABLE_XCAM_SUPPORT
+    bool enable;
+    if(stats.sta_Connection == 0){
+        enable = true;
+    }else {
+        enable = false;
+    }
+#else
     bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
+#endif
     if (enable)
     {
         strncpy((char *)endPointInfo->status, "Enabled", (size_t)BUFF_LENGTH_64);
