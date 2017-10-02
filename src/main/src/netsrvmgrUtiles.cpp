@@ -44,6 +44,9 @@
 
 #define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
 #define MAX_TIME_LENGTH 32
+#define INTERFACE_STATUS_FILE_PATH_BUFFER 100
+#define INTERFACE_STATUS_FILE_PATH "/sys/class/net/%s/operstate"
+#define ETHERNET_UP_STATUS "UP"
 using namespace netSrvMgrUtiles;
 
 /**
@@ -326,4 +329,35 @@ bool netSrvMgrUtiles::getCurrentTime(char* currTime, const char *timeFormat)
   }
   RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
   return true;
+}
+
+bool netSrvMgrUtiles::checkInterfaceActive(char *interfaceName)
+{
+    FILE * file;
+    char buffer[INTERFACE_STATUS_FILE_PATH_BUFFER]={0};
+    bool ret=false;
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    if(!interfaceName)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Device doesnt support Ethernet !!!! \n", __FUNCTION__, __LINE__);
+        return ret;
+    }
+    sprintf(buffer,INTERFACE_STATUS_FILE_PATH,interfaceName);
+    file = fopen(buffer, "r");
+    if (file)
+    {
+        fscanf(file,"%s",buffer);
+        if(NULL != strcasestr(buffer,ETHERNET_UP_STATUS))
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] TELEMETRY_NETWORK_MANAGER_ETHERNET_MODE \n", __FUNCTION__, __LINE__);
+            ret=true;
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] TELEMETRY_NETWORK_MANAGER_WIFI_MODE \n", __FUNCTION__, __LINE__);
+        }
+        fclose(file);
+    }
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+    return ret;
 }
