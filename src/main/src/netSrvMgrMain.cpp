@@ -232,6 +232,7 @@ static bool read_ConfigProps()
     gsize length = 0;
     gdouble double_value = 0;
     guint group = 0, key = 0;
+    static char *ethIfName=NULL;
 
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
 
@@ -257,6 +258,7 @@ static bool read_ConfigProps()
     {
         gsize groups_id, num_keys;
         gchar **groups = NULL, **keys = NULL, *value = NULL;
+        ethIfName=getenv("ETHERNET_INTERFACE");
 
         groups = g_key_file_get_groups(key_file, &groups_id);
 
@@ -279,7 +281,7 @@ static bool read_ConfigProps()
                         confProp.wifiProps.statsParam_PollInterval = atoi(value);
                     }
 #ifdef ENABLE_LOST_FOUND
-                    if(0 == strncasecmp(ENABLE_LOST_FOUND_RUN, keys[key], strlen(keys[key])))
+                    if((0 == strncasecmp(ENABLE_LOST_FOUND_RUN, keys[key], strlen(keys[key]))) && (!netSrvMgrUtiles::checkInterfaceActive(ethIfName)))
                     {
                         confProp.wifiProps.bEnableLostFound = (atoi(value) == 0) ? false : true;
                     }
