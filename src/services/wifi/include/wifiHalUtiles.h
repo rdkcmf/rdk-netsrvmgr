@@ -132,6 +132,7 @@ bool clearSSID_On_Disconnect_AP();
 bool getRoamingConfigInfo(WiFi_RoamingCtrl_t *param);
 bool setRoamingConfigInfo(WiFi_RoamingCtrl_t *param);
 #endif
+bool getHALVersion();
 #endif
 
 #ifdef ENABLE_LOST_FOUND
