@@ -110,6 +110,7 @@ bool scan_Neighboring_WifiAP(char *);
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams);
 void monitor_WiFiStatus();
 bool clearSSID_On_Disconnect_AP();
+bool getHALVersion();
 #endif
 
 #ifdef ENABLE_LOST_FOUND
@@ -125,7 +126,6 @@ bool getDeviceInfo(laf_device_info_t *dev_info);
 #ifdef ENABLE_IARM
 bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType);
 #endif
-bool getHALVersion();
 bool addSwitchToPrivateResults(int lnfError,char *currTime);
 bool convertSwitchToPrivateResultsToJson(char *buffer);
 bool clearSwitchToPrivateResults();
