@@ -180,6 +180,7 @@ void* rtMessage_Receive(void* arg)
 }
 #endif
 
+#ifdef USE_RDK_WIFI_HAL
 bool getHALVersion()
 {
     if(wifiHALVer[0] == 0)
@@ -188,6 +189,8 @@ bool getHALVersion()
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] WiFi HAL Version is %s \n",MODULE_NAME,__FUNCTION__, __LINE__,wifiHALVer);
     }
 }
+#endif
+
 SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryptionType)
 {
     SsidSecurity mode = NET_WIFI_SECURITY_NOT_SUPPORTED;
