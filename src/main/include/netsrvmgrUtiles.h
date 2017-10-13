@@ -38,6 +38,7 @@ bool getRouteInterface(char* devname);
 bool readDevFile(char *deviceName);
 char getAllNetworkInterface(char* devAllInterface);
 bool getCurrentTime(char* currTime,const char *timeFormat);
+bool checkInterfaceActive(char *interfaceName);
 }
 
 
