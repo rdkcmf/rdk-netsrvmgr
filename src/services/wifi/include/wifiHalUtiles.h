@@ -116,6 +116,7 @@ WiFiLNFStatusCode_t get_WiFiLNFStatusCode();
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType);
 bool getmacaddress(gchar* ifname,GString *data);
 bool getDeviceInfo(laf_device_info_t *dev_info);
+bool getHALVersion();
 bool addSwitchToPrivateResults(int lnfError,char *currTime);
 bool convertSwitchToPrivateResultsToJson(char *buffer);
 bool clearSwitchToPrivateResults();
