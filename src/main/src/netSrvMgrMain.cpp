@@ -197,7 +197,9 @@ void netSrvMgr_Loop()
     while(1)
     {
         time(&curr);
+#ifndef ENABLE_XCAM_SUPPORT
         printf("I-ARM NET-SRV-MGR: HeartBeat at %s\r\n", ctime(&curr));
+#endif
         sleep(60);
     }
 }
