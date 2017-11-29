@@ -45,6 +45,7 @@ bool isLAFCurrConnectedssid=false;
 bool bIsStopLNFWhileDisconnected=false;
 bool bAutoSwitchToPrivateEnabled=true;
 bool bSwitch2Private=false;
+bool bPrivConnectionLost=false;
 #define TOTAL_NO_OF_RETRY 5
 #endif
 #ifdef USE_HOSTIF_WIFI_HAL
@@ -703,6 +704,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
+                bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
 #endif
@@ -757,6 +759,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
+                bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
 #endif
@@ -826,6 +829,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
+                bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
 #endif
@@ -985,7 +989,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
 //        char temp[500] = {'\0'};
 
         ssid = neighbor_ap_array[index].ap_SSID;
-        if(ssid[0] != '\0') {
+        if(!((ssid[0] == '\0') || (ssid[0] == '\x00') || (g_strcmp0(g_strstrip(ssid),LNF_NON_SECURE_SSID) == 0) ||  (g_strcmp0(g_strstrip(ssid),LNF_SECURE_SSID) == 0)))  {
             signalStrength = neighbor_ap_array[index].ap_SignalStrength;
             frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, &pFreq);
 
@@ -1749,7 +1753,12 @@ void *lafConnPrivThread(void* arg)
         retVal=lastConnectedSSID(&savedWiFiConnList);
         if(retVal == false)
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n",MODULE_NAME, __FUNCTION__, __LINE__ );
-
+        if(bPrivConnectionLost)
+        {
+            bPrivConnectionLost=false;
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n[%s:%s:%d] Wait for 10 sec before starting lost and found \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+            sleep(10);
+        }
         do
         {
             if (true == bStopLNFWhileDisconnected)
@@ -1885,6 +1894,7 @@ void *lafConnThread(void* arg)
     bLnfActivationLoop=false;
     if(gWifiLNFStatus == CONNECTED_LNF)
     {
+        bPrivConnectionLost=false;
         lnfConnectPrivCredentials();
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n",MODULE_NAME, __FUNCTION__, __LINE__ );
@@ -1953,6 +1963,7 @@ void connectToLAF()
             if(IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
 #endif
             {
+                bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
         }

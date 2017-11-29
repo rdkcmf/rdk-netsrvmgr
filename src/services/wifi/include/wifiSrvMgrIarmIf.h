@@ -43,6 +43,9 @@
 #define PASSPHRASE_BUFF BUFF_LENGTH_64
 #define MAX_SSIDLIST_BUF 10000
 
+#define LNF_NON_SECURE_SSID "A16746DF2466410CA2ED9FB2E32FE7D9"
+#define LNF_SECURE_SSID "D375C1D9F8B041E2A1995B784064977B"
+
 /*IARM Interface for wifiManager_2 */
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
