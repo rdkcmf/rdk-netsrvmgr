@@ -2424,7 +2424,7 @@ void logs_Period2_Params()
         if(NULL != wifiParams_Tele_Period2.paramlist)
         {
             char bssid_string[BUFF_MAX];
-            int ssidIndex = 1;
+            int ssidIndex = 0;
             memset(bssid_string,0, BUFF_MAX);
             char output_string[BUFF_MAX];
             wifi_getBaseBSSID(ssidIndex, bssid_string);

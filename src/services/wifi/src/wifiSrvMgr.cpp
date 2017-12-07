@@ -1056,7 +1056,7 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
     WiFiStatusCode_t status = WIFI_DISCONNECTED;
     WiFiConnectionStatus currSsidInfo;
     char output_string[BUFF_MAX];
-    int ssidIndex=1;
+    int ssidIndex=0;
     memset(output_string,0, BUFF_MAX);
 
     if(param->numEntry == IARM_BUS_WIFI_MGR_SSIDEntry)
