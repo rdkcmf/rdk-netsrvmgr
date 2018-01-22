@@ -249,8 +249,8 @@ void* getGatewayRouteDataThrd(void* arg)
 	gwRouteInfo = g_list_first(gwRouteInfo);
         if((g_list_length(gwRouteInfo) == 0) && ( access( DHCP_LEASE_FLAG, F_OK ) == -1 ))
         {
-//            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
-//            netSrvMgrUtiles::triggerDhcpLease();
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+            netSrvMgrUtiles::triggerDhcpLease();
 #ifdef ENABLE_NLMONITOR
             //Clear out /tmp/resolv.dnsmasq.upnp
             std::ofstream ofs;
