@@ -1107,14 +1107,16 @@ gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
         gboolean retVal=FALSE;
         gboolean isIpv4;
 
+        memset(&data,0,sizeof(data));
+
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
         if(getCurrentRoute(routeIp,&isIpv4))
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route data to be sent is %s and isIpv4 %d \n", MODULE_NAME,__FUNCTION__, __LINE__,routeIp,isIpv4);
             strcpy(data.routeIp,routeIp);
             data.ipv4=isIpv4;
-            if(!routeIf)
-                strcpy(data.routeIf,routeIf);
+            if(NULL != routeIf)
+                strncpy(data.routeIf,routeIf,sizeof(data.routeIf));
         }
         if (IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME, (IARM_EventId_t) IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA, (void *)&data, sizeof(data)) == IARM_RESULT_SUCCESS)
         {
@@ -1137,7 +1139,7 @@ gboolean RouteNetworkMgr::removeRouteFromList(routeInfo *routeInfoData)
         if(getCurrentRoute(param->route.routeIp,&param->route.ipv4))
         {
             param->status = true;
-            strcpy(param->route.routeIf,routeIf);
+            strncpy(param->route.routeIf,routeIf,sizeof(param->route.routeIf));
 
         }
         else
