@@ -91,7 +91,7 @@ gboolean checkvalidip( char* ipAddress);
 gboolean checkvalidhostname( char* hostname);
 bool checkIpMode(char *v6Prefix);
 typedef enum _NetworkManager_Route_EventId_t {
-        IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA = 70,
+        IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA = 10,
         IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_MAX,
 } IARM_Bus_NetworkManager_Route_EventId_t;
 
