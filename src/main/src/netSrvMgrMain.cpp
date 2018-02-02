@@ -119,7 +119,8 @@ int main(int argc, char *argv[])
             if (itr < argc)
             {
                 configFilePath = argv[itr];
-                memcpy(configProp_FilePath, configFilePath, strlen(configFilePath));
+                memset(&configProp_FilePath,0,sizeof(configProp_FilePath));
+                strncpy(configProp_FilePath, configFilePath, sizeof(configProp_FilePath));
             }
             else
             {
@@ -146,7 +147,8 @@ int main(int argc, char *argv[])
 #ifdef RDK_LOGGER_ENABLED
     if(rdk_logger_init(debugConfigFile) == 0) b_rdk_logger_enabled = 1;
     if(configFilePath) {
-        memcpy(configProp_FilePath, configFilePath, strlen(configFilePath))
+        memset(&configProp_FilePath,0,sizeof(configProp_FilePath));
+        strncpy(configProp_FilePath, configFilePath, sizeof(configProp_FilePath));
     }
 #ifdef ENABLE_IARM
     IARM_Bus_RegisterForLog(logCallback);

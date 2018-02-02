@@ -167,8 +167,8 @@ typedef struct _setWiFiAdapter
 typedef struct _WiFiConnection
 {
     char ssid[SSID_SIZE];
-    char bssid[SSID_SIZE];
-    char security[SSID_SIZE];
+    char bssid[BSSID_BUFF];
+    char security[BUFF_LENGTH_64];
     char passphrase[PASSPHRASE_BUFF];
     SsidSecurity security_mode;
     char security_WEPKey[PASSPHRASE_BUFF];
@@ -188,18 +188,18 @@ typedef struct _WiFiConnectionStatus
 
 typedef struct _WiFiConnectedSSIDInfo
 {
-    unsigned char ssid[BUFF_LENGTH_64];		/* !< The name of connected SSID. */
-    unsigned char bssid[BUFF_LENGTH_64];	/* !< The the Basic Service Set ID (mac address). */
-    float rate;								/* !< The Physical data rate in Mbps */
-    float noise;							/* !< The average noise strength in dBm. */
-    float signalStrength;					/* !< The RSSI value in dBm. */
+    char ssid[SSID_SIZE];		/* !< The name of connected SSID. */
+    char bssid[BSSID_BUFF];   	        /* !< The the Basic Service Set ID (mac address). */
+    float rate;				/* !< The Physical data rate in Mbps */
+    float noise;			/* !< The average noise strength in dBm. */
+    float signalStrength;		/* !< The RSSI value in dBm. */
 } WiFiConnectedSSIDInfo_t;
 
 typedef struct _WiFiPairedSSIDInfo
 {
-    unsigned char ssid[BUFF_LENGTH_64];		/* !< The name of connected SSID. */
-    unsigned char bssid[BUFF_LENGTH_64];	/* !< The the Basic Service Set ID (mac address). */
-    unsigned char security[BUFF_LENGTH_64];								/* !< security of AP */
+    char ssid[SSID_SIZE];		/* !< The name of connected SSID. */
+    char bssid[BSSID_BUFF];		/* !< The the Basic Service Set ID (mac address). */
+    char security[BUFF_LENGTH_64];	/* !< security of AP */
 } WiFiPairedSSIDInfo_t;
 
 typedef struct _WiFiLnfSwitchPrivateResults
@@ -299,9 +299,9 @@ typedef struct _WiFi_SSID_Diag_Params {
     bool enable;
     char status[BUFF_MIN];
     char name[BUFF_LENGTH_32];
-    char bssid[BUFF_MAC];
+    char bssid[BSSID_BUFF];
     char macaddr[BUFF_MAC];
-    char ssid[BUFF_LENGTH_32];
+    char ssid[SSID_SIZE];
 } WiFi_SSID_Diag_Params;
 
 

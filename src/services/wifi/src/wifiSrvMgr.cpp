@@ -379,7 +379,7 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] json Message length : [%d].\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);
 
     if(jBuffLen) {
-        strncpy(param->curSsids.jdata, jbuff, jBuffLen);
+        strncpy(param->curSsids.jdata, jbuff, sizeof(param->curSsids.jdata));
         param->curSsids.jdataLen = jBuffLen;
         param->status = true;
         ret = IARM_RESULT_SUCCESS;
@@ -454,11 +454,11 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
     if( retVal == true )
     {
         char *ssid = savedWiFiConnList.ssidSession.ssid;
-        memcpy(param->data.getPairedSSIDInfo.ssid, ssid, strlen(ssid));
+        memcpy(param->data.getPairedSSIDInfo.ssid, ssid, SSID_SIZE);
         char *bssid = savedWiFiConnList.ssidSession.bssid;
-        memcpy(param->data.getPairedSSIDInfo.bssid, bssid, strlen(bssid));
+        memcpy(param->data.getPairedSSIDInfo.bssid, bssid, BSSID_BUFF);
         char *security = savedWiFiConnList.ssidSession.security;
-        memcpy(param->data.getPairedSSIDInfo.security, security, strlen(security));
+        memcpy(param->data.getPairedSSIDInfo.security, security, BUFF_LENGTH_64);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSIDInfo SSID (%s) : BSSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid,bssid);
         param->status = true;
     }
@@ -493,7 +493,7 @@ IARM_Result_t WiFiNetworkMgr::getSwitchToPrivateResults(void *arg)
   RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] json Message length : [%d].\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);
 
   if(jBuffLen) {
-      strncpy(param->switchPvtResults.jdata, jbuff, jBuffLen);
+      strncpy(param->switchPvtResults.jdata, jbuff, MAX_SSIDLIST_BUF);
       param->switchPvtResults.jdataLen = jBuffLen;
       param->status = true;
       ret = IARM_RESULT_SUCCESS;
@@ -702,7 +702,7 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
     {
         char *ssid = savedWiFiConnList.ssidSession.ssid;
 //        memcpy(param->data.getPairedSSID.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
-        memcpy(param->data.getPairedSSID.ssid, ssid, strlen(ssid));
+        strncpy(param->data.getPairedSSID.ssid, ssid,SSID_SIZE);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSID SSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
         param->status = true;
     }
