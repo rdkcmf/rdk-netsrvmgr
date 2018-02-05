@@ -247,7 +247,7 @@ WiFiLNFStatusCode_t get_WiFiLNFStatusCode()
 #endif
 void get_CurrentSsidInfo(WiFiConnectionStatus *curSSIDConnInfo)
 {
-    strncpy(curSSIDConnInfo->ssidSession.ssid, wifiConnData.ssid, strlen(wifiConnData.ssid)+1);
+    strncpy(curSSIDConnInfo->ssidSession.ssid, wifiConnData.ssid, SSID_SIZE);
     curSSIDConnInfo->isConnected = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
 }
 
@@ -2197,7 +2197,7 @@ bool storeMfrWifiCredentials(void)
         }
         else
         {
-            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %d \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
+            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
             return true;
         }
     }
