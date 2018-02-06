@@ -950,14 +950,15 @@ bool scan_Neighboring_WifiAP(char *buffer)
 
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ ); 
-#ifdef ENABLE_LOST_FOUND
-    if((isWifiConnected()) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
-#else
-    if(RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid))
-#endif
-    {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()",MODULE_NAME, __FUNCTION__, __LINE__);
-    }
+// Commenting disconnect during getAvailableSSIDs call,since it is causing wifi disconnect till service restart/ box reboot
+//#ifdef ENABLE_LOST_FOUND
+//    if((isWifiConnected()) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
+//#else
+//    if(RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid))
+//#endif
+//    {
+//        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()",MODULE_NAME, __FUNCTION__, __LINE__);
+//    }
 
     ret = wifi_getNeighboringWiFiDiagnosticResult(radioIndex, &neighbor_ap_array, &output_array_size);
 
