@@ -142,28 +142,46 @@ char* netSrvMgrUtiles::get_IfName_devicePropsFile(void)
 
 
 
-void netSrvMgrUtiles::triggerDhcpLease(void)
+void netSrvMgrUtiles::triggerDhcpLease(Dhcp_Lease_Operation op)
 {
-    static gint retType;
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
-    retType=system(TRIGGER_DHCP_LEASE_FILE);
-    if(retType == SYSTEM_COMMAND_ERROR)
-    {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error has occured in shell command  \n", __FUNCTION__, __LINE__);
-    }
-    else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
-    {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] That shell command is not found  \n", __FUNCTION__, __LINE__);
-    }
-    else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_SUCESS)
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] system call dhcp lease success %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
-    }
+    static char* RENEW = "renew";
+    static char* RELEASE_AND_RENEW = "release_and_renew";
+
+    char* operation = NULL;
+    if (netSrvMgrUtiles::DHCP_LEASE_RENEW == op)
+        operation = RENEW;
+    else if (netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW == op)
+        operation = RELEASE_AND_RENEW;
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] unknown error   %d  \n", __FUNCTION__, __LINE__,WEXITSTATUS(retType));
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Unsupported DHCP lease operation [%d]\n", __FUNCTION__, op);
+        return;
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+
+    char command[200];
+    sprintf (command, "%s %s 2>&1", TRIGGER_DHCP_LEASE_FILE, operation);
+
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
+
+    char scriptLogOutputLine[256];
+
+    FILE *fp = popen (command, "r");
+    if (fp == NULL)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Failed to execute command [%s]\n", __FUNCTION__, command);
+        return;
+    }
+
+    // log script output at INFO level
+    while (fgets (scriptLogOutputLine, sizeof (scriptLogOutputLine), fp) != NULL)
+    {
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s", __FUNCTION__, scriptLogOutputLine);
+    }
+
+    int pclose_status = pclose (fp);
+    int status = WEXITSTATUS (pclose_status);
+
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
 }
 
 bool netSrvMgrUtiles::getRouteInterface(char* devname)
