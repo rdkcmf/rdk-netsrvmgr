@@ -31,9 +31,13 @@
 
 namespace netSrvMgrUtiles
 {
+enum Dhcp_Lease_Operation {
+    DHCP_LEASE_RENEW = 0,
+    DHCP_LEASE_RELEASE_AND_RENEW
+};
 char* get_IfName_devicePropsFile(void);
 bool getMacAddress_IfName(char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN]);
-void triggerDhcpLease(void);
+void triggerDhcpLease(Dhcp_Lease_Operation op = DHCP_LEASE_RENEW);
 bool getRouteInterface(char* devname);
 bool readDevFile(char *deviceName);
 char getAllNetworkInterface(char* devAllInterface);
