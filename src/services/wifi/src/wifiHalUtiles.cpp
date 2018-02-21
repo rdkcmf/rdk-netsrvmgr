@@ -19,6 +19,11 @@
 
 #include "wifiHalUtiles.h"
 #include "netsrvmgrUtiles.h"
+
+#ifdef ENABLE_LOST_FOUND
+#include <time.h>
+#endif // ENABLE_LOST_FOUND
+
 #define WIFI_HAL_VERSION_SIZE   6
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
@@ -33,7 +38,6 @@ pthread_t lafConnectThread;
 pthread_t lafConnectToPrivateThread;
 pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier_laf_connect;
 static bool triggerLAF = false;
 WiFiLNFStatusCode_t gWifiLNFStatus = LNF_UNITIALIZED;
@@ -1234,8 +1238,16 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
 #endif
 
 #ifdef ENABLE_LOST_FOUND
+
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
 {
+    static pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
+    static laf_status_t last_laf_status = {.errcode = 0, .backoff = 0.0f};
+    static struct timespec current_time;
+    static struct timespec last_lnf_server_contact_time;
+    static float seconds_elapsed_after_last_lnf_server_contact;
+    static float seconds_remaining_to_wait;
+
     laf_conf_t* conf = NULL;
     laf_client_t* clnt = NULL;
     laf_ops_t *ops = NULL;
@@ -1258,6 +1270,32 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
         free(ops);
         return ENOMEM;
     }
+
+    pthread_mutex_lock(&mutexTriggerLAF);
+
+    clock_gettime (CLOCK_MONOTONIC, &current_time);
+
+    if (last_laf_status.backoff > 0.0f)
+    {
+        seconds_elapsed_after_last_lnf_server_contact = (current_time.tv_sec - last_lnf_server_contact_time.tv_sec) +
+                (((float) (current_time.tv_nsec - last_lnf_server_contact_time.tv_nsec))/1000000000);
+
+        seconds_remaining_to_wait = last_laf_status.backoff - seconds_elapsed_after_last_lnf_server_contact;
+        if (seconds_remaining_to_wait <= 0)
+            seconds_remaining_to_wait = 0;
+
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,
+                "[%s:%s:%d] last requested backoff = %fs, elapsed after last lnf server contact = %fs, waiting for remaining %fs\n",
+                MODULE_NAME, __FUNCTION__, __LINE__,
+                last_laf_status.backoff, seconds_elapsed_after_last_lnf_server_contact, seconds_remaining_to_wait);
+
+        usleep (seconds_remaining_to_wait * 1000000); // wait out the remainder of the requested backoff period
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] backoff = 0s\n", MODULE_NAME, __FUNCTION__, __LINE__);
+    }
+
     memset(dev_info,0,sizeof(laf_device_info_t));
     memset(ops,0,sizeof(laf_ops_t));
     /* set operation parameters */
@@ -1289,24 +1327,32 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
         {
             /* start laf */
             clnt->req_type = lafRequestType;
-            err = laf_start(clnt);
+            clnt->conf.device.backoff = last_laf_status.backoff;
+            err = laf_start(clnt, &last_laf_status);
+            if (err != LAF_NO_RESPONSE_FROM_LNF)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] lnf server requested backoff = %fs\n",
+                        MODULE_NAME, __FUNCTION__, __LINE__, last_laf_status.backoff);
+                clock_gettime(CLOCK_MONOTONIC, &last_lnf_server_contact_time);
+            }
+
             if(err != 0) {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in lost and found client, error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,err );
-                  bRet=false;
+                bRet=false;
             }
             if(!bAutoSwitchToPrivateEnabled)
             {
-	      if((!bRet) && (bLastLnfSuccess))
-	      {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] !AutoSwitchToPrivateEnabled + lastLnfSuccessful + currLnfFailure = clr switch2prv Results \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-		clearSwitchToPrivateResults();
-		bLastLnfSuccess=false;
-              }
-	      if(bRet)
-		bLastLnfSuccess=true;
-              netSrvMgrUtiles::getCurrentTime(currTime,(char *)TIME_FORMAT);
-              addSwitchToPrivateResults(err,currTime);
-  	      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added Time=%s lnf error=%d to list,length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,currTime,err,g_list_length(lstLnfPvtResults));
+                if((!bRet) && (bLastLnfSuccess))
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] !AutoSwitchToPrivateEnabled + lastLnfSuccessful + currLnfFailure = clr switch2prv Results \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    clearSwitchToPrivateResults();
+                    bLastLnfSuccess=false;
+                }
+                if(bRet)
+                    bLastLnfSuccess=true;
+                netSrvMgrUtiles::getCurrentTime(currTime,(char *)TIME_FORMAT);
+                addSwitchToPrivateResults(err,currTime);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added Time=%s lnf error=%d to list,length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,currTime,err,g_list_length(lstLnfPvtResults));
             }
         }
     }
@@ -1318,6 +1364,9 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     /* destroy lost and found client */
     if(clnt)
         laf_client_destroy(clnt);
+
+    pthread_mutex_unlock(&mutexTriggerLAF);
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return bRet;
 }
@@ -1458,7 +1507,7 @@ out:
     return bRet;
 }
 
-#else
+#else // ENABLE_IARM
 
 #ifdef ENABLE_XCAM_SUPPORT
 int get_token_length(unsigned int &tokenlength)
@@ -1508,7 +1557,7 @@ int get_laf_token(char* token,unsigned int tokenlength)
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 	return 0;
 }
-#endif
+#endif // ENABLE_XCAM_SUPPORT
 
 bool getDeviceInfo( laf_device_info_t *dev_info )
 {
@@ -1545,11 +1594,11 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - token is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__,dev_info->auth_token);
     ret = true;
-#endif
+#endif // ENABLE_XCAM_SUPPORT
     return ret;
 }
 
-#endif
+#endif // ENABLE_IARM
 
 /* Callback function to connect to wifi */
 int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
@@ -1735,15 +1784,15 @@ void *lafConnPrivThread(void* arg)
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
         if((bAutoSwitchToPrivateEnabled) || (bSwitch2Private))
         {
-	  bSwitch2Private=false;
-          if(gWifiLNFStatus == CONNECTED_LNF)
-          {
-              reqType = LAF_REQUEST_SWITCH_TO_PRIVATE;
-          }
-          else
-          {
-              reqType = LAF_REQUEST_CONNECT_TO_PRIV_WIFI;
-          }
+            bSwitch2Private=false;
+            if(gWifiLNFStatus == CONNECTED_LNF)
+            {
+                reqType = LAF_REQUEST_SWITCH_TO_PRIVATE;
+            }
+            else
+            {
+                reqType = LAF_REQUEST_CONNECT_TO_PRIV_WIFI;
+            }
         }
         else
         {
@@ -1777,9 +1826,7 @@ void *lafConnPrivThread(void* arg)
             }
 
             bIsStopLNFWhileDisconnected=false;
-            pthread_mutex_trylock(&mutexTriggerLAF);
             lnfReturnStatus=triggerLostFound(reqType);
-            pthread_mutex_unlock(&mutexTriggerLAF);
             if (!lnfReturnStatus)
             {
                 if (true == bStopLNFWhileDisconnected)
@@ -1857,9 +1904,7 @@ void *lafConnThread(void* arg)
                 bLnfActivationLoop=false;
                 return NULL;
             }
-            pthread_mutex_trylock(&mutexTriggerLAF);
             lnfReturnStatus=triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID);
-            pthread_mutex_unlock(&mutexTriggerLAF);
             if (false == lnfReturnStatus)
             {
 
@@ -1955,7 +2000,7 @@ void connectToLAF()
             wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
             wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_DISCONNECT);
         }
-#endif
+#endif // ENABLE_XCAM_SUPPORT
         if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus())) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID %s\n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
         }
@@ -2082,7 +2127,7 @@ bool getDeviceActivationState()
     return bDeviceActivated;
 #else
     return true;
-#endif
+#endif // ENABLE_XCAM_SUPPORT
 }
 bool isWifiConnected()
 {
@@ -2110,7 +2155,7 @@ void lnfConnectPrivCredentials()
     pthread_mutex_unlock(&mutexLAF);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
-#endif
+#endif // ENABLE_LOST_FOUND
 
 #ifdef ENABLE_IARM
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
@@ -2162,7 +2207,7 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retValue;
 }
-#endif
+#endif // ENABLE_IARM
 
 void put_boolean(char *ptr, bool val)
 {
@@ -2234,8 +2279,8 @@ bool storeMfrWifiCredentials(void)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] IARM error in storing wifi credentials mfr error code \n",MODULE_NAME,__FUNCTION__,__LINE__ ,param.returnVal);
     }
-#endif
-#endif
+#endif // ENABLE_IARM
+#endif // USE_RDK_WIFI_HAL
     return retVal;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
@@ -2283,7 +2328,7 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
     }
 #else
     bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
-#endif
+#endif // ENABLE_XCAM_SUPPORT
     if (enable)
     {
         strncpy((char *)endPointInfo->status, "Enabled", (size_t)BUFF_LENGTH_64);
@@ -2310,7 +2355,7 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
     		[SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ] \n",
             MODULE_NAME,__FUNCTION__, __LINE__, endPointInfo->stats.signalStrength, endPointInfo->stats.retransmissions,
             endPointInfo->stats.lastDataDownlinkRate, endPointInfo->stats.lastDataUplinkRate);
-#endif
+#endif // USE_RDK_WIFI_HAL
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
@@ -2557,7 +2602,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
     cJSON_Delete(response);
     return 0;
 }
-#else
+#else // ENABLE_XCAM_SUPPORT
 int laf_get_lfat(laf_lfat_t *lfat)
 {
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -2581,7 +2626,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 	return ret;
 }
-#endif
+#endif // ENABLE_XCAM_SUPPORT
 
 #ifndef ENABLE_XCAM_SUPPORT
 /* store lfat with auth service */
@@ -2622,7 +2667,7 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 
     return 0;
 }
-#else
+#else // ENABLE_XCAM_SUPPORT
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -2638,7 +2683,7 @@ int laf_set_lfat(laf_lfat_t* const lfat)
   }
   return 0;
 }
-#endif
+#endif // ENABLE_XCAM_SUPPORT
 
 bool addSwitchToPrivateResults(int lnfError,char *currTime)
 {
@@ -2705,8 +2750,8 @@ bool clearSwitchToPrivateResults()
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
-#endif
-#endif
+#endif // ENABLE_LOST_FOUND
+#endif // USE_RDK_WIFI_HAL
 bool shutdownWifi()
 {
     bool result=true;
@@ -2734,7 +2779,6 @@ bool shutdownWifi()
 #ifdef ENABLE_LOST_FOUND
     condLAF = PTHREAD_COND_INITIALIZER;
     mutexLAF = PTHREAD_MUTEX_INITIALIZER;
-    mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
     triggerLAF = false;
     gWifiLNFStatus = LNF_UNITIALIZED;
     bLNFConnect=false;
