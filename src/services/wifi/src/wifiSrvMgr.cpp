@@ -443,7 +443,7 @@ IARM_Result_t WiFiNetworkMgr::isAutoSwitchToPrivateEnabled(void *arg)
 }
 IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
 {
-    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
     bool retVal = false;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
@@ -461,12 +461,14 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
         memcpy(param->data.getPairedSSIDInfo.security, security, BUFF_LENGTH_64);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSIDInfo SSID (%s) : BSSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid,bssid);
         param->status = true;
+        ret = IARM_RESULT_SUCCESS;
     }
     else
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in getting last ssid .\n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
 }
 IARM_Result_t WiFiNetworkMgr::getSwitchToPrivateResults(void *arg)
 {
