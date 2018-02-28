@@ -24,6 +24,7 @@ Requires=iarmbusd.service network-online.target
 [Service]
 EnvironmentFile=/etc/device.properties
 ExecStartPre=/bin/sh -c 'if [ -f /opt/wifi/wpa_supplicant.conf ]; then sed -i "/bssid=/d" /opt/wifi/wpa_supplicant.conf; fi'
+ExecStartPre=/bin/sh -c 'if [ -f /opt/wifi/wpa_supplicant.conf ]; then sed -i "s/key_mgmt=OPEN/key_mgmt=NONE/g" /opt/wifi/wpa_supplicant.conf; fi'
 ExecStartPre=/bin/sh -c 'if [ "$BUILD_TYPE" != "prod" ];then /lib/rdk/opt-override.sh; fi'
 ExecStart=/usr/bin/netsrvmgr --debugconfig $DEBUGINIFILE --configFilePath $NETSRVMGRINIFILE
 ExecStop=/bin/kill -15 $MAINPID
