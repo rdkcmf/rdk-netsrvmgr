@@ -174,7 +174,7 @@ int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_s
             if (!*security) RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONF_FROM_DB_MODE_EMPTY\n");
 
             const char *security_mode_map[][2] = {
-                {"Open", "OPEN"},
+                {"Open", "NONE"},
                 {"Wep", "NONE"},
                 {"WpaPskAes", "WPA-PSK"},
                 {"WpaPskTkip", "WPA-PSK"},
