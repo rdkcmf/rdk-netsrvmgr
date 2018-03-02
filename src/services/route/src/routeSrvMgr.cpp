@@ -149,27 +149,37 @@ static void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, s
 bool RouteNetworkMgr::getGatewayResults(char* gatewayResults, unsigned int messageLength)
 {
     IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t *param = NULL;
-    IARM_Result_t ret ;
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool returnStatus = FALSE;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
-    IARM_Malloc(IARM_MEMTYPE_PROCESSLOCAL, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + messageLength + 1, (void**)&param);
-    param->bufLength = messageLength;
-
-    ret = IARM_Bus_Call(_IARM_XUPNP_NAME,IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo,
-                        (void *)param, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + messageLength + 1);
-
+    ret = IARM_Malloc(IARM_MEMTYPE_PROCESSLOCAL, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + messageLength + 1, (void**)&param);
     if(ret == IARM_RESULT_SUCCESS)
     {
-        memcpy(gatewayResults, ((char *)param + sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t)), param->bufLength);
-        gatewayResults[param->bufLength] = '\0';
+        param->bufLength = messageLength;
+
+        ret = IARM_Bus_Call(_IARM_XUPNP_NAME,IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo,
+                            (void *)param, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + messageLength + 1);
+
+        if(ret == IARM_RESULT_SUCCESS)
+        {
+            memcpy(gatewayResults, ((char *)param + sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t)), param->bufLength);
+            gatewayResults[param->bufLength] = '\0';
+            returnStatus =  TRUE;
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        }
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] gatewayResults %s \n", MODULE_NAME,__FUNCTION__, __LINE__,gatewayResults);
+        IARM_Free(IARM_MEMTYPE_PROCESSLOCAL, param);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo , IARM_Malloc Failed  \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] gatewayResults %s \n", MODULE_NAME,__FUNCTION__, __LINE__,gatewayResults);
-    IARM_Free(IARM_MEMTYPE_PROCESSLOCAL, param);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return returnStatus;
 }
 
 void getGatewayRouteData()
@@ -201,10 +211,16 @@ gboolean RouteNetworkMgr::storeRouteDetails(unsigned int messageLength)
     char upnpResults[messageLength+1];
     gboolean retVal=FALSE;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    getGatewayResults(&upnpResults[0], messageLength);
-    if(parse_store_gateway_data(&upnpResults[0]))
-        retVal=TRUE;
-
+    memset(&upnpResults,0,sizeof(upnpResults));
+    if(getGatewayResults(&upnpResults[0], messageLength))
+    {
+        if(parse_store_gateway_data(&upnpResults[0]))
+            retVal=TRUE;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"Failure in getting gateway results. \n");
+    }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;
 }
@@ -1099,14 +1115,17 @@ gboolean RouteNetworkMgr::sendCurrentRouteData()
     gboolean retVal=FALSE;
     gboolean isIpv4;
 
+    memset(&data,0,sizeof(data));
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if(getCurrentRoute(routeIp,&isIpv4))
     {
-	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route data to be sent is %s and isIpv4 %d \n", MODULE_NAME,__FUNCTION__, __LINE__,routeIp,isIpv4);
-        strcpy(data.routeIp,routeIp);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] route data to be sent is %s and isIpv4 %d \n", MODULE_NAME,__FUNCTION__, __LINE__,routeIp,isIpv4);
+        if(data.routeIp)
+            strncpy(data.routeIp,routeIp,sizeof(data.routeIp));
         data.ipv4=isIpv4;
-        if(!routeIf)
-            strcpy(data.routeIf,routeIf);
+        if(NULL != routeIf)
+            strncpy(data.routeIf,routeIf,sizeof(data.routeIf));
     }
     if (IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME, (IARM_EventId_t) IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA, (void *)&data, sizeof(data)) == IARM_RESULT_SUCCESS)
     {
@@ -1129,8 +1148,7 @@ IARM_Result_t RouteNetworkMgr::getCurrentRouteData(void *arg)
     if(getCurrentRoute(param->route.routeIp,&param->route.ipv4))
     {
         param->status = true;
-        strcpy(param->route.routeIf,routeIf);
-
+        strncpy(param->route.routeIf,routeIf,sizeof(param->route.routeIf));
     }
     else
     {

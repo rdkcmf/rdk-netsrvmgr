@@ -305,7 +305,7 @@ bool updateWiFiList()
 
             if(ret)
             {
-                strncpy(gSsidList.ssid, wifiParam.paramValue, strlen(wifiParam.paramValue) +1);
+                strncpy(gSsidList.ssid, wifiParam.paramValue, sizeof(gSsidList.ssid));
             }
 
             // Get SSID
@@ -317,7 +317,7 @@ bool updateWiFiList()
 
             if(ret)
             {
-                strncpy(gSsidList.bssid,  wifiParam.paramValue, strlen(wifiParam.paramValue) +1);
+                strncpy(gSsidList.bssid,  wifiParam.paramValue, sizeof(gSsidList.bssid));
             }
 
             /* Not Implemented in tr69 Hal.*/
@@ -1205,8 +1205,8 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     memset(&stats, '\0', sizeof(stats));
 
     wifi_getStats(radioIndex, &stats);
-    strncpy((char *)conSSIDInfo->ssid, (const char *)stats.sta_SSID, (size_t)BUFF_LENGTH_64);
-    strncpy((char *)conSSIDInfo->bssid, (const char *)stats.sta_BSSID, (size_t)BUFF_LENGTH_64);
+    strncpy((char *)conSSIDInfo->ssid, (const char *)stats.sta_SSID, (size_t)SSID_SIZE);
+    strncpy((char *)conSSIDInfo->bssid, (const char *)stats.sta_BSSID, (size_t)BSSID_BUFF);
     conSSIDInfo->rate = stats.sta_PhyRate;
     conSSIDInfo->noise = stats.sta_Noise;
     conSSIDInfo->signalStrength = stats.sta_RSSI;
