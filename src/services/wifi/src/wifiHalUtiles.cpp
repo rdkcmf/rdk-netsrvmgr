@@ -937,6 +937,25 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     return ret;
 }
 
+static int string_represents_series_of_nulls (const char* ptr)
+{
+    static const char* null_encoding = "\\x00"; // wpa_supplicant encodes NULL character as the 4-character string "\x00"
+    static const int n = strlen (null_encoding);
+
+    if (ptr == 0 || *ptr == 0)
+        return false;
+
+    int i = 0;
+    for (; *ptr; ptr++)
+    {
+        if (*ptr != null_encoding[i])
+            return false;
+        if (++i == n)
+            i = 0;
+    }
+    return i == 0;
+}
+
 bool scan_Neighboring_WifiAP(char *buffer)
 {
     bool ret = false;
@@ -994,7 +1013,11 @@ bool scan_Neighboring_WifiAP(char *buffer)
 //        char temp[500] = {'\0'};
 
         ssid = neighbor_ap_array[index].ap_SSID;
-        if(!((ssid[0] == '\0') || (ssid[0] == '\x00') || (g_strcmp0(g_strstrip(ssid),LNF_NON_SECURE_SSID) == 0) ||  (g_strcmp0(g_strstrip(ssid),LNF_SECURE_SSID) == 0)))  {
+        if (!(ssid[0] == '\0' ||
+                string_represents_series_of_nulls (ssid) ||
+                g_strcmp0(g_strstrip(ssid),LNF_NON_SECURE_SSID) == 0 ||
+                g_strcmp0(g_strstrip(ssid),LNF_SECURE_SSID) == 0))
+        {
             signalStrength = neighbor_ap_array[index].ap_SignalStrength;
             frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, &pFreq);
 
