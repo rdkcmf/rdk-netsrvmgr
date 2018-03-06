@@ -907,9 +907,9 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
         eventData.data.wifiStateChange.state = WIFI_CONNECTING;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
 #endif
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s with passphrase %s \n",
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
     }
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s with passphrase %s \n",
+            MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
     if(ret)
     {
@@ -1576,7 +1576,10 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
 #endif
     if(false == retVal)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s passphrase %s failed \n", MODULE_NAME,__FUNCTION__, __LINE__,wificred->ssid,wificred->passphrase );
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s failed \n",
+                MODULE_NAME, __FUNCTION__, __LINE__, wificred->ssid);
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] connect with ssid %s failed (passphrase %s)\n",
+                MODULE_NAME, __FUNCTION__, __LINE__, wificred->ssid, wificred->passphrase );
         return EPERM;
     }
     while(get_WifiRadioStatus() != WIFI_CONNECTED && retry <= 30) {
