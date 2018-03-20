@@ -110,6 +110,19 @@ AC_ARG_ENABLE([xcam-support],
          [echo "xcam-support is disabled"])
 AM_CONDITIONAL([XCAM_SUPPORT], [test x$XCAM_SUPPORT = xtrue])
 
+RTMESSAGE=" "
+AC_ARG_ENABLE([rtmessage],
+        AS_HELP_STRING([--enable-rtmessage],[This will enable/disable rtmessage]),
+        [
+          case "${enableval}" in
+           yes) RTMESSAGE=true ;;
+           no) RTMESSAGE=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-rtmessage]) ;;
+           esac
+           ],
+         [echo " rtmessage is enable"])
+AM_CONDITIONAL([RTMESSAGE], [test x$RTMESSAGE = xtrue])
+
 AC_ARG_ENABLE([nlmonitor],
         AS_HELP_STRING([--enable-nlmonitor],[This will enable/disable netlink monitor support.]),
         [

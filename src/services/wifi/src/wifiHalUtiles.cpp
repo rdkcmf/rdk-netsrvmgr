@@ -15,6 +15,10 @@
 #include <time.h>
 #endif // ENABLE_LOST_FOUND
 
+#ifdef ENABLE_RTMESSAGE
+static rtConnection con = NULL;
+#endif
+
 #define WIFI_HAL_VERSION_SIZE   6
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
@@ -111,6 +115,59 @@ wifi_securityModes wifi_securityModesMap[] =
     { NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,		"WPA2-ENTERPRISE"		},
     { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
 };
+
+#ifdef ENABLE_RTMESSAGE
+void rtConnection_init()
+{
+  rtLog_SetLevel(RT_LOG_INFO);
+  rtLog_SetOption(rdkLog);
+  rtConnection_Create(&con, "NETSRVMGR_WIFI", SOCKET_ADDRESS);
+  rtConnection_AddListener(con, "RDKC.WIFI", onMessage, con);
+}
+
+void rtConnection_destroy()
+{
+  rtConnection_Destroy(con);
+}
+
+void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure)
+{
+  rtConnection con = (rtConnection) closure;
+
+  rtMessage req;
+  rtMessage_FromBytes(&req, buff, n);
+
+  if (rtMessageHeader_IsRequest(hdr))
+  {
+    char* buff = NULL;
+    uint32_t buff_length = 0;
+
+    rtMessage_ToString(req, &buff, &buff_length);
+    rtLog_Info("Req : %.*s", buff_length, buff);
+    free(buff);
+
+    // create response
+    rtMessage res;
+    rtMessage_Create(&res);
+    rtMessage_SetString(res, "reply", "Success");
+    rtConnection_SendResponse(con, hdr, res, 1000);
+    rtMessage_Release(res);
+  }
+  rtMessage_Release(req);
+}
+
+
+void* rtMessage_Receive(void* arg)
+{
+  while (1)
+  {
+    rtError err = rtConnection_Dispatch(con);
+    if (err != RT_OK)
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
+  }
+}
+#endif
+
 bool getHALVersion()
 {
     if(wifiHALVer[0] == 0)

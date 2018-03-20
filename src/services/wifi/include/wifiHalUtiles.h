@@ -59,6 +59,14 @@ extern "C" {
 #include "libIBusDaemon.h"
 #endif
 
+#ifdef ENABLE_RTMESSAGE
+/* RtMessage */
+#include "rtLog.h"
+#include "rtConnection.h"
+#include "rtMessage.h"
+#define SOCKET_ADDRESS "tcp://127.0.0.1:10001"
+#endif
+
 #define ACTION_ON_CONNECT 	1
 #define ACTION_ON_DISCONNECT 	0
 #define RETRY_TIME_INTERVAL     5
@@ -81,6 +89,14 @@ extern "C" {
 #define DEVICEID_SIZE 512
 #define PARTNERID_SIZE 128
 #define TIME_FORMAT "%Y-%m-%d %H:%M:%S"
+
+#ifdef ENABLE_RTMESSAGE
+void rtConnection_init();
+static void* rtMessage_Receive(void * arg);
+void rtConnection_destroy();
+static void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure);
+#endif
+
 #ifdef ENABLE_IARM
 bool gpvFromTR069hostif( HOSTIF_MsgData_t *param);
 #endif
