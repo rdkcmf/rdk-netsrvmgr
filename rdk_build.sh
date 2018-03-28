@@ -164,6 +164,7 @@ function install()
        make install DESTDIR=${RDK_FSROOT_PATH}
     else
        make install
+       cp -r conf/netsrvmgr.conf.cam ${RDK_FSROOT_PATH}/etc/netsrvmgr.conf
     fi
 }
 

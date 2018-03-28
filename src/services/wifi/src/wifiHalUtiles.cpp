@@ -589,11 +589,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
-#ifndef ENABLE_XCAM_SUPPORT
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
-#else
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
-#endif
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
             /* one condition variable is signaled */
@@ -660,11 +656,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
             pthread_mutex_lock(&mutexGo);
             if(0 == pthread_cond_signal(&condGo)) {
-#ifndef ENABLE_XCAM_SUPPORT
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-#else
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-#endif
             }
             pthread_mutex_unlock(&mutexGo);
         } else if (ACTION_ON_DISCONNECT == action) {
@@ -756,9 +748,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     /* the SSID of the network changed */
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
-#ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
-#endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
@@ -774,9 +764,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
 #endif
-#ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_SSID_CHANGED\n");
-#endif
         }
         break;
     /* the connection to the network was lost */
@@ -929,9 +917,6 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     else
     {
         ret = true;
-#ifdef ENABLE_XCAM_SUPPORT
-        set_WiFiStatusCode(WIFI_CONNECTED);
-#endif
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
@@ -1077,7 +1062,7 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
     retVal=wifi_lastConnected_Endpoint(&pairedSSIDInfo);
     if(retVal != RETURN_OK )
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in getting lost connected SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in getting last connected SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
         ret = false;
     }
     else
@@ -1152,9 +1137,7 @@ void *wifiConnStatusThread(void* arg)
                 wifiStatusCode = get_WiFiStatusCode();
 
                 if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
-#ifndef ENABLE_XCAM_SUPPORT
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
-#endif
                 }
                 else {
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
@@ -1164,18 +1147,6 @@ void *wifiConnStatusThread(void* arg)
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
                     memset(&stats, 0, sizeof(wifi_sta_stats_t));
                     wifi_getStats(radioIndex, &stats);
-#ifdef ENABLE_XCAM_SUPPORT
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "XCAM - WIFI status - :%d, %s\n", stats.sta_Connection, stats.sta_SSID);
-                //check the connection status
-                if(stats.sta_Connection == 0) {
-                    wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
-                    wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_CONNECT);
-                } else {
-                    wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
-                    wifi_status_action (connCode, stats.sta_SSID, (unsigned short) ACTION_ON_DISCONNECT);
-                }
-                confProp.wifiProps.statsParam_PollInterval = 30;
-#else
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d\n",
                             stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI);
                     //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
@@ -1183,7 +1154,6 @@ void *wifiConnStatusThread(void* arg)
                     /*Telemetry Parameter logging*/
                     logs_Period1_Params();
                     logs_Period2_Params();
-#endif
                 }
 
                 sleep(confProp.wifiProps.statsParam_PollInterval);
@@ -1533,52 +1503,62 @@ out:
 #else // ENABLE_IARM
 
 #ifdef ENABLE_XCAM_SUPPORT
+char* getlfatfilename()
+{
+    static char *lfat_file = NULL;
+    lfat_file =  getenv("LFAT_TOKEN_FILE");
+    RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d]lfat file name=%s\n", __FUNCTION__, __LINE__, lfat_file);
+    return lfat_file;
+}
+
 int get_token_length(unsigned int &tokenlength)
 {
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-	FILE* fp_token;
-	int tokensize;
-	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
-	if(NULL == fp_token) {
-		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_token_length - Error in opening lfat token file");
-		return EBADF;
-	}else{
-		fseek(fp_token, 0L, SEEK_END);
-		tokensize = ftell(fp_token);
-		fseek(fp_token, 0, SEEK_SET);
-		tokenlength = tokensize-1;
-		RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "get_token_length - token size is - %d\n",tokenlength);
-		if(NULL != fp_token){
-			fclose(fp_token);
-			fp_token = NULL;
-		}
-	}
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
-	return 0;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    FILE* fp_token;
+    int tokensize;
+    char* tokenfilename = getlfatfilename();
+    fp_token = fopen(tokenfilename,"rb");
+    if(NULL == fp_token) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_token_length - Error in opening lfat token file\n");
+        return EBADF;
+    }else{
+        fseek(fp_token, 0L, SEEK_END);
+        tokensize = ftell(fp_token);
+        fseek(fp_token, 0, SEEK_SET);
+        tokenlength = tokensize-1;
+        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "get_token_length - token size is - %d\n",tokenlength);
+        if(NULL != fp_token){
+            fclose(fp_token);
+            fp_token = NULL;
+        }
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+    return 0;
 }
 
 int get_laf_token(char* token,unsigned int tokenlength)
 {
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-	FILE* fp_token;
-	fp_token = fopen(LFAT_TOKEN_FILE,"rb");
-	if(NULL == fp_token) {
-		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Error in opening lfat token file");
-		return EBADF;
-	}else{
-		if(NULL != token)
-		{
-			fread(token,tokenlength,1,fp_token);
-		}else {
-			RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Token NULL");
-		}
-		if(NULL != fp_token){
-			fclose(fp_token);
-			fp_token = NULL;
-		}
-	}
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
-	return 0;
+    char* tokenfilename = getlfatfilename();
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    FILE* fp_token;
+    fp_token = fopen(tokenfilename,"rb");
+    if(NULL == fp_token) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Error in opening lfat token file");
+        return EBADF;
+    }else{
+        if(NULL != token)
+        {
+            fread(token,tokenlength,1,fp_token);
+        }else {
+            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Token NULL");
+        }
+        if(NULL != fp_token){
+            fclose(fp_token);
+            fp_token = NULL;
+        }
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+    return 0;
 }
 #endif // ENABLE_XCAM_SUPPORT
 
@@ -1999,34 +1979,23 @@ void connectToLAF()
     }
     else
     {
+      //Before starting nt_services - Ensure we call connectssid based on last saved ssid details.
+#ifdef ENABLE_XCAM_SUPPORT
+        //query wifi connection status
+        WiFi_EndPoint_Diag_Params endPointInfo;
+        getEndPointInfo(&endPointInfo);
+#endif
         retVal=lastConnectedSSID(&savedWiFiConnList);
-#ifndef ENABLE_XCAM_SUPPORT
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
         {
             sleep(confProp.wifiProps.lnfStartInSecs);
         }
-#endif
 
         /* If Device is activated and already connected to Private or any network,
             but defineltly not LF SSID. - No need to trigger LNF*/
         /* Here, 'getDeviceActivationState == true'*/
         lastConnectedSSID(&savedWiFiConnList);
 
-#ifdef ENABLE_XCAM_SUPPORT
-        //xcam - query wifi connection status
-        WiFi_EndPoint_Diag_Params endPointInfo;
-        getEndPointInfo(&endPointInfo);
-
-        if(endPointInfo.enable == 1) {
-            //Indicate that wifi is connected
-            wifiStatusCode_t connCode = WIFI_HAL_SUCCESS;
-            wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_CONNECT);
-
-        } else {
-            wifiStatusCode_t connCode = WIFI_HAL_ERROR_SSID_CHANGED;
-            wifi_status_action (connCode, endPointInfo.SSIDReference, (unsigned short) ACTION_ON_DISCONNECT);
-        }
-#endif // ENABLE_XCAM_SUPPORT
         if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus())) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID %s\n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
         }
@@ -2336,7 +2305,6 @@ bool eraseMfrWifiCredentials(void)
 
 void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 {
-    bool ret = true;
     int radioIndex = 0;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #ifdef USE_RDK_WIFI_HAL
@@ -2346,15 +2314,13 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
     wifi_getStats(radioIndex, &stats);
 
 #ifdef ENABLE_XCAM_SUPPORT
-    bool enable;
-    if(stats.sta_Connection == 0){
-        enable = true;
-    }else {
-        enable = false;
+    if(4 == stats.sta_Retransmissions) { //connected state
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] wifi_getStats : \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        set_WiFiStatusCode(WIFI_CONNECTED);
     }
-#else
-    bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
 #endif // ENABLE_XCAM_SUPPORT
+
+    bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
     if (enable)
     {
         strncpy((char *)endPointInfo->status, "Enabled", (size_t)BUFF_LENGTH_64);
@@ -2697,11 +2663,12 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+  char* tokenfilename = getlfatfilename();
   char buffer[512];
   memset(buffer, 0, 512);
   if(NULL != lfat->token){
       RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Updating lfat token after token expiry\n");
-      sprintf(buffer,"echo \"%s\" > %s",lfat->token,LFAT_TOKEN_FILE);
+      sprintf(buffer,"echo \"%s\" > %s",lfat->token,tokenfilename);
       system(buffer);
   }else {
        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "LFAT Token is Null");
