@@ -80,6 +80,7 @@ extern "C" {
 #define DEVICE_ACTIVATED 	1
 #define DEFAULT_TR69_INSTANCE 	0
 #define XRE_REFRESH_SESSION         "Device.X_COMCAST-COM_Xcalibur.Client.XRE.xreRefreshXreSession"
+#define XRE_REFRESH_SESSION_WITH_RR "Device.X_COMCAST-COM_Xcalibur.Client.XRE.xreRefreshXreSessionWithRR"
 
 #define WIFI_ADAPTER_STATUS_PARAM 	"Device.WiFi.Radio.1.Status"
 #define WIFI_ADAPTER_ENABLE_PARAM	"Device.WiFi.Radio.1.Enable"
@@ -162,6 +163,7 @@ void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 bool setHostifParam (char *name, HostIf_ParamType_t type, void *value);
 #endif
 void put_boolean(char *ptr, bool val);
+void put_int(char *ptr, int val);
 bool storeMfrWifiCredentials(void);
 bool eraseMfrWifiCredentials(void);
 bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params);

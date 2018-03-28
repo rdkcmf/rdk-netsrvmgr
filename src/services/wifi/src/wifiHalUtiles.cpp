@@ -639,7 +639,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
-    bool xreBounceNotify=true;
+    int xreReconnectReason = 19; //RECONNECT_REASON_WIFI_ACTIVATION
     memset(&eventData, 0, sizeof(eventData));
 #endif
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -674,7 +674,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #ifdef ENABLE_IARM
-                    if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&xreBounceNotify))
+                    if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
                     }
@@ -2271,10 +2271,10 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
         param.paramtype = hostIf_StringType;
         strcpy(param.paramValue, (char *) value);
         break;
-    /*    case  hostIf_IntegerType:
+        case  hostIf_IntegerType:
         case hostIf_UnsignedIntType:
-            put_int(param.paramValue, value);
-            param.paramtype = hostIf_IntegerType;*/
+            put_int(param.paramValue, *(int*)value);
+            param.paramtype = hostIf_IntegerType;
     case hostIf_BooleanType:
         put_boolean(param.paramValue,*(bool*)value);
         param.paramtype = hostIf_BooleanType;
@@ -2303,6 +2303,12 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
 void put_boolean(char *ptr, bool val)
 {
     bool *tmp = (bool *)ptr;
+    *tmp = val;
+}
+
+void put_int(char *ptr, int val)
+{
+    int *tmp = (int *)ptr;
     *tmp = val;
 }
 
