@@ -891,6 +891,26 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_INVALID_CREDENTIALS\n");
         break;
+    /* the connection failed due to authentication failure */
+    case WIFI_HAL_ERROR_AUTH_FAILED:
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Auth Failure (%d)\n", MODULE_NAME, __FUNCTION__, __LINE__, connCode);
+            set_WiFiStatusCode (WIFI_DISCONNECTED);
+#ifdef ENABLE_LOST_FOUND
+            if (confProp.wifiProps.bEnableLostFound)
+            {
+                bPrivConnectionLost = true;
+                lnfConnectPrivCredentials ();
+            }
+#endif
+#ifdef ENABLE_IARM
+            notify = true;
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_AUTH_FAILED;
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'AUTH_FAILED\'(%d).\n",
+                    MODULE_NAME, __FUNCTION__, __LINE__, eventId, eventData.data.wifiError.code);
+#endif
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_AUTH_FAILED\n");
+        break;
     case WIFI_HAL_UNRECOVERABLE_ERROR:
         if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to UNRECOVERABLE ERROR. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
