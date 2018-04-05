@@ -107,7 +107,7 @@ AC_ARG_ENABLE([iarm],
               [
                 case "${enableval}" in
                  yes) IARM_CFLAGS="-DENABLE_IARM"
-                      IARM_LFLAGS="-lIARMBus -ldirect -lfusion -ldbus-1 -lIARMBus " ;;
+                      IARM_LFLAGS="-lIARMBus -ldbus-1 " ;;
                  no)  IARM_CFLAGS=" "
                       IARM_LFLAGS=" " ;;
                  *) AC_MSG_ERROR([bad value ${enableval} for --enable-iarm]) ;;
