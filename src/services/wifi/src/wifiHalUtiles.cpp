@@ -1909,6 +1909,16 @@ void *lafConnPrivThread(void* arg)
             }
 
             bIsStopLNFWhileDisconnected=false;
+#ifdef ENABLE_XCAM_SUPPORT
+            int readtoken=0;
+            unsigned int tokenlength=0;
+            readtoken = get_token_length(tokenlength);
+            if(readtoken != 0) {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] LNF TOKEN ERROR \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                setLNFState(CONNECTED_PRIVATE);
+                break;
+            }
+#endif
             lnfReturnStatus=triggerLostFound(reqType);
             if (!lnfReturnStatus)
             {
@@ -1987,6 +1997,16 @@ void *lafConnThread(void* arg)
                 bLnfActivationLoop=false;
                 return NULL;
             }
+#ifdef ENABLE_XCAM_SUPPORT
+            int readtoken=0;
+            unsigned int tokenlength=0;
+            readtoken = get_token_length(tokenlength);
+            if(readtoken != 0) {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] LNF TOKEN ERROR \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                setLNFState(CONNECTED_PRIVATE);
+                break;
+            }
+#endif
             lnfReturnStatus=triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID);
             if (false == lnfReturnStatus)
             {
