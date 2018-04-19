@@ -2078,9 +2078,8 @@ void connectToLAF()
     {
       //Before starting nt_services - Ensure we call connectssid based on last saved ssid details.
 #ifdef ENABLE_XCAM_SUPPORT
-        //query wifi connection status
-        WiFi_EndPoint_Diag_Params endPointInfo;
-        getEndPointInfo(&endPointInfo);
+        //Boot time don't trigger lnf
+        set_WiFiStatusCode(WIFI_CONNECTED);
 #endif
         retVal=lastConnectedSSID(&savedWiFiConnList);
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
@@ -2409,13 +2408,6 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
     memset(&stats, '\0', sizeof(stats));
 
     wifi_getStats(radioIndex, &stats);
-
-#ifdef ENABLE_XCAM_SUPPORT
-    if(4 == stats.sta_Retransmissions) { //connected state
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] wifi_getStats : \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-        set_WiFiStatusCode(WIFI_CONNECTED);
-    }
-#endif // ENABLE_XCAM_SUPPORT
 
     bool enable = (WIFI_CONNECTED == get_WiFiStatusCode())? true: false;
     if (enable)
