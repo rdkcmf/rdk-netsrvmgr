@@ -363,12 +363,12 @@ typedef struct _IARM_BUS_WiFi_DiagsPropParam_t {
     IARM_Bus_WiFiSrvMgr_NumEntry_t numEntry;
 } IARM_BUS_WiFi_DiagsPropParam_t;
 
-typedef enum _NetworkManager_EventId_t {
+typedef enum _NetworkManager_WiFi_EventId_t {
         IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE = 5,
         IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED,
         IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED,
         IARM_BUS_NETWORK_MANAGER_EVENT_MAX,
-} IARM_Bus_NetworkManager_EventId_t;
+} IARM_Bus_NetworkManager_WiFi_EventId_t;
 typedef struct _IARM_BUS_NetworkManager_EventData_t {
         int value;
 } IARM_BUS_NetworkManager_EventData_t;

@@ -41,12 +41,31 @@
 
 #include "NetworkMgrMain.h"
 #include "netsrvmgrUtiles.h"
+#include <string.h>
+#include <errno.h>
 
 #define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
 #define MAX_TIME_LENGTH 32
 #define INTERFACE_STATUS_FILE_PATH_BUFFER 100
 #define INTERFACE_STATUS_FILE_PATH "/sys/class/net/%s/operstate"
 #define ETHERNET_UP_STATUS "UP"
+
+static const char INTERFACE_PERSISTENCE_FILE[] = "/opt/persistent/interfacePersistent.dat";
+
+EntryExitLogger::EntryExitLogger (const char* func, const char* file) :
+        func (func), file (file)
+{
+    RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "Entry: %s [%s]\n", func, file);
+}
+
+EntryExitLogger::~EntryExitLogger ()
+{
+    RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "Exit: %s [%s]\n", func, file);
+}
+
+static bool loadKeyFile (const char* filename, GKeyFile* keyFile);
+static bool writeKeyFile (const char* filename, GKeyFile* keyFile);
+
 using namespace netSrvMgrUtiles;
 
 /**
@@ -179,11 +198,13 @@ void netSrvMgrUtiles::triggerDhcpLease(Dhcp_Lease_Operation op)
 
 bool netSrvMgrUtiles::getRouteInterface(char* devname)
 {
+    LOG_ENTRY_EXIT;
+
+    bool route_found = false;
     char dst[50],gw[50];
     char line[100] , *ptr , *ctr, *sptr;
     int ret;
     FILE *fp;
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     fp = fopen("/proc/net/ipv6_route","r");
     if(fp!=NULL) {
         while((ret=fscanf(fp,"%s %*x %*s %*x %s %*x %*x %*x %*x %s",
@@ -195,15 +216,15 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
             }
             if((strcmp(dst,gw) == 0) && (strcmp(devname,"sit0") != 0) && (strcmp(devname,"lo") != 0) )
             {
-
-		readDevFile(devname);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__,devname);
-                return true;
+                readDevFile(devname);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__,devname);
+                route_found = true;
+                goto close_file;
             }
         }
     }
-
     fclose(fp);
+
     fp = fopen("/proc/net/route" , "r");
     while(fgets(line , 100 , fp))
     {
@@ -215,39 +236,44 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
             if(strcmp(ctr , "00000000") == 0)
             {
                 strcpy(devname,ptr);
-		readDevFile(devname);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__,devname);
-                return true;
+                readDevFile(devname);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__,devname);
+                route_found = true;
+                goto close_file;
             }
         }
     }
+
+close_file:
     fclose(fp);
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
-    return false;
+
+    if (!route_found)
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] No Route Found\n", __FUNCTION__, __LINE__);
+
+    return route_found;
 }
 
 bool netSrvMgrUtiles::readDevFile(char *deviceName)
 {
-    GError                  *error=NULL;
-    gboolean                result = FALSE;
+    LOG_ENTRY_EXIT;
+
+    GError *error = NULL;
+    gboolean result = FALSE;
     gchar* devfilebuffer = NULL;
     const gchar* deviceFile = "//etc/device.properties";
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     if(!deviceName)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] device name is null  \n", __FUNCTION__, __LINE__);
-	return result;
     }
-    result = g_file_get_contents (deviceFile, &devfilebuffer, NULL, &error);
-    if (result == FALSE)
+    else if (g_file_get_contents (deviceFile, &devfilebuffer, NULL, &error) == false)
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No contents in device properties  \n", __FUNCTION__, __LINE__);
+        if (!error) g_error_free (error);
     }
     else
     {
-        /* reset result = FALSE to identify device properties from devicefile contents */
-        result = FALSE;
         gchar **tokens = g_strsplit_set(devfilebuffer,",='\n'", -1);
+        g_free (devfilebuffer);
         guint toklength = g_strv_length(tokens);
         guint loopvar=0;
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Interface Name  %s  \n", __FUNCTION__, __LINE__,deviceName);
@@ -258,8 +284,8 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
                 if ((loopvar+1) < toklength )
                 {
                     strcpy(deviceName,"ETHERNET");
-        	    result=TRUE;
-		    break;
+                    result=TRUE;
+                    break;
                 }
             }
             else if (g_strrstr(g_strstrip(tokens[loopvar]), "MOCA_INTERFACE") && ((g_strcmp0(g_strstrip(tokens[loopvar+1]),deviceName)) == 0))
@@ -267,8 +293,8 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
                 if ((loopvar+1) < toklength )
                 {
                     strcpy(deviceName,"MOCA");
-        	    result=TRUE;
-		    break;
+                    result=TRUE;
+                    break;
                 }
             }
             else if (g_strrstr(g_strstrip(tokens[loopvar]), "WIFI_INTERFACE") && ((g_strcmp0(g_strstrip(tokens[loopvar+1]),deviceName)) == 0))
@@ -276,14 +302,14 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
                 if ((loopvar+1) < toklength )
                 {
                     strcpy(deviceName,"WIFI");
-        	    result=TRUE;
-		    break;
+                    result=TRUE;
+                    break;
                 }
             }
         }
+        g_strfreev (tokens);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Network Type  %s  \n", __FUNCTION__, __LINE__,deviceName);
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return result;
 }
 
@@ -377,5 +403,126 @@ bool netSrvMgrUtiles::checkInterfaceActive(char *interfaceName)
         fclose(file);
     }
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+    return ret;
+}
+
+// returns:
+// true if file with given 'filename' could be loaded into 'keyFile'
+// false otherwise
+bool loadKeyFile (const char* filename, GKeyFile* keyFile)
+{
+    LOG_ENTRY_EXIT;
+
+    bool ret = true;
+    GError* err = NULL;
+    g_key_file_load_from_file (keyFile, filename, G_KEY_FILE_NONE, &err);
+    if (err != NULL)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] error loading '%s' (error domain=%d code=%d message=%s)\n",
+                __FUNCTION__, filename, err->domain, err->code, err->message);
+        g_error_free (err);
+        ret = false;
+    }
+    return ret;
+}
+
+// returns:
+// true if 'keyFile' could be written into file with given 'filename'
+// false otherwise
+bool writeKeyFile (const char* filename, GKeyFile* keyFile)
+{
+    LOG_ENTRY_EXIT;
+
+    bool ret = true;
+    gchar *contents = g_key_file_to_data (keyFile, NULL, NULL);
+    GError* err = NULL;
+    g_file_set_contents (filename, contents, -1, &err);
+    if (err != NULL)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] error writing '%s' (error domain=%d code=%d message=%s)\n",
+                __FUNCTION__, filename, err->domain, err->code, err->message);
+        g_error_free (err);
+        ret = false;
+    }
+    g_free (contents);
+    return ret;
+}
+
+// returns:
+// false if no saved enable/disable config exists for given interface (interfaceControlPersistence = false)
+// true otherwise (interfaceControlPersistence = true) and also returns the saved enable/disable config by reference
+bool netSrvMgrUtiles::getSavedInterfaceConfig(const char *interface, bool& enable)
+{
+    LOG_ENTRY_EXIT;
+
+    bool saved_config_exists = false; // default
+    GKeyFile *keyFile = g_key_file_new ();
+    if (loadKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile) && g_key_file_has_key (keyFile, "Interface", interface, NULL))
+    {
+        saved_config_exists = true;
+        enable = g_key_file_get_boolean (keyFile, "Interface", interface, NULL);
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enable = [%s]\n", __FUNCTION__, interface, enable ? "true" : "false");
+    }
+    else
+    {
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] no saved config\n", __FUNCTION__, interface);
+    }
+    g_key_file_free (keyFile);
+    return saved_config_exists;
+}
+
+// returns:
+// true if given interface config could be persisted
+// false otherwise
+bool netSrvMgrUtiles::saveInterfaceConfig(const char *interface, bool enable)
+{
+    LOG_ENTRY_EXIT;
+
+    bool ret = false;
+    GKeyFile *keyFile = g_key_file_new ();
+    loadKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile);
+    // if loadKeyFile is
+    // successful:   updated persistence file will contain given interface/key and value; other keys are unaffected
+    // unsuccessful: updated persistence file will contain only given interface/key and value
+    g_key_file_set_boolean (keyFile, "Interface", interface, enable);
+    if (writeKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile))
+    {
+        ret = true;
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] success. interface = [%s] enable = [%s]\n",
+                __FUNCTION__, interface, enable ? "true" : "false");
+    }
+    else
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface = [%s] enable = [%s]\n",
+                __FUNCTION__, interface, enable ? "true" : "false");
+    }
+    g_key_file_free (keyFile);
+    return ret;
+}
+
+// returns:
+// true if persisted config for given interface could be removed / does not already exist
+// false otherwise
+bool netSrvMgrUtiles::removeSavedInterfaceConfig(const char *interface)
+{
+    LOG_ENTRY_EXIT;
+
+    bool ret = false;
+    GKeyFile *keyFile = g_key_file_new ();
+    // remove only provided interface/key leaving other keys unaffected
+
+    if (loadKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile) &&
+            (g_key_file_has_key (keyFile, "Interface", interface, NULL) == false || // key does not exist; already removed = success
+                (g_key_file_remove_key (keyFile, "Interface", interface, NULL) &&
+                        writeKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile))))
+    {
+        ret = true;
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] success. interface = [%s]\n", __FUNCTION__, interface);
+    }
+    else
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface = [%s]\n", __FUNCTION__, interface);
+    }
+    g_key_file_free (keyFile);
     return ret;
 }

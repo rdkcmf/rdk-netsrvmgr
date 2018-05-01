@@ -28,6 +28,8 @@
 #define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus "getTelemetryLogStatus"
 #define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration "getTelemetryLogDuration"
 #define IARM_BUS_NETSRVMGR_API_isInterfaceEnabled "isInterfaceEnabled"
+#define IARM_BUS_NETSRVMGR_API_getInterfaceControlPersistence  "getInterfaceControlPersistence"
+
 typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG=20,
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG_DURATION,
@@ -36,6 +38,7 @@ typedef enum _NetworkManager_MoCA_EventId_t {
 
 typedef enum _NetworkManager_EventId_t {
         IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED=50,
+        IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE,
         IARM_BUS_NETWORK_MANAGER_MAX,
 } IARM_Bus_NetworkManager_EventId_t;
  
