@@ -2076,11 +2076,6 @@ void connectToLAF()
     }
     else
     {
-      //Before starting nt_services - Ensure we call connectssid based on last saved ssid details.
-#ifdef ENABLE_XCAM_SUPPORT
-        //Boot time don't trigger lnf
-        set_WiFiStatusCode(WIFI_CONNECTED);
-#endif
         retVal=lastConnectedSSID(&savedWiFiConnList);
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
         {
