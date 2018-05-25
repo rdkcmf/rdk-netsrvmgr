@@ -67,6 +67,10 @@ char gWifiMacAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
 IARM_Bus_Daemon_SysMode_t sysModeParam;
 #endif
 
+#ifdef ENABLE_RTMESSAGE
+#include "wifi_provider.h"
+#endif
+
 WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
 bool WiFiNetworkMgr::instanceIsReady = false;
 pthread_mutex_t wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
@@ -317,6 +321,17 @@ int  WiFiNetworkMgr::Start()
     } else  {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in wifi_init(). \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
+
+    #ifdef ENABLE_RTMESSAGE
+      int ret = start_dmProvider();
+      if (ret)
+      {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error starting netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__);
+      }
+      else
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully started netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    #endif
+
     getHALVersion();
     /*Register connect and disconnect call back */
     wifi_connectEndpoint_callback_register(wifi_connect_callback);
@@ -351,7 +366,16 @@ int  WiFiNetworkMgr::Stop()
     wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
     shutdownWifi();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-}
+    #ifdef ENABLE_RTMESSAGE
+      int ret = stop_dmProvider();
+      if (ret)
+       {
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Error Stopping netsrvmgr wifi dm provider!\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+       }
+       else
+         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully stopped netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    #endif
+ }
 
 #ifdef ENABLE_IARM
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
