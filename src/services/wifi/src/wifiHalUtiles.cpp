@@ -179,8 +179,8 @@ bool getHALVersion()
 SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryptionType)
 {
     SsidSecurity mode = NET_WIFI_SECURITY_NOT_SUPPORTED;
-    if(!secModeString) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed due to NULL. \n",__FUNCTION__, __LINE__ );
+    if(!secModeString || !encryptionType) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to NULL. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return NET_WIFI_SECURITY_NONE;
     }
     if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
@@ -195,20 +195,27 @@ SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryption
         }
     }
     else
-    {
-        int len = sizeof(wifi_securityModesMap)/sizeof(wifi_securityModes);
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] securitymode = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,secModeString);
-        for(int i = 0; i < len; i++) {
-	    if(NULL != strcasestr(secModeString,wifi_securityModesMap[i].modeString)) {
-	        if((encryptionType != NULL) && (NULL != strcasestr(encryptionType,"AES"))) {
-                    mode = wifi_securityModesMap[++i].securityMode;
+    {   // If both secModeString and encryptionType are Empty then Security Mode is OPEN/NONE
+        if(strlen(secModeString) == 0 && strlen(encryptionType) == 0)
+        {
+           mode  = NET_WIFI_SECURITY_NONE;
+        }
+        else
+        {
+            int len = sizeof(wifi_securityModesMap)/sizeof(wifi_securityModes);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] securitymode = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,secModeString);
+            for(int i = len-1 ; i >= 0; i--) {
+                if(NULL != strcasestr(secModeString,wifi_securityModesMap[i].modeString)) {
+                    if(((encryptionType != NULL) && (NULL != strcasestr(encryptionType,"AES"))) ||  (NULL != strcasestr(secModeString,"WEP"))) {
+                        mode = wifi_securityModesMap[i].securityMode;
+                    }
+                    else
+                    {
+                        mode = wifi_securityModesMap[i-1].securityMode;
+                    }
+                    break;
                 }
-                else
-                {
-                    mode = wifi_securityModesMap[i].securityMode;
-                }
-                break;
-            }   
+            }
         }
     }
     return mode;
