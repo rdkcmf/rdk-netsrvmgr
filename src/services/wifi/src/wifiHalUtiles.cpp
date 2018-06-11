@@ -666,7 +666,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enable LNF \n",__FUNCTION__, __LINE__ );
                     bStopLNFWhileDisconnected=false;
                 }
-                if(g_strcmp0(g_strstrip(savedWiFiConnList.ssidSession.ssid),g_strstrip(ap_SSID)) != 0)
+                if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
                     storeMfrWifiCredentials();
                 retVal = lastConnectedSSID(&savedWiFiConnList);
                 if(!retVal)
@@ -993,88 +993,50 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     return ret;
 }
 
-static int string_represents_series_of_nulls (const char* ptr)
-{
-    static const char* null_encoding = "\\x00"; // wpa_supplicant encodes NULL character as the 4-character string "\x00"
-    static const int n = strlen (null_encoding);
-
-    if (ptr == 0 || *ptr == 0)
-        return false;
-
-    int i = 0;
-    for (; *ptr; ptr++)
-    {
-        if (*ptr != null_encoding[i])
-            return false;
-        if (++i == n)
-            i = 0;
-    }
-    return i == 0;
-}
-
 bool scan_Neighboring_WifiAP(char *buffer)
 {
-    bool ret = false;
-    INT radioIndex = 0,  index;
-    UINT output_array_size = 0;
-    wifi_neighbor_ap_t *neighbor_ap_array = NULL;
-    char *ssid = NULL;
-    int security = 0;
-    int signalStrength = 0;
-    double frequency = 0;
-    SsidSecurity encrptType = NET_WIFI_SECURITY_NONE;
-    cJSON *rootObj = NULL, *array_element = NULL, *array_obj = NULL;
-    char *out = NULL;
-    char *pFreq = NULL;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
-
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ ); 
     if((isWifiConnected()) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
     }
 
-    ret = wifi_getNeighboringWiFiDiagnosticResult(radioIndex, &neighbor_ap_array, &output_array_size);
+    wifi_neighbor_ap_t *neighbor_ap_array = NULL;
+    UINT neighbor_ap_array_size = 0;
+    bool ret = wifi_getNeighboringWiFiDiagnosticResult (0, &neighbor_ap_array, &neighbor_ap_array_size);
 
-    if((RETURN_OK != ret ) && ((NULL == neighbor_ap_array) || (0 == output_array_size)))
-    {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Failed in \'wifi_getNeighboringWiFiDiagnosticResult()\' with NULL \'neighbor_ap_array\', size %d and returns as %d \n",
-                 MODULE_NAME,__FUNCTION__, __LINE__, output_array_size, ret);
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] wifi_getNeighboringWiFiDiagnosticResult returned %d, neighbor_ap_array_size %d\n",
+            MODULE_NAME, __FUNCTION__, __LINE__, ret, neighbor_ap_array_size);
+
+    if ((RETURN_OK != ret ) && ((NULL == neighbor_ap_array) || (0 == neighbor_ap_array_size)))
         return false;
-    }
-    else {
-        ret = true;
-    }
 
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] \'wifi_getNeighboringWiFiDiagnosticResult()\' comes with \'neighbor_ap_array\', size %d and returns as %d \n",
-             MODULE_NAME,__FUNCTION__, __LINE__, output_array_size, ret);
-
-    rootObj = cJSON_CreateObject();
-
-    if(NULL == rootObj) {
+    cJSON *rootObj = cJSON_CreateObject();
+    if (NULL == rootObj) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to create root json object.\n",  MODULE_NAME,__FUNCTION__, __LINE__);
         return false;
     }
 
+    cJSON *array_obj = NULL, *array_element = NULL;
+    char *ssid = NULL;
+    int signalStrength = 0;
+    double frequency = 0;
+    SsidSecurity encrptType = NET_WIFI_SECURITY_NONE;
+
     cJSON_AddItemToObject(rootObj, "getAvailableSSIDs", array_obj=cJSON_CreateArray());
 
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n*********** Start: SSID Scan List **************** \n");
-    for (index = 0; index < output_array_size; index++ )
+    for (int index = 0; index < neighbor_ap_array_size; index++ )
     {
-//        char temp[500] = {'\0'};
-
         ssid = neighbor_ap_array[index].ap_SSID;
-        if (!(ssid[0] == '\0' ||
-                string_represents_series_of_nulls (ssid) ||
-                g_strcmp0(g_strstrip(ssid),LNF_NON_SECURE_SSID) == 0 ||
-                g_strcmp0(g_strstrip(ssid),LNF_SECURE_SSID) == 0))
+        if (*ssid && (0 != strcmp (ssid, LNF_NON_SECURE_SSID)) && (0 != strcmp (ssid, LNF_SECURE_SSID)))
         {
             signalStrength = neighbor_ap_array[index].ap_SignalStrength;
-            frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, &pFreq);
+            frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, NULL);
 
-
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] [%d] => SSID : \"%s\"  | SignalStrength : \"%d\" | frequency : \"%f\" | EncryptionMode : \"%s\" \n",\
-                     MODULE_NAME,__FUNCTION__, __LINE__, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s] [%d] => SSID: %s | SignalStrength: %d | Frequency: %f | EncryptionMode: %s\n",
+                     MODULE_NAME, __FUNCTION__, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
 
             if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
             {
@@ -1095,9 +1057,8 @@ bool scan_Neighboring_WifiAP(char *buffer)
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n***********End: SSID Scan List **************** \n\n");
 
 
-    out = cJSON_PrintUnformatted(rootObj);
-
-    if(out) {
+    char *out = cJSON_PrintUnformatted(rootObj);
+    if (out) {
         strncpy(buffer, out, strlen(out)+1);
     }
 
@@ -1111,43 +1072,36 @@ bool scan_Neighboring_WifiAP(char *buffer)
         free(neighbor_ap_array);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    return ret;
+    return true;
 }
 
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
-    char ap_ssid[SSID_SIZE];
-    char ap_passphrase[PASSPHRASE_BUFF];
-    char ap_bssid[BUFF_LENGTH_32];
-    char ap_security[BUFF_LENGTH_32];
-    wifi_pairedSSIDInfo_t pairedSSIDInfo={0};
-    bool ret = true;
-    int retVal;
-
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    retVal=wifi_lastConnected_Endpoint(&pairedSSIDInfo);
-    if(retVal != RETURN_OK )
+
+    bool ret = false;
+    wifi_pairedSSIDInfo_t pairedSSIDInfo = {0};
+    if (RETURN_OK != wifi_lastConnected_Endpoint (&pairedSSIDInfo))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in getting lost connected SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
-        ret = false;
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in getting last connected SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     else
     {
-        strncpy(ConnParams->ssidSession.ssid,g_strstrip(pairedSSIDInfo.ap_ssid), sizeof(ConnParams->ssidSession.ssid)-1);
-        ConnParams->ssidSession.ssid[sizeof(ConnParams->ssidSession.ssid)-1]='\0';
-        strncpy(ConnParams->ssidSession.passphrase, g_strstrip(pairedSSIDInfo.ap_passphrase), sizeof(ConnParams->ssidSession.passphrase)-1);
-        ConnParams->ssidSession.passphrase[sizeof(ConnParams->ssidSession.passphrase)-1]='\0';
-        strncpy(ConnParams->ssidSession.bssid, g_strstrip(pairedSSIDInfo.ap_bssid), sizeof(ConnParams->ssidSession.bssid)-1);
-        ConnParams->ssidSession.bssid[sizeof(ConnParams->ssidSession.bssid)-1]='\0';
-        strncpy(ConnParams->ssidSession.security, g_strstrip(pairedSSIDInfo.ap_security), sizeof(ConnParams->ssidSession.security)-1);
-        ConnParams->ssidSession.security[sizeof(ConnParams->ssidSession.security)-1]='\0';
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,"[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,ConnParams->ssidSession.ssid,ConnParams->ssidSession.passphrase,ConnParams->ssidSession.bssid,ConnParams->ssidSession.security);
-        if(g_strcmp0(g_strstrip(ConnParams->ssidSession.security),SECURITY_MODE_WPA_PSK) == 0 )
+        snprintf (ConnParams->ssidSession.ssid, sizeof(ConnParams->ssidSession.ssid), "%s", pairedSSIDInfo.ap_ssid);
+        snprintf (ConnParams->ssidSession.passphrase, sizeof(ConnParams->ssidSession.passphrase), "%s", pairedSSIDInfo.ap_passphrase);
+        snprintf (ConnParams->ssidSession.bssid, sizeof(ConnParams->ssidSession.bssid), "%s", pairedSSIDInfo.ap_bssid);
+        snprintf (ConnParams->ssidSession.security, sizeof(ConnParams->ssidSession.security), "%s", pairedSSIDInfo.ap_security);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,
+                "[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s \n",
+                MODULE_NAME, __FUNCTION__, __LINE__,
+                ConnParams->ssidSession.ssid, ConnParams->ssidSession.passphrase,
+                ConnParams->ssidSession.bssid, ConnParams->ssidSession.security);
+        if (strcmp (ConnParams->ssidSession.security, SECURITY_MODE_WPA_PSK) == 0 )
         {
             RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_PSK \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_PSK_AES;
         }
-        else if(g_strcmp0(g_strstrip(ConnParams->ssidSession.security),SECURITY_MODE_WPA_EAP) == 0)
+        else if (strcmp (ConnParams->ssidSession.security, SECURITY_MODE_WPA_EAP) == 0)
         {
             RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_EAP \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES;
@@ -1157,6 +1111,7 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
             RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_NONE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_NONE;
         }
+        ret = true;
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
@@ -2190,11 +2145,7 @@ bool getDeviceActivationState()
 }
 bool isWifiConnected()
 {
-    if (get_WiFiStatusCode() == WIFI_CONNECTED)
-    {
-        return true;
-    }
-    return false;
+    return (get_WiFiStatusCode() == WIFI_CONNECTED);
 }
 
 void lnfConnectPrivCredentials()
@@ -2301,14 +2252,17 @@ bool storeMfrWifiCredentials(void)
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
-        if((g_strcmp0(g_strstrip(param.wifiCredentials.cSSID),g_strstrip(savedWiFiConnList.ssidSession.ssid)) == 0 ) && (g_strcmp0(g_strstrip(param.wifiCredentials.cPassword),g_strstrip(savedWiFiConnList.ssidSession.passphrase)) == 0))
+        if ((strcmp (param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid) == 0) &&
+                (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0))
         {
-            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
+            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",
+                    MODULE_NAME, __FUNCTION__, __LINE__, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
             return true;
         }
         else
         {
-            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] ssid info is different continue to store ssid %s new ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
+            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] ssid info is different continue to store ssid %s new ssid %s \n",
+                    MODULE_NAME, __FUNCTION__, __LINE__, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
         }
     }
     memset(&param,0,sizeof(param));
@@ -2323,7 +2277,8 @@ bool storeMfrWifiCredentials(void)
         if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
         {
             RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
-            if((g_strcmp0(g_strstrip(param.wifiCredentials.cSSID),g_strstrip(savedWiFiConnList.ssidSession.ssid)) == 0 ) && (g_strcmp0(g_strstrip(param.wifiCredentials.cPassword),g_strstrip(savedWiFiConnList.ssidSession.passphrase)) == 0 ))
+            if ((strcmp (param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid) == 0) &&
+                    (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0))
             {
                 retVal=true;
                 RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] Successfully stored the credentails and verified stored ssid %s current ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
