@@ -642,6 +642,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     char command[128]= {'\0'};
     static unsigned int switchLnf2Priv=0;
     static unsigned int switchPriv2Lnf=0;
+    bool retVal = false;
 #ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
@@ -668,10 +669,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 isLAFCurrConnectedssid=false;
                 if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
                     storeMfrWifiCredentials();
-                memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
-                strncpy(savedWiFiConnList.ssidSession.ssid, ap_SSID, strlen(ap_SSID)+1);
-                strcpy(savedWiFiConnList.ssidSession.passphrase, " ");
-                savedWiFiConnList.conn_type = wifi_conn_type;
+                retVal = lastConnectedSSID(&savedWiFiConnList);
+                if(!retVal)
+                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #ifndef ENABLE_XCAM_SUPPORT
                 if(!switchPriv2Lnf)
                     switchPriv2Lnf=1;
@@ -1844,10 +1844,6 @@ void *lafConnPrivThread(void* arg)
             reqType = LAF_REQUEST_CONNECT_TO_LFSSID;
         }
         setLNFState(LNF_IN_PROGRESS);
-        retVal=false;
-        retVal=lastConnectedSSID(&savedWiFiConnList);
-        if(retVal == false)
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n",MODULE_NAME, __FUNCTION__, __LINE__ );
         if(bPrivConnectionLost)
         {
             bPrivConnectionLost=false;
@@ -1891,7 +1887,10 @@ void *lafConnPrivThread(void* arg)
                     break;
                 }
 //                  counter++;
-                if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
+                retVal=false;
+                retVal=lastConnectedSSID(&savedWiFiConnList);
+            
+                if (retVal && savedWiFiConnList.ssidSession.ssid[0] != '\0')
                 {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Trying Manual Connect with ssid %s security %d since not able to connect through LNF \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode);
                     retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode, NULL, savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL,WIFI_CON_PRIVATE);
@@ -1899,6 +1898,10 @@ void *lafConnPrivThread(void* arg)
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s  failed \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid );
                     }
+                }
+                else
+                {
+                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get previous SSID, Manual connect failed.  \n",MODULE_NAME, __FUNCTION__, __LINE__ );
                 }
                 sleep(confProp.wifiProps.lnfRetryInSecs);
             }
