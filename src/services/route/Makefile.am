@@ -21,11 +21,14 @@ DIST_SUBDIRS =
 
 AM_CXXFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) -I$(top_srcdir)/src/main/include \
 		-I$(top_srcdir)/src/services/route/include $(GLIB_CFLAGS) $(G_THREAD_CFLAGS) \
-		-I$(RDK_FSROOT_PATH)/usr/local/include $(NLMONITOR_CFLAGS) $(NL_CFLAGS)
+		-I$(RDK_FSROOT_PATH)/usr/local/include $(NLMONITOR_CFLAGS) $(NL_CFLAGS) $(YOCTO_FLAG)
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
         $(G_THREAD_LIBS) -ldbus-1  -lIARMBus -lcjson $(NLMONITOR_LINK)
 
+if IS_YOCTO_ENABLED
+AM_LDFLAGS += -lsecure_wrapper
+endif
 
 noinst_LTLIBRARIES = librouteservices.la
 librouteservices_la_SOURCES =    src/routeSrvMgr.cpp 

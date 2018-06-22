@@ -51,7 +51,8 @@ RDKWIFIHAL=" "
 RDKMOCAHAL=" "
 NLMONITOR_CFLAGS=" "
 NLMONITOR_LINK=" "
-
+YOCTO_FLAG=" "
+IS_YOCTO_ENABLED=" "
 
 AC_ARG_ENABLE([rdk-moca-hal],
         AS_HELP_STRING([--enable-rdk-moca-hal],[This will enable/disable rdk moca hal.]),
@@ -154,6 +155,20 @@ AC_ARG_ENABLE([nlmonitor],
            esac
            ],
          [echo "Network Monitor Support is enabled"])
+
+AC_ARG_ENABLE([yocto],
+        AS_HELP_STRING([--enable-yocto],[enable yocto (default is no)]),
+        [
+          case "${enableval}" in
+           yes) IS_YOCTO_ENABLED=true
+                YOCTO_FLAG=" -DYOCTO_BUILD ";;
+           no)  IS_YOCTO_ENABLED=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-yocto]) ;;
+           esac
+           ],
+        [echo "yocto is disabled"])
+AM_CONDITIONAL([IS_YOCTO_ENABLED], [test x$IS_YOCTO_ENABLED = xtrue])
+AC_SUBST(YOCTO_FLAG)
 
 
 AC_SUBST(RDKWIFIHAL)
