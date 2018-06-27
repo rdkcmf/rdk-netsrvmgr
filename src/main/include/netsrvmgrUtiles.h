@@ -75,6 +75,11 @@ bool checkInterfaceActive(char *interfaceName);
 bool getSavedInterfaceConfig(const char *interface, bool& enable);
 bool saveInterfaceConfig(const char *interface, bool enable);
 bool removeSavedInterfaceConfig(const char *interface);
+bool getSTBip(char *stbip,bool *isIpv6);
+bool getRouteInterfaceType(char* devname);
+bool chk_ipaddr_linklocal(const char *stbip,unsigned int family);
+bool currentActiveInterface(char *currentInterface);
+bool check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr);
 }
 
 
