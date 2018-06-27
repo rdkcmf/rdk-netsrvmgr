@@ -27,6 +27,9 @@
 #endif
 #include "netsrvmgrUtiles.h"
 #include "netsrvmgrIarm.h"
+#ifdef ENABLE_NLMONITOR
+#include "netlinkifc.h"
+#endif
 
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
@@ -59,6 +62,7 @@ static IARM_Result_t isInterfaceEnabled(void *arg);
 static IARM_Result_t getInterfaceControlPersistence(void *arg);
 static void setInterfaceEnabled(const char* interface, bool enabled);
 static void setInterfaceControlPersistence(const char* interface, bool interfaceControlPersistence);
+static IARM_Result_t getSTBip(void *arg);
 #endif // ENABLE_IARM
 
 static bool validate_interface_can_be_disabled (const char* interface);
@@ -190,6 +194,7 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getNetworkInterfaces, getNetworkInterfaces);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isInterfaceEnabled, isInterfaceEnabled);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getInterfaceControlPersistence, getInterfaceControlPersistence);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getSTBip, getSTBip);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED, _eventHandler);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE, _eventHandler);
 #endif
@@ -201,7 +206,7 @@ int main(int argc, char *argv[])
 bool validate_interface_can_be_disabled (const char* interface)
 {
     char activeInterface[INTERFACE_SIZE];
-    if (!netSrvMgrUtiles::getRouteInterface (activeInterface))
+    if (!netSrvMgrUtiles::getRouteInterfaceType (activeInterface))
     {
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Cannot determine the active interface\n", __FUNCTION__);
         return false;
@@ -217,7 +222,11 @@ bool validate_interface_can_be_disabled (const char* interface)
 void netSrvMgr_start()
 {
     LOG_ENTRY_EXIT;
-
+#ifdef ENABLE_NLMONITOR
+    NetLinkIfc* netifc = NetLinkIfc::get_instance();
+    netifc->initialize();
+    netifc->run(false);
+#endif
 #ifdef ENABLE_ROUTE_SUPPORT
     RouteNetworkMgr::getInstance()->Start();
 #endif
@@ -503,7 +512,7 @@ IARM_Result_t getActiveInterface(void *arg)
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
     char devName[INTERFACE_SIZE];
     IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
-    if(netSrvMgrUtiles::getRouteInterface(devName))
+    if(netSrvMgrUtiles::getRouteInterfaceType(devName))
         strcpy(param->activeIface,devName);
     else
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Route Found.\n", __FUNCTION__, __LINE__);
@@ -666,6 +675,23 @@ void setInterfaceControlPersistence (const char* interface, bool interfaceContro
     }
 }
 
+IARM_Result_t getSTBip(void *arg)
+{
+        IARM_Result_t ret = IARM_RESULT_SUCCESS;
+        char stbip[MAX_IP_ADDRESS_LEN];
+        bool isIpv6=false;
+        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+        if(netSrvMgrUtiles::getSTBip(stbip,&isIpv6))
+        {
+           strcpy(param->activeIfaceIpaddr,stbip);
+           RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
+        }
+        else
+           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+        return ret;
+}
 #endif // ENABLE_IARM
 
 #ifdef USE_RDK_WIFI_HAL

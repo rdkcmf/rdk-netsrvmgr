@@ -40,16 +40,24 @@
  *
  */
 
-#include <net/if.h>
+
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
-
+#include <algorithm>
 #include "NetworkMgrMain.h"
 #include "netsrvmgrUtiles.h"
 #include <string.h>
 #include <errno.h>
+#ifdef ENABLE_NLMONITOR
+#include "netlinkifc.h"
+#else
+#include <net/if.h>
+#endif //ENABLE_NLMONITOR
+#include <arpa/inet.h>
+#define IN_IS_ADDR_LINKLOCAL(a)     (((a) & htonl(0xffff0000)) == htonl (0xa9fe0000))
+#define INTERFACE_SIZE 10
 
 #define TRIGGER_DHCP_LEASE_FILE "/lib/rdk/triggerDhcpLease.sh"
 #define MAX_TIME_LENGTH 32
@@ -223,7 +231,7 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
             }
             if((strcmp(dst,gw) == 0) && (strcmp(devname,"sit0") != 0) && (strcmp(devname,"lo") != 0) )
             {
-                readDevFile(devname);
+//                readDevFile(devname);
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__,devname);
                 route_found = true;
                 goto close_file;
@@ -243,7 +251,7 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
             if(strcmp(ctr , "00000000") == 0)
             {
                 strcpy(devname,ptr);
-                readDevFile(devname);
+//                readDevFile(devname);
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__,devname);
                 route_found = true;
                 goto close_file;
@@ -258,6 +266,23 @@ close_file:
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] No Route Found\n", __FUNCTION__, __LINE__);
 
     return route_found;
+}
+
+bool netSrvMgrUtiles::getRouteInterfaceType(char* devname)
+{
+    LOG_ENTRY_EXIT;
+    if(!getRouteInterface(devname))
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Route interface failure  \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    if(!readDevFile(devname))
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Route interface type failure  \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Route interface type %s  \n", __FUNCTION__, __LINE__,devname);
+    return true;
 }
 
 bool netSrvMgrUtiles::readDevFile(char *deviceName)
@@ -532,4 +557,191 @@ bool netSrvMgrUtiles::removeSavedInterfaceConfig(const char *interface)
     }
     g_key_file_free (keyFile);
     return ret;
+}
+
+bool netSrvMgrUtiles::getSTBip(char *stbip,bool *isIpv6)
+{
+
+    LOG_ENTRY_EXIT;
+    bool ret=false;
+#ifdef ENABLE_NLMONITOR
+    std::vector<std::string> ipAddr;
+    char interface[INTERFACE_SIZE]={0};
+    char macAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
+    if(netSrvMgrUtiles::getRouteInterface(interface))
+    {
+        std::string ifcStr(interface);
+        NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET6,ipAddr);
+        if(ipAddr.empty())
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ipv6 address not there for interface %s Trying ipv4 \n", __FUNCTION__, __LINE__,ifcStr.c_str());
+            NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET,ipAddr);
+            if(ipAddr.empty())
+                RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] No ipaddress on interface %s \n", __FUNCTION__, __LINE__,ifcStr.c_str());
+            else
+            {
+                for (auto const& s : ipAddr)
+                {
+                    if((ipAddr.size()) > 1)
+                    {
+                        std::string tempStr = s.substr(0, s.find("/", 0));
+                        if(chk_ipaddr_linklocal(&tempStr[0],AF_INET))
+                        {
+                            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
+                        }
+                        else
+                        {
+                            *isIpv6=false;
+                            strcpy(stbip,tempStr.c_str());
+                            ret=true;
+                        }
+                        RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] ipv4 address %s on interface %s \n", __FUNCTION__, __LINE__,s.c_str(),ifcStr.c_str());
+                    }
+                    else
+                    {
+                        *isIpv6=false;
+                        std::string tempStr = s.substr(0, s.find("/", 0));
+                        strcpy(stbip,tempStr.c_str());
+                        ret=true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            netSrvMgrUtiles::getMacAddress_IfName(interface,macAddress);
+            std::string macAddrStr(macAddress);
+            for (auto const& s : ipAddr)
+            {
+                if(((ipAddr.size()) > 1) && (netSrvMgrUtiles::check_global_v6_based_macaddress(s,macAddrStr)))
+                {
+                    RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ip addr %s since it is based on mac %s \n", __FUNCTION__, __LINE__,s.c_str(),macAddrStr.c_str());
+                }
+                else
+                {
+                    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] ipv6 address %s on interface %s \n", __FUNCTION__, __LINE__,s.c_str(),ifcStr.c_str());
+                    *isIpv6=true;
+                    std::string tempStr = s.substr(0, s.find("/", 0)); //remove /64 in ip  2601:a40:300:164:aa11:fcff:fefd:1e8d/64
+                    strcpy(stbip,tempStr.c_str());
+                    ret=true;
+                }
+            }
+        }
+    }
+    else
+    {
+        if(netSrvMgrUtiles::currentActiveInterface(interface))
+        {
+            std::string ifcStr(interface);
+            NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET,ipAddr);
+            if(ipAddr.empty())
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No ipaddress on interface %s \n", __FUNCTION__, __LINE__,ifcStr.c_str());
+            }
+            else
+            {
+                for (auto const& s : ipAddr)
+                {
+                    std::string tempStr = s.substr(0, s.find("/", 0));
+                    if(chk_ipaddr_linklocal(tempStr.c_str(),AF_INET))
+                    {
+                        *isIpv6=false;
+                        strcpy(stbip,tempStr.c_str());
+                        ret=true;
+                    }
+                }
+            }
+
+        }
+
+    }
+#else
+    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ENABLE_NLMONITOR not set \n", __FUNCTION__, __LINE__);
+#endif
+    return ret;
+}
+
+//Check  IP string(IPv4 and IPv6) is link local address
+// Check for 169.254 since it will be come as Global scope.
+
+bool netSrvMgrUtiles::chk_ipaddr_linklocal(const char *stbip,unsigned int family)
+{
+    LOG_ENTRY_EXIT;
+    struct sockaddr_in6 sa6;
+    struct sockaddr_in sa;
+    switch(family)
+    {
+        case AF_INET:
+            inet_pton(AF_INET, stbip, &(sa.sin_addr));
+            return IN_IS_ADDR_LINKLOCAL(sa.sin_addr.s_addr);
+        case AF_INET6:
+            inet_pton(AF_INET6, stbip, &(sa6.sin6_addr));
+            return IN6_IS_ADDR_LINKLOCAL(&sa6.sin6_addr);
+            break;
+        default:
+            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] interface family not supported %d \n", __FUNCTION__, __LINE__,family);
+            return false;
+    }
+}
+
+bool netSrvMgrUtiles::currentActiveInterface(char *currentInterface)
+{
+    LOG_ENTRY_EXIT;
+    std::string ifcStr;
+    if (getenv("WIFI_INTERFACE") != NULL)
+    {
+        if (getenv("MOCA_INTERFACE") != NULL)
+        {
+            ifcStr=getenv("MOCA_INTERFACE");
+            if(!checkInterfaceActive((char *)ifcStr.c_str()))
+            {
+                ifcStr=getenv("WIFI_INTERFACE");
+            }
+        }
+    }
+    else if (getenv("MOCA_INTERFACE") != NULL)
+    {
+        ifcStr=getenv("MOCA_INTERFACE");
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] current interface not there \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    strcpy(currentInterface,ifcStr.c_str());
+    return true;
+}
+
+
+//IPV6 Address based on mac XXXX:XXXX:XXXX:XXXX:ABAA:AAff:feAA:AAAA        XXXX:XXXX:XXXX:XXXX  is the prefix  mac address is AA:AA:AA:AA:AA:AA    B is A XOR 2   Inserted  FF:FE
+//global ipv6 based on mac address
+
+bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr)
+{
+    LOG_ENTRY_EXIT;
+    if((ipv6Addr.empty()) && (macAddr.empty()))
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ipv6 addr or mac addr is empty \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    else if (macAddr.size() < 12)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] mac addr is less than 12 \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    std::string tmpMacAddr(macAddr);//A8:11:FC:FD:1E:8D
+    std::transform(tmpMacAddr.begin(), tmpMacAddr.end(), tmpMacAddr.begin(), ::tolower); //a8:11:fc:fd:1e:8d
+    tmpMacAddr.erase(std::remove(tmpMacAddr.begin(), tmpMacAddr.end(), ':'), tmpMacAddr.end()); //a811fcfd1e8d
+    std::string strTmpAdd2Mac="fffe";
+    tmpMacAddr.insert(6,strTmpAdd2Mac);//a811fcfffefd1e8d
+    tmpMacAddr.replace(0,2,"");//11fcfffefd1e8d
+    std::string tmpIpv6Str(ipv6Addr);//2601:a40:300:164:aa11:fcff:fefd:1e8d
+    std::transform(tmpIpv6Str.begin(), tmpIpv6Str.end(), tmpIpv6Str.begin(), ::tolower);//2601:a40:300:164:aa11:fcff:fefd:1e8d
+    tmpIpv6Str.erase(std::remove(tmpIpv6Str.begin(), tmpIpv6Str.end(), ':'), tmpIpv6Str.end());//2601a40300164aa11fcfffefd1e8d
+    if(tmpIpv6Str.find(tmpMacAddr) != std::string::npos)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] mac %s based global v6 address %s \n", __FUNCTION__, __LINE__,macAddr.c_str(),ipv6Addr.c_str());
+        return true;
+    }
+    return false;
 }
