@@ -170,6 +170,20 @@ AC_ARG_ENABLE([yocto],
 AM_CONDITIONAL([IS_YOCTO_ENABLED], [test x$IS_YOCTO_ENABLED = xtrue])
 AC_SUBST(YOCTO_FLAG)
 
+# Enable wifi client Roaming
+WIFI_CLIENT_ROAMING=" "
+AC_ARG_ENABLE([client_roaming],
+        AS_HELP_STRING([--enable-client-roaming],[This will enable/disable wifi client roaming.]),
+        [
+          case "${enableval}" in
+           yes) WIFI_CLIENT_ROAMING=true 
+                echo " wifi-client-roaming is enabled";;
+           no) WIFI_CLIENT_ROAMING=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-client-roaming ]) ;;
+           esac
+           ],
+         [echo " wifi-client-roaming is enabled"])
+AM_CONDITIONAL([WIFI_CLIENT_ROAMING], [test x$WIFI_CLIENT_ROAMING = xtrue])
 
 AC_SUBST(RDKWIFIHAL)
 AC_SUBST(RDKMOCAHAL)
@@ -180,6 +194,7 @@ AC_SUBST(IARM_LFLAGS)
 AC_SUBST(XCAM_SUPPORT)
 AC_SUBST(NLMONITOR_CFLAGS)
 AC_SUBST(NLMONITOR_LINK)
+AC_SUBST(WIFI_CLIENT_ROAMING)
 
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])

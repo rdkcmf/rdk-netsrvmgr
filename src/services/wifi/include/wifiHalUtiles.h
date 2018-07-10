@@ -128,6 +128,10 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams);
 void monitor_WiFiStatus();
 bool clearSSID_On_Disconnect_AP();
 bool getHALVersion();
+#ifdef WIFI_CLIENT_ROAMING
+bool getRoamingConfigInfo(WiFi_RoamingCtrl_t *param);
+bool setRoamingConfigInfo(WiFi_RoamingCtrl_t *param);
+#endif
 #endif
 
 #ifdef ENABLE_LOST_FOUND

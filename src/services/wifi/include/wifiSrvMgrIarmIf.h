@@ -73,6 +73,10 @@
 #define IARM_BUS_WIFI_MGR_API_getSSIDProps          "getSSIDProps"            /*!< Retrieve the ssid properties*/
 #define IARM_BUS_WIFI_MGR_API_getEndPointProps      "getEndPointProps"        /*!< Retrieve the Endpoint properties*/
 
+#ifdef WIFI_CLIENT_ROAMING
+#define IARM_BUS_WIFI_MGR_API_getRoamingCtrls       "getRoamingCtrls"        /* !< Retrieve the Roaming Controls */
+#define IARM_BUS_WIFI_MGR_API_setRoamingCtrls       "setRoamingCtrls"        /* !< set the Roaming Controls */
+#endif
 /*! Event states associated with WiFi connection  */
 typedef enum _WiFiStatusCode_t {
     WIFI_UNINSTALLED,						/* !< The device was in an installed state, and was uninstalled	*/
@@ -377,5 +381,18 @@ typedef struct _IARM_BUS_NetworkManager_EventData_t {
         int value;
 } IARM_BUS_NetworkManager_EventData_t;
 
+#ifdef WIFI_CLIENT_ROAMING
+typedef enum _WiFi_Roaming_Status_t {
+    ROAM_PARAM_SUCCESS = 0,
+    ROAM_PARAM_FAILURE = -1,
+    ROAM_PARAM_DISABLED = -2
+} WiFi_Roaming_Status_t;
 
+typedef struct _WiFi_RoamingCtrl_t {
+        WiFi_Roaming_Status_t status;
+        bool roamingEnable;
+        int preassnBestThreshold;
+        int preassnBestDelta;
+} WiFi_RoamingCtrl_t;
+#endif
 #endif

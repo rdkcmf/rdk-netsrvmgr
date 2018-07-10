@@ -2422,7 +2422,57 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 
 
 #ifdef USE_RDK_WIFI_HAL
+#ifdef WIFI_CLIENT_ROAMING
+bool getRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
+{
+   int ssidIndex = 0;
+   bool retStatus = false;
+   wifi_roamingCtrl_t  out_param;
+   memset(&out_param,0,sizeof(out_param));
+   int status = wifi_getRoamingControl(ssidIndex,&out_param);
+   if(status ==  0) {
+       param->roamingEnable = (out_param.roamingEnable==1?true:false);
+       param->preassnBestThreshold = out_param.preassnBestThreshold;
+       param->preassnBestDelta = out_param.preassnBestDelta;
+       param->status = ROAM_PARAM_SUCCESS; 
+       RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]\n", MODULE_NAME,param->roamingEnable,param->preassnBestThreshold,param->preassnBestDelta);
+       retStatus = true;
+    } else if(status == -1) {
+        param->status = ROAM_PARAM_FAILURE;
+    } else if(status == -2) {
+        param->status = ROAM_PARAM_DISABLED;
+    } else
+      param->status = ROAM_PARAM_FAILURE;
 
+   return retStatus;
+}
+
+bool setRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
+{
+   int ssidIndex = 0;
+   bool retStatus = false;
+   wifi_roamingCtrl_t  in_param;
+   memset(&in_param,0,sizeof(in_param));
+
+   in_param.roamingEnable = (param->roamingEnable==true?1:0);
+   in_param.preassnBestThreshold = param->preassnBestThreshold;
+   in_param.preassnBestDelta = param->preassnBestDelta;
+   
+   int status = wifi_setRoamingControl(ssidIndex,&in_param);
+   if(status == 0) {
+       param->status = ROAM_PARAM_SUCCESS;
+       retStatus = true;
+       RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]\n", MODULE_NAME,in_param.roamingEnable,in_param.preassnBestThreshold,in_param.preassnBestDelta);
+   } else if(status == -1)
+        param->status = ROAM_PARAM_FAILURE;
+     else if(status == -2)
+        param->status = ROAM_PARAM_DISABLED;
+     else
+        param->status = ROAM_PARAM_FAILURE;
+
+   return retStatus;
+}
+#endif
 bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params)
 {
     int radioIndex=0;
