@@ -52,8 +52,6 @@ export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
 export RDK_DIR=$RDK_PROJECT_ROOT_PATH
 source $RDK_SCRIPTS_PATH/soc/build/soc_env.sh
 
-
-
 # parse arguments
 INITIAL_ARGS=$@
 
@@ -114,10 +112,10 @@ function configure()
         if [ "x$DEFAULT_HOST" != "x" ]; then
         configure_options="--host $DEFAULT_HOST"
         fi
-        configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=no"
-        generic_options="$configure_options"
+        configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes"
+	 generic_options="$configure_options"
 
-        export ac_cv_func_malloc_0_nonnull=yes
+	 export ac_cv_func_malloc_0_nonnull=yes
         export ac_cv_func_memset=yes
 
         ./configure --prefix=${RDK_FSROOT_PATH}/usr --sysconfdir=${RDK_FSROOT_PATH}/etc $configure_options

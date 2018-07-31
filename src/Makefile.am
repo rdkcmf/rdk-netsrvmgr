@@ -41,9 +41,7 @@ endif
 
 if XCAM_SUPPORT
 AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
-if RTMESSAGE
-AM_CXXFLAGS += -DENABLE_RTMESSAGE -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
-endif
+AM_CXXFLAGS += -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
 sysconf_DATA = $(top_srcdir)/conf/netsrvmgr.conf
 endif
 
@@ -63,9 +61,7 @@ endif
 
 if XCAM_SUPPORT
 AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
-if RTMESSAGE
 AM_LDFLAGS += -L$(RDK_SOURCE_PATH)/../opensource/lib/ -lrtMessage -ldataProvider
-endif
 endif
 
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
@@ -89,11 +85,9 @@ netsrvmgr_LDADD += $(top_builddir)/src/services/wifi/libwifiservices.la
 endif
 
 if XCAM_SUPPORT
-if RTMESSAGE
 install-data-local:
 	mkdir -p $(RDK_FSROOT_PATH)/etc/model
 	cp -fpR $(top_builddir)/src/services/wifi/data/* $(RDK_FSROOT_PATH)/etc/model/
-endif
 endif
 
 if ROUTE_SUPPORT

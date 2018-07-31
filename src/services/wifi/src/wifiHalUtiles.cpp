@@ -24,9 +24,9 @@
 #include <time.h>
 #endif // ENABLE_LOST_FOUND
 
-#ifdef ENABLE_RTMESSAGE
-static rtConnection con = NULL;
-#endif
+#ifdef ENABLE_XCAM_SUPPORT
+static rtConnection wifi_con = NULL;
+#endif //ENABLE_XCAM_SUPPORT
 
 #define WIFI_HAL_VERSION_SIZE   6
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
@@ -127,23 +127,23 @@ wifi_securityModes wifi_securityModesMap[] =
     { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
 };
 
-#ifdef ENABLE_RTMESSAGE
+#ifdef ENABLE_XCAM_SUPPORT
 void rtConnection_init()
 {
   rtLog_SetLevel(RT_LOG_INFO);
   rtLog_SetOption(rdkLog);
-  rtConnection_Create(&con, "NETSRVMGR_WIFI", SOCKET_ADDRESS);
-  rtConnection_AddListener(con, "RDKC.WIFI", onMessage, con);
+  rtConnection_Create(&wifi_con, "NETSRVMGR_WIFI", SOCKET_ADDRESS);
+  rtConnection_AddListener(wifi_con, "RDKC.WIFI", onNetSrvMessage, wifi_con);
 }
 
 void rtConnection_destroy()
 {
-  rtConnection_Destroy(con);
+  rtConnection_Destroy(wifi_con);
 }
 
-void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure)
+void onNetSrvMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure)
 {
-  rtConnection con = (rtConnection) closure;
+  rtConnection wifi_con = (rtConnection) closure;
 
   rtMessage req;
   rtMessage_FromBytes(&req, buff, n);
@@ -161,23 +161,22 @@ void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void
     rtMessage res;
     rtMessage_Create(&res);
     rtMessage_SetString(res, "reply", "Success");
-    rtConnection_SendResponse(con, hdr, res, 1000);
+    rtConnection_SendResponse(wifi_con, hdr, res, 1000);
     rtMessage_Release(res);
   }
   rtMessage_Release(req);
 }
 
-
 void* rtMessage_Receive(void* arg)
 {
   while (1)
   {
-    rtError err = rtConnection_Dispatch(con);
+    rtError err = rtConnection_Dispatch(wifi_con);
     if (err != RT_OK)
       RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
   }
 }
-#endif
+#endif //ENABLE_XCAM_SUPPORT
 
 bool getHALVersion()
 {
@@ -313,6 +312,7 @@ WiFiLNFStatusCode_t get_WiFiLNFStatusCode()
     return gWifiLNFStatus;
 }
 #endif
+
 void get_CurrentSsidInfo(WiFiConnectionStatus *curSSIDConnInfo)
 {
     strncpy(curSSIDConnInfo->ssidSession.ssid, wifiConnData.ssid, SSID_SIZE);
@@ -948,6 +948,21 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         }
         break;
     }
+
+    #ifdef ENABLE_XCAM_SUPPORT
+    rtMessage msg;
+    rtMessage_Create(&msg);
+    rtMessage_SetInt32(msg,"wifi_status", get_WiFiStatusCode());
+    rtLog_Info("From wifiConnStatusThread sending wifiStatusCode : %d", get_WiFiStatusCode());
+    rtError err = rtConnection_SendMessage(wifi_con, msg, "RDKC.WIFI.STATE");
+    rtLog_Info("Send Message:%s", rtStrError(err));
+
+    if (err != RT_OK)
+    {
+      rtLog_Error("Error sending msg via rtmessage\n");
+    }
+    rtMessage_Release(msg);
+    #endif //ENABLE_XCAM_SUPPORT
 
     connCode_prev_state = connCode;
 #ifdef ENABLE_IARM

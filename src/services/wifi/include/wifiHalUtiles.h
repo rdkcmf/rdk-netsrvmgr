@@ -66,7 +66,7 @@ extern "C" {
 #include "libIBusDaemon.h"
 #endif
 
-#ifdef ENABLE_RTMESSAGE
+#ifdef ENABLE_XCAM_SUPPORT
 /* RtMessage */
 #include "rtLog.h"
 #include "rtConnection.h"
@@ -98,11 +98,11 @@ extern "C" {
 #define PARTNERID_SIZE 128
 #define TIME_FORMAT "%Y-%m-%d %H:%M:%S"
 
-#ifdef ENABLE_RTMESSAGE
+#ifdef ENABLE_XCAM_SUPPORT
 void rtConnection_init();
 static void* rtMessage_Receive(void * arg);
 void rtConnection_destroy();
-static void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure);
+static void onNetSrvMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure);
 #endif
 
 #ifdef ENABLE_IARM
