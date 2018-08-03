@@ -69,7 +69,7 @@ extern "C" {
 
 #define ACTION_ON_CONNECT 	1
 #define ACTION_ON_DISCONNECT 	0
-#define RETRY_TIME_INTERVAL     5
+#define RETRY_TIME_INTERVAL     3
 #define DEVICE_ACTIVATED 	1
 #define DEFAULT_TR69_INSTANCE 	0
 #define XRE_REFRESH_SESSION         "Device.X_COMCAST-COM_Xcalibur.Client.XRE.xreRefreshXreSession"
