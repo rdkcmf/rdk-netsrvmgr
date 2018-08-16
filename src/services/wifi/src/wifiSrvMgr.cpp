@@ -993,6 +993,15 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioOperatingChannelBandwidth FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     memset(output_string,0,BUFF_MAX);
+    if(wifi_getRadioSupportedFrequencyBands(radioIndex, output_string) == RETURN_OK) {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Supported frequency band  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
+        snprintf(param->data.radio.params.supportedFrequencyBands,BUFF_LENGTH_64,output_string);
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioSupportedFrequencyBands FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    }
+    memset(output_string,0,BUFF_MAX);
     if ( wifi_getRadioOperatingFrequencyBand(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] operating frequency band  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
         snprintf(param->data.radio.params.operatingFrequencyBand,BUFF_LENGTH_64,output_string);
