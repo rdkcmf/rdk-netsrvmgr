@@ -29,15 +29,7 @@
 #include <unistd.h>
 #include "sqlite3.h"
 #include "cJSON.h"
-#endif // ENABLE_XCAM_SUPPORT
-
-#ifndef ENABLE_XCAM_SUPPORT
-// added for create_wpa_supplicant_conf_from_netapp_db
-#include <string.h>
-#include <unistd.h>
-#include "sqlite3.h"
-#include "cJSON.h"
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT 
 
 #define SAVE_SSID 1
 
@@ -441,7 +433,7 @@ IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
 IARM_Result_t WiFiNetworkMgr::getCurrentConnectionType(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n",__FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     param->status = true;
@@ -452,7 +444,7 @@ IARM_Result_t WiFiNetworkMgr::getCurrentConnectionType(void *arg)
     else
         param->data.connectionType = WIFI_CON_UNKNOWN;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
 
