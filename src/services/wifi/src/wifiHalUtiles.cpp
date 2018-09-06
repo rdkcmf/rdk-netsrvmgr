@@ -654,7 +654,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
 #endif
             /* one condition variable is signaled */
-
+#ifndef ENABLE_XCAM_SUPPORT
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
+#endif
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
             if (! laf_is_lnfssid(ap_SSID))
@@ -676,8 +679,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     switchPriv2Lnf=1;
                 if(switchLnf2Priv)
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Switching from LnF to Private get dhcp lease since there is a network change. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-                    netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
                     if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
                     {
@@ -697,8 +698,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 if(switchPriv2Lnf)
                 {
                     switchPriv2Lnf=0;
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Switching from private to LnF get dhcp lease since there is a network change. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-                    netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
                 }
 #endif // ENABLE_XCAM_SUPPORT
                 setLNFState(CONNECTED_LNF);

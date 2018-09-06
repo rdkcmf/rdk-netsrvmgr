@@ -50,6 +50,7 @@ bool RouteNetworkMgr::instanceIsReady = false;
 
 static bool gwSelected = false;
 static bool xb3Selected = false;
+static bool upnpGwyLost = true;
 
 pthread_cond_t condRoute = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexRoute = PTHREAD_MUTEX_INITIALIZER;
@@ -258,8 +259,12 @@ void* getGatewayRouteDataThrd(void* arg)
 	gwRouteInfo = g_list_first(gwRouteInfo);
         if((g_list_length(gwRouteInfo) == 0) && ( access( DHCP_LEASE_FLAG, F_OK ) == -1 ))
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
-            netSrvMgrUtiles::triggerDhcpLease();
+            if (!upnpGwyLost)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+                netSrvMgrUtiles::triggerDhcpLease();
+                upnpGwyLost=true;
+            }
 #ifdef ENABLE_NLMONITOR
             //Clear out /tmp/resolv.dnsmasq.upnp
             std::ofstream ofs;
@@ -670,6 +675,7 @@ gboolean RouteNetworkMgr::setRoute() {
         }
         if(setRoute)
         {
+            upnpGwyLost=false;
 #ifdef ENABLE_NLMONITOR
             if ((!gwSelected) && (!xb3Selected))
             {
