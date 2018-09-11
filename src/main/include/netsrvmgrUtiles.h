@@ -29,6 +29,17 @@
 #define SYSTEM_COMMAND_SHELL_SUCESS 23
 #define SYSTEM_COMMAND_ERROR -1
 
+class EntryExitLogger
+{
+    const char* func;
+    const char* file;
+public:
+    EntryExitLogger (const char* func, const char* file);
+    ~EntryExitLogger ();
+};
+
+#define LOG_ENTRY_EXIT EntryExitLogger entry_exit_logger (__FUNCTION__, __FILE__)
+
 namespace netSrvMgrUtiles
 {
 enum Dhcp_Lease_Operation {
@@ -43,6 +54,9 @@ bool readDevFile(char *deviceName);
 char getAllNetworkInterface(char* devAllInterface);
 bool getCurrentTime(char* currTime,const char *timeFormat);
 bool checkInterfaceActive(char *interfaceName);
+bool getSavedInterfaceConfig(const char *interface, bool& enable);
+bool saveInterfaceConfig(const char *interface, bool enable);
+bool removeSavedInterfaceConfig(const char *interface);
 }
 
 
