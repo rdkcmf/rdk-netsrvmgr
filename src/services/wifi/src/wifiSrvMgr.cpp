@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include "sqlite3.h"
 #include "cJSON.h"
+#include <stdio.h>
 #endif // ENABLE_XCAM_SUPPORT 
 
 #define SAVE_SSID 1
@@ -240,9 +241,11 @@ int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_s
         sqlite3_close (db);
     }
 
+    remove(netapp_db_file);
+
     return ret;
 }
-#endif // ENABLE_XCAM_SUPPORT
+#endif // #ifndef ENABLE_XCAM_SUPPORT
 
 int  WiFiNetworkMgr::Start()
 {
