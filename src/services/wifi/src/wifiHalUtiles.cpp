@@ -742,8 +742,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_DISCONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_DISCONNECTED);
-	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
-#endif        
+#endif
+	        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
         }
         break;
     case WIFI_HAL_CONNECTING:
