@@ -264,7 +264,7 @@ typedef struct _WiFi_Radio_Diag_Params {
     char lowerLayers[64];
     bool upstream;
     unsigned int maxBitRate;
-    char supportedFrequencyBands[8];
+    char supportedFrequencyBands[24];
     char operatingFrequencyBand[24];
     char supportedStandards[20];
     char operatingStandards[24];
