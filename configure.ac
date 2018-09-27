@@ -137,6 +137,20 @@ AC_ARG_ENABLE([nlmonitor],
            ],
          [echo "Network Monitor Support is enabled"])
 
+# Enable wifi client Roaming
+WIFI_CLIENT_ROAMING=" "
+AC_ARG_ENABLE([client_roaming],
+        AS_HELP_STRING([--enable-client-roaming],[This will enable/disable wifi client roaming.]),
+        [
+          case "${enableval}" in
+           yes) WIFI_CLIENT_ROAMING=true 
+                echo " wifi-client-roaming is enabled";;
+           no) WIFI_CLIENT_ROAMING=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-client-roaming ]) ;;
+           esac
+           ],
+         [echo " wifi-client-roaming is enabled"])
+AM_CONDITIONAL([WIFI_CLIENT_ROAMING], [test x$WIFI_CLIENT_ROAMING = xtrue])
 
 AC_SUBST(RDKWIFIHAL)
 AC_SUBST(RDKMOCAHAL)
@@ -147,6 +161,8 @@ AC_SUBST(NLMONITOR_LINK)
 AC_SUBST(ROUTE_SUPPORT)
 AC_SUBST(IARM_CFLAGS)
 AC_SUBST(IARM_LFLAGS)
+AC_SUBST(WIFI_CLIENT_ROAMING)
+
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 

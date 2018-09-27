@@ -52,6 +52,11 @@ public:
     static IARM_Result_t getSwitchToPrivateResults(void *arg);
     static IARM_Result_t isAutoSwitchToPrivateEnabled(void *arg);
 
+#ifdef WIFI_CLIENT_ROAMING
+    static IARM_Result_t setRoamingCtrls(void *arg);
+    static IARM_Result_t getRoamingCtrls(void *arg);
+#endif
+
 
     static IARM_Result_t getCurrentConnectionType(void *arg);
 #ifdef ENABLE_LOST_FOUND

@@ -255,6 +255,11 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectedSSID, getConnectedSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectionType, getCurrentConnectionType);
+#ifdef  WIFI_CLIENT_ROAMING
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRoamingCtrls, getRoamingCtrls);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setRoamingCtrls, setRoamingCtrls);
+#endif
+
 
 #ifdef ENABLE_LOST_FOUND
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
@@ -1310,4 +1315,33 @@ IARM_Result_t WiFiNetworkMgr::getEndPointProps(void *arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
 }
+
+
+#ifdef  WIFI_CLIENT_ROAMING
+IARM_Result_t WiFiNetworkMgr::getRoamingCtrls(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal=false;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    WiFi_RoamingCtrl_t *param = (WiFi_RoamingCtrl_t *)arg;
+    memset(param,0,sizeof(WiFi_RoamingCtrl_t));
+    retVal = getRoamingConfigInfo(param);
+    ret = (retVal==true?IARM_RESULT_SUCCESS:IARM_RESULT_IPCCORE_FAIL);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
+
+
+IARM_Result_t WiFiNetworkMgr::setRoamingCtrls(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal=0;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    WiFi_RoamingCtrl_t *param = (WiFi_RoamingCtrl_t *)arg;
+    retVal = setRoamingConfigInfo(param);
+    ret = (retVal==true?IARM_RESULT_SUCCESS:IARM_RESULT_IPCCORE_FAIL);
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
+#endif
 #endif
