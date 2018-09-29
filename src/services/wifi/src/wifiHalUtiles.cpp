@@ -1645,7 +1645,6 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already WPS flow has intiated so skipping the request the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return EPERM;
     }
-    setLNFState(LNF_IN_PROGRESS);
     if (laf_is_lnfssid(wificred->ssid))
     {
         bLNFConnect=true;
@@ -1655,8 +1654,17 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         bLNFConnect=false;
     }
 #ifdef USE_RDK_WIFI_HAL
+    if(gWifiLNFStatus != CONNECTED_PRIVATE)
+    {
+         setLNFState(LNF_IN_PROGRESS);
+         if(RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid))
+         {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
+         }
         retVal=connect_withSSID(ssidIndex, wificred->ssid, (SsidSecurity)wificred->security_mode, NULL, wificred->psk, wificred->passphrase, (int)(!bLNFConnect),wificred->identity,wificred->carootcert,wificred->clientcert,wificred->privatekey,bLNFConnect ? WIFI_CON_LNF : WIFI_CON_PRIVATE);
-//    retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, wificred->psk);
+    }
+        //    retVal=connect_withSSID(ssidIndex, wificred->ssid, NET_WIFI_SECURITY_NONE, NULL, NULL, wificred->psk);
+//  }
 #endif
     if(false == retVal)
     {
