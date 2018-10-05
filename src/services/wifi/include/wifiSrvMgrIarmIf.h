@@ -399,8 +399,19 @@ typedef enum _WiFi_Roaming_Status_t {
 typedef struct _WiFi_RoamingCtrl_t {
         WiFi_Roaming_Status_t status;
         bool roamingEnable;
+        bool roaming80211kvrEnable;
+        bool selfSteerOverride;
         int preassnBestThreshold;
         int preassnBestDelta;
+        int postAssnLevelDeltaConnected;
+        int postAssnLevelDeltaDisconnected;
+        int postAssnSelfSteerThreshold;
+        int postAssnSelfSteerTimeframe;
+        int postAssnBackOffTime;
+        //int postAssnSelfSteerBeaconsMissedTime;
+        int postAssnAPcontrolThresholdLevel;
+        int postAssnAPcontrolTimeframe;
+    
 } WiFi_RoamingCtrl_t;
 #endif
 #endif

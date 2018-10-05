@@ -2437,7 +2437,17 @@ bool getRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
        param->roamingEnable = (out_param.roamingEnable==1?true:false);
        param->preassnBestThreshold = out_param.preassnBestThreshold;
        param->preassnBestDelta = out_param.preassnBestDelta;
-       param->status = ROAM_PARAM_SUCCESS; 
+       param->status = ROAM_PARAM_SUCCESS;
+       param->selfSteerOverride = (out_param.selfSteerOverride==1?true:false);
+       param->postAssnLevelDeltaConnected = out_param.postAssnLevelDeltaConnected;
+       param->postAssnLevelDeltaDisconnected = out_param.postAssnLevelDeltaDisconnected;
+       param->postAssnSelfSteerThreshold = out_param.postAssnSelfSteerThreshold;
+       param->postAssnSelfSteerTimeframe = out_param.postAssnSelfSteerTimeframe;
+       param->postAssnBackOffTime = out_param.postAssnBackOffTime;
+       //param->postAssnSelfSteerBeaconsMissedTime = out_param.postAssnSelfSteerBeaconsMissedTime;
+       param->postAssnAPcontrolThresholdLevel = out_param.postAssnAPctrlThreshold;
+       param->postAssnAPcontrolTimeframe = out_param.postAssnAPctrlTimeframe;
+       param->roaming80211kvrEnable = out_param.roam80211kvrEnable;
        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]\n", MODULE_NAME,param->roamingEnable,param->preassnBestThreshold,param->preassnBestDelta);
        retStatus = true;
     } else if(status == -1) {
@@ -2460,7 +2470,17 @@ bool setRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
    in_param.roamingEnable = (param->roamingEnable==true?1:0);
    in_param.preassnBestThreshold = param->preassnBestThreshold;
    in_param.preassnBestDelta = param->preassnBestDelta;
-   
+   in_param.selfSteerOverride = (param->selfSteerOverride==true?1:0);
+   in_param.postAssnLevelDeltaConnected = param->postAssnLevelDeltaConnected;
+   in_param.postAssnLevelDeltaDisconnected = param->postAssnLevelDeltaDisconnected;
+   in_param.postAssnSelfSteerThreshold = param->postAssnSelfSteerThreshold;
+   in_param.postAssnSelfSteerTimeframe = param->postAssnSelfSteerTimeframe;
+   in_param.postAssnBackOffTime = param->postAssnBackOffTime;
+   //in_param.postAssnSelfSteerBeaconsMissedTime = param->postAssnSelfSteerBeaconsMissedTime;
+   in_param.postAssnAPctrlThreshold = param->postAssnAPcontrolThresholdLevel;
+   in_param.postAssnAPctrlTimeframe = param->postAssnAPcontrolTimeframe;
+   in_param.roam80211kvrEnable = param->roaming80211kvrEnable;
+
    int status = wifi_setRoamingControl(ssidIndex,&in_param);
    if(status == 0) {
        param->status = ROAM_PARAM_SUCCESS;
