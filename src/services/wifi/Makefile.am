@@ -9,7 +9,7 @@ if RDKWIFIHAL
 AM_CXXFLAGS += -DUSE_RDK_WIFI_HAL
 endif
 if LOSTFOUND
-AM_CXXFLAGS += -DENABLE_LOST_FOUND -I$(RDK_SOURCE_PATH)/../opensource/include -I$(RDK_SOURCE_PATH)/../opensource/include/cjson
+AM_CXXFLAGS += -DENABLE_LOST_FOUND -I$(RDK_SOURCE_PATH)/../opensource/include
 endif
 
 if WIFI_CLIENT_ROAMING
