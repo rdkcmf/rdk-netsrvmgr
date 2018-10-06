@@ -21,7 +21,7 @@ AM_CXXFLAGS += -DENABLE_LOST_FOUND
 endif
 
 if XCAM_SUPPORT
-AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include -I$(RDK_SOURCE_PATH)/../opensource/include/cjson
+AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
 if RTMESSAGE
 AM_CXXFLAGS += -DENABLE_RTMESSAGE -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
 endif
