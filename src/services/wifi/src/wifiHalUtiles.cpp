@@ -30,6 +30,9 @@ GList *lstLnfPvtResults=NULL;
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
 pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
+static laf_status_t last_laf_status = {.errcode = 0, .backoff = 0.0f};
+static struct timespec last_lnf_server_contact_time;
 pthread_t wifiStatusMonitorThread;
 pthread_t lafConnectThread;
 pthread_t lafConnectToPrivateThread;
@@ -1250,15 +1253,38 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
 
 #ifdef ENABLE_LOST_FOUND
 
+void doLnFBackoff()
+{
+    if (last_laf_status.backoff > 0.0f)
+    {
+        struct timespec current_time;
+        clock_gettime (CLOCK_MONOTONIC, &current_time);
+
+        float seconds_elapsed_after_last_lnf_server_contact =
+                (current_time.tv_sec - last_lnf_server_contact_time.tv_sec)
+                + (((float) ((current_time.tv_nsec - last_lnf_server_contact_time.tv_nsec))) / 1000000000);
+
+        float seconds_remaining_to_wait = last_laf_status.backoff - seconds_elapsed_after_last_lnf_server_contact;
+        if (seconds_remaining_to_wait <= 0)
+            seconds_remaining_to_wait = 0;
+
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR,
+                "[%s:%s:%d] last requested backoff = %fs, elapsed after last lnf server contact = %fs, waiting for remaining %fs\n",
+                MODULE_NAME, __FUNCTION__, __LINE__,
+                last_laf_status.backoff, seconds_elapsed_after_last_lnf_server_contact, seconds_remaining_to_wait);
+
+        usleep (seconds_remaining_to_wait * 1000000); // wait out the remainder of the requested backoff period
+    }
+    else
+    {
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] backoff = 0s\n", MODULE_NAME, __FUNCTION__, __LINE__);
+    }
+
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] backoff wait done.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+}
+
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
 {
-    static pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
-    static laf_status_t last_laf_status = {.errcode = 0, .backoff = 0.0f};
-    static struct timespec current_time;
-    static struct timespec last_lnf_server_contact_time;
-    static float seconds_elapsed_after_last_lnf_server_contact;
-    static float seconds_remaining_to_wait;
-
     laf_conf_t* conf = NULL;
     laf_client_t* clnt = NULL;
     laf_ops_t *ops = NULL;
@@ -1284,31 +1310,6 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] laf_device_info malloc failed \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         free(ops);
         return ENOMEM;
-    }
-
-    pthread_mutex_lock(&mutexTriggerLAF);
-
-    clock_gettime (CLOCK_MONOTONIC, &current_time);
-
-    if (last_laf_status.backoff > 0.0f)
-    {
-        seconds_elapsed_after_last_lnf_server_contact = (current_time.tv_sec - last_lnf_server_contact_time.tv_sec) +
-                (((float) (current_time.tv_nsec - last_lnf_server_contact_time.tv_nsec))/1000000000);
-
-        seconds_remaining_to_wait = last_laf_status.backoff - seconds_elapsed_after_last_lnf_server_contact;
-        if (seconds_remaining_to_wait <= 0)
-            seconds_remaining_to_wait = 0;
-
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR,
-                "[%s:%s:%d] last requested backoff = %fs, elapsed after last lnf server contact = %fs, waiting for remaining %fs\n",
-                MODULE_NAME, __FUNCTION__, __LINE__,
-                last_laf_status.backoff, seconds_elapsed_after_last_lnf_server_contact, seconds_remaining_to_wait);
-
-        usleep (seconds_remaining_to_wait * 1000000); // wait out the remainder of the requested backoff period
-    }
-    else
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] backoff = 0s\n", MODULE_NAME, __FUNCTION__, __LINE__);
     }
 
     memset(dev_info,0,sizeof(laf_device_info_t));
@@ -1379,8 +1380,6 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     /* destroy lost and found client */
     if(clnt)
         laf_client_destroy(clnt);
-
-    pthread_mutex_unlock(&mutexTriggerLAF);
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return bRet;
@@ -1657,7 +1656,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     if(gWifiLNFStatus != CONNECTED_PRIVATE)
     {
          setLNFState(LNF_IN_PROGRESS);
-         if(RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid))
+         if((bLNFConnect == true) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
          {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
          }
@@ -1847,7 +1846,20 @@ void *lafConnPrivThread(void* arg)
                 }
 
                 bIsStopLNFWhileDisconnected=false;
-                lnfReturnStatus=triggerLostFound(reqType);
+                pthread_mutex_lock(&mutexTriggerLAF);
+                doLnFBackoff();
+                if (gWifiLNFStatus == CONNECTED_PRIVATE)
+                {
+                    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected to Private SSID already. Aborting requested LNF.\n",
+                            MODULE_NAME, __FUNCTION__, __LINE__);
+                    pthread_mutex_unlock(&mutexTriggerLAF);
+                    break;
+                }
+                else
+                {
+                    lnfReturnStatus = triggerLostFound(reqType);
+                }
+                pthread_mutex_unlock(&mutexTriggerLAF);
                 if (false == lnfReturnStatus)
 //                else if (!triggerLostFound(LAF_REQUEST_CONNECT_TO_PRIV_WIFI) && counter < TOTAL_NO_OF_RETRY)
                 {
@@ -1943,7 +1955,20 @@ void *lafConnThread(void* arg)
                 break;
             }
 #endif
-            lnfReturnStatus=triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID);
+            pthread_mutex_lock(&mutexTriggerLAF);
+            doLnFBackoff();
+            if (gWifiLNFStatus == CONNECTED_PRIVATE)
+            {
+                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected to Private SSID already. Aborting requested LNF.\n",
+                        MODULE_NAME, __FUNCTION__, __LINE__);
+                pthread_mutex_unlock(&mutexTriggerLAF);
+                break;
+            }
+            else
+            {
+                lnfReturnStatus = triggerLostFound(LAF_REQUEST_CONNECT_TO_LFSSID);
+            }
+            pthread_mutex_unlock(&mutexTriggerLAF);
             if (false == lnfReturnStatus)
             {
 
