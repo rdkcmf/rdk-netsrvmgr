@@ -36,7 +36,6 @@
 #include "netlinkifc.h"
 #endif //ENABLE_NLMONITOR
 
-
 #define ROUTE_PRIORITY 50
 #define GW_SETUP_FILE "/lib/rdk/gwSetup.sh"
 #define MAX_CJSON_EMPTY_LENGTH 40
@@ -44,6 +43,11 @@
 #define DHCP_LEASE_FLAG "/tmp/usingdhcp"
 #define PREFERRED_GATEWAY_FILE		"/opt/prefered-gateway"
 
+#ifdef YOCTO_BUILD
+extern "C" {
+#include "secure_wrapper.h"
+}
+#endif
 
 int messageLength;
 GList* gwList = NULL;
@@ -300,7 +304,11 @@ void* getGatewayRouteDataThrd(void* arg)
                   NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                   NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
                   //Call script to enable SLAAC ra support.
+#ifdef YOCTO_BUILD
+                  v_secure_system(cmd.c_str());
+#else
                   system(cmd.c_str());
+#endif
                }
                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] No Gateway Detected, SLAAC Support is enabled\n", MODULE_NAME,__FUNCTION__, __LINE__ );
             }
@@ -704,7 +712,11 @@ gboolean RouteNetworkMgr::setRoute() {
                   std::string ifcStr = i;
                   std::string cmd = "/lib/rdk/disableIpv6Autoconf.sh ";
                   cmd += ifcStr;
+#ifdef YOCTO_BUILD
+                  v_secure_system(cmd.c_str());
+#else
                   system(cmd.c_str());
+#endif
 
                   //Invoke API to cleanup Global IPs assigned.
                   NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
@@ -724,7 +736,11 @@ gboolean RouteNetworkMgr::setRoute() {
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->gwyipv6->str);
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->devicetype->str);
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Calling gateway script %s  \n", MODULE_NAME,__FUNCTION__, __LINE__,GwRouteParam->str);
+#ifdef YOCTO_BUILD
+            retType=v_secure_system(GwRouteParam->str);
+#else
             retType=system(GwRouteParam->str);
+#endif
             g_string_free(GwRouteParam,TRUE);
         }
         if(retType == SYSTEM_COMMAND_ERROR)
@@ -881,7 +897,11 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
                 g_string_printf(command, "ip -6 route del default via %s", ipAddr);
             }
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Remove Route ******* %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,command->str);
+#ifdef YOCTO_BUILD
+            retType=v_secure_system(command->str);
+#else
             retType=system(command->str);
+#endif
             if(retType == SYSTEM_COMMAND_ERROR)
             {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error has occured in shell command  \n", MODULE_NAME,__FUNCTION__, __LINE__);
