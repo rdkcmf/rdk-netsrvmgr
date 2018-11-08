@@ -20,7 +20,7 @@
 SUBDIRS =  services
 DIST_SUBDIRS = services
 
-AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) \
+AM_CXXFLAGS = $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) $(NLMONITOR_CFLAGS) $(NL_CFLAGS) \
 	-I$(top_srcdir)/src/main/include \
 	-I$(RDK_FSROOT_PATH)/usr/local/include \
 	-I$(top_srcdir)/src/services/wifi/include \
@@ -54,7 +54,7 @@ AM_CXXFLAGS += $(IARM_CFLAGS)
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) -lpthread -lcjson
 
-AM_LDFLAGS += $(IARM_LFLAGS)
+AM_LDFLAGS += $(IARM_LFLAGS) $(NLMONITOR_LINK)
 
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal

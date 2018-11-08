@@ -31,10 +31,11 @@
 #include "NetworkMedium.h"
 #include "netsrvmgrUtiles.h"
 #include <fstream>
-
 #ifdef ENABLE_NLMONITOR
 #include "netlinkifc.h"
 #endif //ENABLE_NLMONITOR
+
+
 
 #define ROUTE_PRIORITY 50
 #define GW_SETUP_FILE "/lib/rdk/gwSetup.sh"
@@ -87,10 +88,6 @@ int  RouteNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_ROUTE_MGR_API_getCurrentRouteData, getCurrentRouteData);
 
 #ifdef ENABLE_NLMONITOR
-    NetLinkIfc* netifc = NetLinkIfc::get_instance();
-    netifc->initialize();
-    netifc->run(false);
-
     //Check to see the preferred Gateway contents.
     ifstream cfgFile(PREFERRED_GATEWAY_FILE);
     std::string prefgw;
