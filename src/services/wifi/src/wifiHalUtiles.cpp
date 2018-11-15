@@ -42,7 +42,6 @@ pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
 static laf_status_t last_laf_status = {.errcode = 0, .backoff = 0.0f};
 static struct timespec last_lnf_server_contact_time;
-pthread_t wifiStatusMonitorThread;
 pthread_t lafConnectThread;
 pthread_t lafConnectToPrivateThread;
 WiFiLNFStatusCode_t gWifiLNFStatus = LNF_UNITIALIZED;
@@ -57,6 +56,7 @@ bool bSwitch2Private=false;
 bool bPrivConnectionLost=false;
 #define TOTAL_NO_OF_RETRY 5
 #endif
+pthread_t wifiStatusMonitorThread;
 #ifdef USE_HOSTIF_WIFI_HAL
 static WiFiStatusCode_t getWpaStatus();
 #endif
@@ -670,6 +670,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
 #endif
+#ifdef ENABLE_LOST_FOUND
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
             if (! laf_is_lnfssid(ap_SSID))
@@ -715,6 +716,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 setLNFState(CONNECTED_LNF);
             }
 
+#endif //  ENABLE_LOST_FOUND
             /*Write into file*/
 //            WiFiConnectionStatus wifiParams;
 
@@ -768,12 +770,14 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_IARM
             notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
+#ifdef ENABLE_LOST_FOUND
             /* Event Id & Code */
             if(confProp.wifiProps.bEnableLostFound)
             {
                 bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
+#endif // ENABLE_LOST_FOUND
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_NO_SSID;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
@@ -817,11 +821,13 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
             set_WiFiStatusCode(WIFI_DISCONNECTED);
+#ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
                 bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
+#endif //ENABLE_LOST_FOUND
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
@@ -882,11 +888,13 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     case WIFI_HAL_ERROR_INVALID_CREDENTIALS:
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Invalid Credentials. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
             set_WiFiStatusCode(WIFI_DISCONNECTED);
+#ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
             {
                 bPrivConnectionLost=true;
                 lnfConnectPrivCredentials();
             }
+#endif //ENABLE_LOST_FOUND
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
@@ -1007,12 +1015,13 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
 bool scan_Neighboring_WifiAP(char *buffer)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#ifdef ENABLE_LOST_FOUND
 
     if((isWifiConnected()) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
     }
-
+#endif //ENABLE_LOST_FOUND
     wifi_neighbor_ap_t *neighbor_ap_array = NULL;
     UINT neighbor_ap_array_size = 0;
     bool ret = wifi_getNeighboringWiFiDiagnosticResult (0, &neighbor_ap_array, &neighbor_ap_array_size);
@@ -1224,11 +1233,13 @@ bool clearSSID_On_Disconnect_AP()
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
                 MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+#ifdef ENABLE_LOST_FOUND
         if ( false == isLAFCurrConnectedssid )
         {
             memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
             eraseMfrWifiCredentials();
         }
+#endif //ENABLE_LOST_FOUND
     }
     return ret;
 }
