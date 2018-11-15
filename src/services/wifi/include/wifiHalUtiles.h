@@ -145,7 +145,6 @@ void doLnFBackoff();
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType);
 bool getmacaddress(gchar* ifname,GString *data);
 bool getDeviceInfo(laf_device_info_t *dev_info);
-bool getHALVersion();
 bool addSwitchToPrivateResults(int lnfError,char *currTime);
 bool convertSwitchToPrivateResultsToJson(char *buffer);
 bool clearSwitchToPrivateResults();
@@ -163,6 +162,7 @@ static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data,
 bool getDeviceActivationState();
 void lnfConnectPrivCredentials();
 #endif
+bool getHALVersion();
 bool isWiFiCapable();
 void get_CurrentSsidInfo(WiFiConnectionStatus *currSsidConnInfo);
 #ifdef ENABLE_IARM
