@@ -521,12 +521,28 @@ IARM_Result_t getActiveInterface(void *arg)
 {
     LOG_ENTRY_EXIT;
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    char devName[INTERFACE_SIZE];
+    char devName[INTERFACE_SIZE]={0};
     IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+    param->activeIface[0]='\0';
     if(netSrvMgrUtiles::getRouteInterfaceType(devName))
         strcpy(param->activeIface,devName);
     else
+    {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Route Found.\n", __FUNCTION__, __LINE__);
+        if(netSrvMgrUtiles::currentActiveInterface(devName))
+        {
+            if(!netSrvMgrUtiles::readDevFile(devName))
+            {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Active interface type failed for %s  \n", __FUNCTION__, __LINE__,devName);
+            }
+            else
+                strcpy(param->activeIface,devName);
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Active Interface.\n", __FUNCTION__, __LINE__);
+        }
+    }
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Current Active Interface : [%s].\n", __FUNCTION__, __LINE__,param->activeIface);
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_ACTIVE_INTERFACE:%s\n",param->activeIface);
     return ret;
@@ -536,8 +552,9 @@ IARM_Result_t getNetworkInterfaces(void *arg)
 {
     LOG_ENTRY_EXIT;
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    char devName[INTERFACE_LIST];
+    char devName[INTERFACE_LIST]={0};
     IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+    param->allNetworkInterfaces[0]='\0';
     char count = netSrvMgrUtiles::getAllNetworkInterface(devName);
     if(count)
         g_stpcpy(param->allNetworkInterfaces,devName);
