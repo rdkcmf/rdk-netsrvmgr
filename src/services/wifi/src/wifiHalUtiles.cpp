@@ -1225,6 +1225,7 @@ bool clearSSID_On_Disconnect_AP()
 {
     bool ret = true;
     int status = 0;
+    int radioIndex = 1;
     char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
     if(RETURN_OK != wifi_disconnectEndpoint(1, ap_ssid))
     {
@@ -1236,6 +1237,14 @@ bool clearSSID_On_Disconnect_AP()
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
                 MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+#ifndef ENABLE_XCAM_SUPPORT
+        // Clear wpa_supplicant SSID info
+        if(wifi_clearSSIDInfo(radioIndex) == RETURN_OK) {
+           RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] Successfully cleared SSID info \n", MODULE_NAME,__FUNCTION__, __LINE__ ); 
+        }
+#endif // ENABLE_XCAM_SUPPORT
+
+
 #ifdef ENABLE_LOST_FOUND
         if ( false == isLAFCurrConnectedssid )
         {
@@ -1735,6 +1744,8 @@ int laf_wifi_disconnect(void)
 {
     int retry = 0;
     bool retVal=false;
+    int radioIndex = 1;
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if ( false == isLAFCurrConnectedssid )
     {
@@ -1747,7 +1758,8 @@ int laf_wifi_disconnect(void)
         return EPERM;
     }
 #ifdef USE_RDK_WIFI_HAL
-    retVal = clearSSID_On_Disconnect_AP();
+    char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
+    retVal = wifi_disconnectEndpoint(radioIndex, ap_ssid);
 #endif
     setLNFState(LNF_IN_PROGRESS);
     if(retVal == false) {
