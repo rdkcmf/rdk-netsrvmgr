@@ -252,6 +252,7 @@ int  WiFiNetworkMgr::Start()
 
 
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, getAvailableSSIDs);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync, getAvailableSSIDsAsync);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getCurrentState, getCurrentState);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setEnabled, setEnabled);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_connect, connect);
@@ -422,6 +423,49 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
+}
+
+void *getAvailableSSIDsThread(void* arg)
+{
+   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+   
+   IARM_Bus_WiFiSrvMgr_SsidList_Param_t param = {0};
+   
+   IARM_Result_t ret = WiFiNetworkMgr::getAvailableSSIDs(&param);
+   
+   if(ret == IARM_RESULT_SUCCESS)
+   {
+      RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] SSID List : [%s]\n", MODULE_NAME,__FUNCTION__, __LINE__, param.curSsids.jdata);
+      
+      IARM_BUS_WiFiSrvMgr_EventData_t eventData;
+      
+      strncpy( eventData.data.wifiSSIDList.ssid_list, param.curSsids.jdata, MAX_SSIDLIST_BUF );
+      eventData.data.wifiSSIDList.ssid_list[MAX_SSIDLIST_BUF-1] = 0;
+      
+      IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
+                                     IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs,
+                                     (void *)&eventData, sizeof(eventData));
+   }
+   else
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ret != IARM_RESULT_SUCCESS\n", MODULE_NAME,__FUNCTION__, __LINE__);
+   
+   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+   
+   return NULL;
+}
+
+IARM_Result_t WiFiNetworkMgr::getAvailableSSIDsAsync(void *arg)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    
+    pthread_t getAvailableSSIDsPThread;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(&getAvailableSSIDsPThread, &attr, getAvailableSSIDsThread, NULL);
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return IARM_RESULT_SUCCESS;
 }
 
 IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)

@@ -48,6 +48,7 @@
 
 /*IARM Interface for wifiManager_2 */
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync "getAvailableSSIDsAsync"/*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
 #define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"		 /*!< Returns the properties of the currently connected SSID */
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Returns the paired ssid as a string*/
@@ -254,6 +255,9 @@ typedef struct _IARM_BUS_WiFiSrvMgr_EventData_t {
         struct _WIFI_ERROR {
             WiFiErrorCode_t code;
         } wifiError;
+        struct _WIFI_SSID_LIST {
+            char ssid_list[MAX_SSIDLIST_BUF];
+        } wifiSSIDList;
     } data;
 } IARM_BUS_WiFiSrvMgr_EventData_t;
 
@@ -262,6 +266,7 @@ typedef enum _IARM_Bus_NMgr_WiFi_EventId_t {
     IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged = 1,
     IARM_BUS_WIFI_MGR_EVENT_onError,
     IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged,
+    IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs,
     IARM_BUS_WIFI_MGR_EVENT_MAX,           		/*!< Maximum event id*/
 } IARM_Bus_NMgr_WiFi_EventId_t;
 
