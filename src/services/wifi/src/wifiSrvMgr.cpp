@@ -349,9 +349,10 @@ int  WiFiNetworkMgr::Start()
     {
         if(getLAFssid())
         {
+            lafConnectToPrivate();
+            
             if(false == isWifiConnected())
             {
-                lafConnectToPrivate();
                 connectToLAF();
             }
         }
@@ -361,7 +362,7 @@ int  WiFiNetworkMgr::Start()
         }
     }
 #endif
-
+    /*Register connect and disconnect call back */
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 
