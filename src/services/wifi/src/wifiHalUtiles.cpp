@@ -854,7 +854,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             /* one condition variable is signaled */
 #ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-            netSrvMgrUtiles::triggerDhcpLease(netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW);
+            netSrvMgrUtiles::triggerDhcpReleaseAndRenew(getenv("WIFI_INTERFACE"));
 #endif
 #ifdef ENABLE_LOST_FOUND
             memset(&wifiConnData, '\0', sizeof(wifiConnData));

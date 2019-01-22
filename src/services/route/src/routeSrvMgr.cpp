@@ -273,7 +273,7 @@ void* getGatewayRouteDataThrd(void* arg)
                 if (!xb3Selected)
                 {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
-                    netSrvMgrUtiles::triggerDhcpLease();
+                    netSrvMgrUtiles::triggerDhcpRenew();
                     upnpGwyLost=true;
                 }
             }

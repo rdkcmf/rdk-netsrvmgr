@@ -140,24 +140,21 @@ bool netSrvMgrUtiles::getMacAddress_IfName(char *ifName_in, char macAddress_out[
 
 
 
-void netSrvMgrUtiles::triggerDhcpLease(Dhcp_Lease_Operation op)
+/**
+ * @fn netSrvMgrUtiles::triggerDhcpLease(const char* operation, const char* interface)
+ * @brief Triggers a "renew" or "release and renew" of DHCP lease on specified interface.
+ * If DHCP lease renew is requested, the specified interface may be NULL in which case
+ * a DHCP lease renew will be triggered for all interfaces running the DHCPv4 client.
+ * If DHCP lease release and renew is requested, the specified interface must not be NULL.
+ *
+ * @param[in] operation DHCP lease operation to perform ("renew" or "release and renew")
+ * @param[in] interface interface (wlan0, eth0, etc.) to perform DHCP lease operation on
+ */
+void netSrvMgrUtiles::triggerDhcpLease(const char* operation, const char* interface)
 {
-    static const char* RENEW = "renew";
-    static const char* RELEASE_AND_RENEW = "release_and_renew";
-
-    const char* operation = NULL;
-    if (netSrvMgrUtiles::DHCP_LEASE_RENEW == op)
-        operation = RENEW;
-    else if (netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW == op)
-        operation = RELEASE_AND_RENEW;
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Unsupported DHCP lease operation [%d]\n", __FUNCTION__, op);
-        return;
-    }
-
     char command[200];
-    sprintf (command, "%s %s 2>&1", TRIGGER_DHCP_LEASE_FILE, operation);
+    snprintf (command, sizeof(command), "%s %s %s 2>&1",
+            TRIGGER_DHCP_LEASE_FILE, operation, interface ? interface : "");
 
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
 
@@ -180,6 +177,16 @@ void netSrvMgrUtiles::triggerDhcpLease(Dhcp_Lease_Operation op)
     int status = WEXITSTATUS (pclose_status);
 
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
+}
+
+void netSrvMgrUtiles::triggerDhcpRenew(const char* interface)
+{
+    netSrvMgrUtiles::triggerDhcpLease("renew", interface);
+}
+
+void netSrvMgrUtiles::triggerDhcpReleaseAndRenew(const char* interface)
+{
+    netSrvMgrUtiles::triggerDhcpLease("release_and_renew", interface);
 }
 
 static bool getIPv6RouteInterface (char *devname)

@@ -66,11 +66,6 @@ public:
 
 namespace netSrvMgrUtiles
 {
-enum Dhcp_Lease_Operation {
-    DHCP_LEASE_RENEW = 0,
-    DHCP_LEASE_RELEASE_AND_RENEW
-};
-
 /**
  * @addtogroup NETSRVMGR_APIS
  * @{
@@ -90,9 +85,12 @@ bool getMacAddress_IfName(char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN
  * @brief This function trigger the process by which the DHCP client renews or updates its IP address configuration data with the
  * DHCP server.
  *
- * @param[in] op      DHCP lease operation in order to renew/release and renew.
+ * @param[in] operation      DHCP lease renew / DHCP lease release and renew.
+ * @param[in] interface      interface to operate on.
  */
-void triggerDhcpLease(Dhcp_Lease_Operation op = DHCP_LEASE_RENEW);
+void triggerDhcpLease(const char* operation, const char* interface);
+void triggerDhcpRenew(const char* interface = NULL);
+void triggerDhcpReleaseAndRenew(const char* interface);
 
 /**
  * @brief This function retrieves information about the active routing interface.
