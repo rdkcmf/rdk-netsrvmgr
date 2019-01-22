@@ -1713,8 +1713,8 @@ IARM_Result_t WiFiNetworkMgr::sysModeChange(void *arg)
     sysModeParam=param->newMode;
     if(IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam)
     {
-	RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Trigger Dhcp lease since we are in warehouse mode \n",MODULE_NAME,__FUNCTION__, __LINE__ );
-    	netSrvMgrUtiles::triggerDhcpLease();
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Trigger Dhcp lease since we are in warehouse mode \n",MODULE_NAME,__FUNCTION__, __LINE__ );
+        netSrvMgrUtiles::triggerDhcpRenew();
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
