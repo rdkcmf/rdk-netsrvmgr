@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 bool validate_interface_can_be_disabled (const char* interface)
 {
     char activeInterface[INTERFACE_SIZE];
-    if (!netSrvMgrUtiles::getRouteInterface (activeInterface))
+    if (!netSrvMgrUtiles::getRouteInterfaceType (activeInterface))
     {
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Cannot determine the active interface\n", __FUNCTION__);
         return false;
