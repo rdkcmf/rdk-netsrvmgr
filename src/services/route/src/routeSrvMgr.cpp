@@ -552,25 +552,47 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
             {
                 guint gwCount = cJSON_GetArraySize(gwFullData);
 		RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] gateway count in json %d \n", __FUNCTION__, __LINE__,gwCount);
+                char *isgateway,*dnsConfig,*gatewayIp,*gatewayIpV6,*serialNum,*ipv6Prefix,*devType;
+
                 for (counter = 0; counter < gwCount; counter++)
                 {
                     cJSON *gwData = cJSON_GetArrayItem(gwFullData, counter);
-                    if((g_strrstr(g_strstrip(cJSON_GetObjectItem(gwData, "isgateway")->valuestring),"yes")) && (checkvalidhostname(cJSON_GetObjectItem(gwData, "dnsconfig")->valuestring) == TRUE ) && (checkvalidip(cJSON_GetObjectItem(gwData, "gatewayip")->valuestring) == TRUE) && (checkvalidip(cJSON_GetObjectItem(gwData, "gatewayipv6")->valuestring) == TRUE))
-                    {
-                        GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
-                        init_gwydata(gwydata);
-                        g_string_assign(gwydata->serial_num,cJSON_GetObjectItem(gwData, "sno")->valuestring);
-                        g_string_assign(gwydata->gwyip,cJSON_GetObjectItem(gwData, "gatewayip")->valuestring);
-                        g_string_assign(gwydata->gwyipv6,cJSON_GetObjectItem(gwData, "gatewayipv6")->valuestring);
-                        g_string_assign(gwydata->dnsconfig,cJSON_GetObjectItem(gwData, "dnsconfig")->valuestring);
-                        g_string_assign(gwydata->ipv6prefix,cJSON_GetObjectItem(gwData, "ipv6Prefix")->valuestring);
-                        g_string_assign(gwydata->devicetype,cJSON_GetObjectItem(gwData, "DevType")->valuestring);
-                        gwList=g_list_append(gwList,gwydata);
-                        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] serial_num  %s gwcount %d \n", MODULE_NAME,__FUNCTION__, __LINE__ ,gwydata->serial_num->str,g_list_length(gwList));
-                    }
-                    else
-                    {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] not a valid gateway %s \n", MODULE_NAME,__FUNCTION__, __LINE__,cJSON_GetObjectItem(gwData, "sno")->valuestring );
+                    isgateway = dnsConfig = gatewayIp = gatewayIpV6 = serialNum = ipv6Prefix = devType = NULL;
+                    if(gwData) {
+                        if (cJSON_GetObjectItem(gwData, "isgateway"))
+                            isgateway = cJSON_GetObjectItem(gwData, "isgateway")->valuestring;
+                        if(cJSON_GetObjectItem(gwData, "dnsconfig"))
+                            dnsConfig = cJSON_GetObjectItem(gwData, "dnsconfig")->valuestring;
+                        if(cJSON_GetObjectItem(gwData, "gatewayip"))
+                            gatewayIp = cJSON_GetObjectItem(gwData, "gatewayip")->valuestring;
+                        if(cJSON_GetObjectItem(gwData, "gatewayipv6"))
+                            gatewayIpV6 = cJSON_GetObjectItem(gwData, "gatewayipv6")->valuestring;
+                        if(cJSON_GetObjectItem(gwData, "sno"))
+                            serialNum = cJSON_GetObjectItem(gwData, "sno")->valuestring;
+                        if(cJSON_GetObjectItem(gwData, "ipv6Prefix"))
+                            ipv6Prefix = cJSON_GetObjectItem(gwData, "ipv6Prefix")->valuestring;
+                        if(cJSON_GetObjectItem(gwData, "DevType"))
+                            devType = cJSON_GetObjectItem(gwData, "DevType")->valuestring;
+
+                        if((isgateway) && (g_strrstr(g_strstrip(isgateway),"yes")) && (dnsConfig) && (checkvalidhostname(dnsConfig) == TRUE ) && (gatewayIp) && (checkvalidip(gatewayIp) == TRUE) && (gatewayIpV6) &&(checkvalidip(gatewayIpV6) == TRUE))
+                        {
+                            GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
+                            init_gwydata(gwydata);
+                            g_string_assign(gwydata->serial_num,serialNum);
+                            g_string_assign(gwydata->gwyip,gatewayIp);
+                            g_string_assign(gwydata->gwyipv6,gatewayIpV6);
+                            g_string_assign(gwydata->dnsconfig,dnsConfig);
+                            g_string_assign(gwydata->ipv6prefix,ipv6Prefix);
+                            g_string_assign(gwydata->devicetype,devType);
+                            gwList=g_list_append(gwList,gwydata);
+                            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] serial_num  %s gwcount %d \n", MODULE_NAME,__FUNCTION__, __LINE__ ,gwydata->serial_num->str,g_list_length(gwList));
+                        }
+                        else
+                        {
+                            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] not a valid gateway %s \n", MODULE_NAME,__FUNCTION__, __LINE__,serialNum);
+                        }
+                    } else {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get gateway details,Array item is Null. \n",MODULE_NAME,__FUNCTION__, __LINE__);
                     }
                 }
                 gwList = g_list_first(gwList);
@@ -579,7 +601,6 @@ gboolean  RouteNetworkMgr::parse_store_gateway_data(char *array)
                     retVal=FALSE;
                     delRouteList();
 		}
-
             }
             else
             {
