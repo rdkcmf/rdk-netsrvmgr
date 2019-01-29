@@ -20,6 +20,8 @@
 #include "wifiHalUtiles.h"
 #include "netsrvmgrUtiles.h"
 
+#include <fstream>
+
 #ifdef ENABLE_LOST_FOUND
 #include <time.h>
 #endif // ENABLE_LOST_FOUND
@@ -258,6 +260,31 @@ bool ethernet_on()
         return false;
     else
         return true;
+}
+
+unsigned long getUptimeMS(void)
+{
+    std::ifstream file("/proc/uptime");
+    if (file.is_open())
+    {
+        char buffer[65];
+        file.getline(buffer, sizeof buffer - 1);
+        file.close();
+        double uptime = atof(buffer);
+        return uptime*1000;
+    }
+    return 0;
+}
+
+void logMilestone(const char *msg_code)
+{
+    FILE *fp = NULL;
+    fp = fopen("/opt/logs/rdk_milestones.log", "a+");
+    if (fp != NULL)
+    {
+      fprintf(fp, "[%ld] %s\n", getUptimeMS(), msg_code);
+      fclose(fp);
+    }
 }
 
 #ifdef ENABLE_IARM
@@ -682,6 +709,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
             if (! laf_is_lnfssid(ap_SSID))
             {
+                logMilestone("PWIFI_CONNECTED");
                 isLAFCurrConnectedssid=false;
                 gWifiLNFStatus=CONNECTED_PRIVATE;
                 if(bStopLNFWhileDisconnected)
