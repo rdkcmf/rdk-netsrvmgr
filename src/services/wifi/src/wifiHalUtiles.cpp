@@ -91,6 +91,10 @@ static void logs_Period2_Params();
 #define SECURITY_MODE_WPA_EAP           "WPA-EAP"
 #define SECURITY_MODE_WPA_PSK           "WPA-PSK"
 #define WIFI_HAL_VERSION                "1.0.0"
+#define LFAT_VERSION                    "lfat_version"
+#define LFAT_TTL                        "lfat_ttl"
+#define LFAT_CONF_FILE                  "/mnt/ramdisk/env/.lnf_conf"
+#define DATA_LEN			4096
 
 typedef struct _wifi_securityModes
 {
@@ -1705,7 +1709,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
                 MODULE_NAME, __FUNCTION__, __LINE__, wificred->ssid, wificred->passphrase );
         return EPERM;
     }
-    while(get_WifiRadioStatus() != WIFI_CONNECTED && retry <= 30) {
+    while(get_WifiRadioStatus() != WIFI_CONNECTED && retry <= confProp.wifiProps.lnfRetryCount) {
         retry++; //max wait for 180 seconds
         if(bStopLNFWhileDisconnected)
         {
@@ -1715,8 +1719,8 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         sleep(1);
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Device not connected to wifi. waiting to connect... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
-    if(retry > 30) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Waited for 30seconds. Failed to connect. Abort \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    if(retry > confProp.wifiProps.lnfRetryCount) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Waited for %d seconds. Failed to connect. Abort \n", MODULE_NAME,__FUNCTION__, __LINE__, confProp.wifiProps.lnfRetryCount);
         return EPERM;
     }
 
@@ -2707,6 +2711,31 @@ void logs_Period2_Params()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
+
+int readValues(FILE *pFile, char *pToken, char *data)
+{
+    char buffer[DATA_LEN];
+    char *keyValue;
+    if(pFile == NULL)
+      return -1;
+    /* Search the token in the config txt file and copy the value */
+    fseek(pFile, 0, SEEK_SET);
+    while(fgets(buffer, DATA_LEN, pFile)!= NULL )
+    {
+        keyValue = strtok( buffer, "=" );
+        if(!(strcmp(keyValue, pToken)))
+        {
+          keyValue = strtok(NULL, "\n" );
+          if(keyValue != NULL)
+          {
+            strncpy(data, keyValue,strlen(keyValue));
+            data[strlen(keyValue)] = '\0'; // Adding '\0' is required if strncpy is used
+          }
+          break;
+        }
+    }
+}
+
 #ifdef ENABLE_LOST_FOUND
 #ifndef ENABLE_XCAM_SUPPORT
 /* get lfat from auth service */
@@ -2754,6 +2783,12 @@ int laf_get_lfat(laf_lfat_t *lfat)
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
 	int ret=0;
 	unsigned int tokenlength=0;
+        FILE *fd = NULL;
+        char version[MAX_VERSION_LEN];
+        char ttl[MAX_VERSION_LEN];
+        long value = 0;
+        char *eptr;
+
 	ret = get_token_length(tokenlength);
 	if(ret != 0) {
 		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "laf_get_lfat - Error in token read \n");
@@ -2767,8 +2802,42 @@ int laf_get_lfat(laf_lfat_t *lfat)
 	lfat->token[tokenlength] = '\0';
 	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token size is - %d\n",lfat->len);
 	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token is - %s\n",lfat->token);
-	strcpy(lfat->version, "1.0");
-	lfat->ttl = 31536000;
+
+        //Read lfat version and ttl from /mnt/ramdisk/env/.lnf_conf
+        if (0 == access(LFAT_CONF_FILE, F_OK)) {
+          memset(version,'\0', MAX_VERSION_LEN);
+          memset(ttl, '\0', MAX_VERSION_LEN);
+          fd = fopen(LFAT_CONF_FILE, "r");
+          if (fd != NULL) {
+            readValues(fd, LFAT_VERSION, version);
+            if(version != NULL){
+              strcpy(lfat->version, version);
+            }else{
+              strcpy(lfat->version, "1.1");
+            }
+
+            readValues(fd, LFAT_TTL, ttl);
+            if(ttl != NULL){
+              value = strtol(ttl, &eptr, 10);
+              lfat->ttl = value;
+            }else{
+              lfat->ttl = 31536000;
+            }
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %s\n",version, ttl);
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %ld\n",lfat->version, lfat->ttl);
+          }else{
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Unable to open lfat_conf file\n");
+          }
+          fclose(fd); 
+        }
+        else //If .lnf_conf file is not present
+        { 
+          // Read from netsrvmgr.conf 
+          strcpy(lfat->version, confProp.wifiProps.lfatVersion);
+          lfat->ttl = confProp.wifiProps.lfatTTL;
+          RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %ld\n",lfat->version, lfat->ttl);
+        }
+
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 	return ret;
 }
