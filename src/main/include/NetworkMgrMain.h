@@ -64,6 +64,9 @@ extern "C" {
 #define GET_LFAT_URL                    "GET_LFAT_URL"
 #define SET_LFAT_URL                    "SET_LFAT_URL"
 #define DISABLE_WPS_XRE			"disableWpsXRE"
+#define LFAT_VERSION			"LFAT_VERSION"
+#define LFAT_TTL			"LFAT_TTL"
+#define LAF_CONNECTION_RETRY            "LAF_CONNECTION_RETRY"
 
 #define WIFI_BCK_PATHNAME				"/opt/persistent/wifi"
 #define WIFI_BCK_FILENAME				"/opt/persistent/wifi/wifiConnectionInfo.json"
@@ -111,6 +114,9 @@ typedef struct  _wifiMgrConfigProps
     char getAuthTokenUrl[BUFFER_SIZE_128];
     char getLfatUrl[BUFFER_SIZE_128];
     char setLfatUrl[BUFFER_SIZE_128];
+    char lfatVersion[BUFFER_SIZE_128];
+    unsigned short lnfRetryCount;
+    unsigned int lfatTTL;
 } wifiMgrConfigProps;
 
 typedef struct  _netMgrConfigProps
