@@ -2067,10 +2067,21 @@ void connectToLAF()
     }
     else
     {
-      //Before starting nt_services - Ensure we call connectssid based on last saved ssid details.
+
 #ifdef ENABLE_XCAM_SUPPORT
-        //Boot time don't trigger lnf
-        set_WiFiStatusCode(WIFI_CONNECTED);
+        //check wifi status
+        WiFiHalStatus_t wifistatus = getwifiStatusCode();
+        if( WIFISTATUS_HAL_COMPLETED == wifistatus )  {
+            set_WiFiStatusCode(WIFI_CONNECTED);
+            //signal to monitor wifi status
+            pthread_mutex_lock(&mutexGo);
+            if(0 == pthread_cond_signal(&condGo)) {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            }
+            pthread_mutex_unlock(&mutexGo);
+        } else {
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
+        }
 #endif
         retVal=lastConnectedSSID(&savedWiFiConnList);
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
