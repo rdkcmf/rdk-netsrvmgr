@@ -255,6 +255,7 @@ int  WiFiNetworkMgr::Start()
 
 
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, getAvailableSSIDs);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, getAvailableSSIDsWithName);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync, getAvailableSSIDsAsync);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getCurrentState, getCurrentState);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setEnabled, setEnabled);
@@ -387,6 +388,51 @@ int  WiFiNetworkMgr::Stop()
  }
 
 #ifdef ENABLE_IARM
+IARM_Result_t WiFiNetworkMgr::getAvailableSSIDsWithName(void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
+    bool status = true;
+    char SSID[64] = {'\0'};
+    double frequency;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t *param = (IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t *)arg;
+
+    char jbuff[MAX_SSIDLIST_BUF] = {'\0'};
+    int jBuffLen = 0;
+
+#ifdef USE_RDK_WIFI_HAL
+    if(param != NULL && param->SSID != NULL)
+         strncpy(SSID,param->SSID,63);
+    if(param != NULL && param->frequency != NULL)
+         frequency = param->frequency;
+    status = scan_SpecificSSID_WifiAP(jbuff,(const char*)SSID,frequency);
+    jBuffLen = strlen(jbuff);
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Scan AP's SSID list buffer size : \"%d\"\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);
+#endif
+    if(status == false)
+    {
+        param->status = false;
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] No SSID available.\n", MODULE_NAME,__FUNCTION__, __LINE__);
+        return ret;
+    }
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] json Message length : [%d].\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);
+
+    if(jBuffLen)
+    {
+        strncpy(param->curSsids.jdata, jbuff, sizeof(param->curSsids.jdata));
+        param->curSsids.jdataLen = jBuffLen;
+        param->status = true;
+        ret = IARM_RESULT_SUCCESS;
+    }
+    else
+    {
+        param->status = false;
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
+
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
