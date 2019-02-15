@@ -39,6 +39,7 @@ public:
 #ifdef ENABLE_IARM
     static IARM_Result_t getPairedSSIDInfo(void *arg);
     static IARM_Result_t getAvailableSSIDs(void *arg);
+    static IARM_Result_t getAvailableSSIDsWithName(void *arg);
     static IARM_Result_t getAvailableSSIDsAsync(void *arg);
     static IARM_Result_t getCurrentState(void *arg);
     static IARM_Result_t setEnabled(void *arg);
