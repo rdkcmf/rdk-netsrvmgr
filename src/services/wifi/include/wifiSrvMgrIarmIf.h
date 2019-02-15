@@ -48,6 +48,7 @@
 
 /*IARM Interface for wifiManager_2 */
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName     "getAvailableSSIDsWithName"      /*!< Retrives the array of strings representing ssids info for a specifc ssid and band*/
 #define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync "getAvailableSSIDsAsync"/*!< Retrives the array of strings representing ssids*/
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
 #define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"		 /*!< Returns the properties of the currently connected SSID */
@@ -225,6 +226,13 @@ typedef struct _IARM_Bus_WiFiSrvMgr_SwitchPrivateResults_Param {
     wifiLnfPrivateResults_t switchPvtResults;
     bool status;
 } IARM_Bus_WiFiSrvMgr_SwitchPrivateResults_Param_t;
+
+typedef struct _IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t {
+        wifiSsidData_t curSsids;
+            bool status;
+            char SSID[SSID_SIZE+1];
+            double frequency;
+} IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t;
 
 
 typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {

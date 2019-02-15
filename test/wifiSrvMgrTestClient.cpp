@@ -49,9 +49,42 @@ enum {
 #endif
     Test_getConnectedSSID = 14,
     Test_getEndPointProps = 15,
+    Test_getAvailableSSIDsInfo = 16,
     Test_Max_Api,
 };
 
+static void WIFI_MGR_API_getAvailableSSIDsInfo()
+{
+#ifdef ENABLE_IARM
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    char ssid[64] = {'\0'};
+    double freq ;
+    IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t param;
+    memset(&param, 0, sizeof(param));
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+    printf("\nEnter SSID to get the info :");
+    scanf("%s",ssid);
+    printf("\nEnter the band to scan 2.4 / 5 / 0 :");
+    scanf("%lf",&freq);
+    strcpy(param.SSID,ssid);
+    param.frequency = freq;
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, (void *)&param, sizeof(IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, ((param.status)?"true":"false"));
+    printf("\n***********************************\n");
+
+    if(retVal == IARM_RESULT_SUCCESS && param.status)
+    {
+        printf("[\n[%s (with Message size: %d)]:\n %s \n '. \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, param.curSsids.jdataLen, param.curSsids.jdata);
+    }
+    else
+    {
+       printf("%s : \"Empty\" with message size: \'%d\'). \n", IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, param.curSsids.jdataLen);
+    }
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+}
 
 static void WIFI_MGR_API_getAvailableSSIDs()
 {
@@ -486,6 +519,7 @@ int main()
 #endif
         printf( "14. getConnectedSSID\n");
         printf( "15. getEndPointProps\n");
+        printf( "16. getAvailableSSIDsInfo\n");
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -496,6 +530,9 @@ int main()
         switch (input) {
         case Test_getAvailableSSIDs:
             WIFI_MGR_API_getAvailableSSIDs();
+            break;
+        case Test_getAvailableSSIDsInfo:
+            WIFI_MGR_API_getAvailableSSIDsInfo();
             break;
         case Test_getCurrentState:
             WIFI_MGR_API_getCurrentState();
