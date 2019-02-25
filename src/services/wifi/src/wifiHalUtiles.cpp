@@ -675,6 +675,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     static unsigned int switchLnf2Priv=0;
     static unsigned int switchPriv2Lnf=0;
     bool retVal = false;
+    int radioIndex = 0;
+    wifi_sta_stats_t stats;
 #ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
@@ -735,6 +737,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     switchLnf2Priv=0;
                 }
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
+                memset(&stats, 0, sizeof(wifi_sta_stats_t));
+                wifi_getStats(radioIndex, &stats);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d,%d,%d,%s\n",stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI,(int)stats.sta_LastDataDownlinkRate,(int)stats.sta_LastDataUplinkRate,stats.sta_BAND);
 #endif // ENABLE_XCAM_SUPPORT
             }
             else {
