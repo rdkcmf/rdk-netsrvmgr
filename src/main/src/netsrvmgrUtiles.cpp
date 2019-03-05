@@ -750,3 +750,24 @@ bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std:
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return false;
 }
+
+bool netSrvMgrUtiles::getScriptOutput(char *scriptPath,char *scriptOutput)
+{
+    FILE *file = NULL;
+    bool ret=false;
+    if(!(file = popen(scriptPath, "r")))
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] script failed %s \n", __FUNCTION__, __LINE__,scriptPath);
+        return ret;
+    }
+    if(fgets(scriptOutput,BUFFER_SIZE_SCRIPT_OUTPUT, file)!=NULL)
+    {
+        ret=true;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed in getting output from script %s \n", __FUNCTION__, __LINE__,scriptPath);
+    }
+    pclose(file);
+    return ret;
+}

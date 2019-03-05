@@ -46,6 +46,7 @@
 #define SYSTEM_COMMAND_SHELL_NOT_FOUND 127
 #define SYSTEM_COMMAND_SHELL_SUCESS 23
 #define SYSTEM_COMMAND_ERROR -1
+#define BUFFER_SIZE_SCRIPT_OUTPUT 512
 
 class EntryExitLogger
 {
@@ -80,6 +81,7 @@ bool getRouteInterfaceType(char* devname);
 bool chk_ipaddr_linklocal(const char *stbip,unsigned int family);
 bool currentActiveInterface(char *currentInterface);
 bool check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr);
+bool getScriptOutput(char *scriptPath,char *scriptOutput);
 }
 
 
