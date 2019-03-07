@@ -356,7 +356,18 @@ static bool read_ConfigProps()
                     {
                         strcpy(confProp.wifiProps.setLfatUrl,value);
                     }
-
+                    if(0 == strncasecmp(LFAT_VERSION, keys[key], strlen(keys[key]) ) )
+                    {
+                        strcpy(confProp.wifiProps.lfatVersion,value);
+                    }
+                    if(0 == strncasecmp(LFAT_TTL, keys[key], strlen(keys[key]) ) )
+                    {
+                        confProp.wifiProps.lfatTTL = atoi(value);
+                    }
+                    if(0 == strncasecmp(LAF_CONNECTION_RETRY, keys[key], strlen(keys[key]) ) )
+                    {
+                        confProp.wifiProps.lnfRetryCount = atoi(value);
+                    }
 #endif
                     if(0 == strncasecmp(AUTHSERVER_URL, keys[key], strlen(keys[key])))
                     {
