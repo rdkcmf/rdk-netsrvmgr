@@ -54,7 +54,7 @@ AM_CXXFLAGS += $(IARM_CFLAGS)
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
 	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) -lpthread -lcjson
 
-AM_LDFLAGS += $(IARM_LFLAGS) $(NLMONITOR_LINK)
+AM_LDFLAGS += $(IARM_LFLAGS) $(NLMONITOR_LINK) $(BREAKPAD_LFLAGS)
 
 if RDKWIFIHAL
 AM_LDFLAGS += -lwifihal
@@ -70,8 +70,8 @@ AM_LDFLAGS += -L$(RDK_SOURCE_PATH)/../opensource/lib/ -lrtMessage -ldataProvider
 endif
 endif
 
-AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
-AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS)
+AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) $(BREAKPAD_CFLAGS)
+AM_CPPFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) $(BREAKPAD_CFLAGS)
 
 # the list of header files that belong to the library (to be installed later)
 include_HEADERS =    $(top_srcdir)/src/services/wifi/include/wifiSrvMgrIarmIf.h \
