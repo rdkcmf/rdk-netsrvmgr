@@ -53,6 +53,8 @@ NLMONITOR_CFLAGS=" "
 NLMONITOR_LINK=" "
 YOCTO_FLAG=" "
 IS_YOCTO_ENABLED=" "
+BREAKPAD_CFLAGS=" "
+BREAKPAD_LFLAGS=" "
 
 AC_ARG_ENABLE([rdk-moca-hal],
         AS_HELP_STRING([--enable-rdk-moca-hal],[This will enable/disable rdk moca hal.]),
@@ -182,9 +184,20 @@ AC_ARG_ENABLE([yocto],
            ],
         [echo "yocto is disabled"])
 AM_CONDITIONAL([IS_YOCTO_ENABLED], [test x$IS_YOCTO_ENABLED = xtrue])
+AC_ARG_ENABLE([breakpad],
+		AS_HELP_STRING([--enable-breakpad],[enable breakpad support (default is no)]),
+		[
+			case "${enableval}" in
+        	 yes) BREAKPAD_CFLAGS="-DINCLUDE_BREAKPAD"
+                    BREAKPAD_LFLAGS="-lbreakpad_client";;
+        	 no) AC_MSG_ERROR([breakpad is disabled]) ;;
+        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-breakpad]) ;;
+        	 esac
+        	 ],
+    	    [echo "breakpad is disabled"])
+AC_SUBST(BREAKPAD_CFLAGS)
+AC_SUBST(BREAKPAD_LFLAGS)
 AC_SUBST(YOCTO_FLAG)
-
-
 AC_SUBST(RDKWIFIHAL)
 AC_SUBST(RDKMOCAHAL)
 AC_SUBST(LOSTFOUND)
