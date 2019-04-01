@@ -1052,6 +1052,98 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     return ret;
 }
 
+bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+#ifndef ENABLE_XCAM_SUPPORT
+    wifi_neighbor_ap_t *ssid_ap_array = NULL;
+    UINT ssid_ap_array_size = 0;
+    WIFI_HAL_FREQ_BAND band = WIFI_HAL_FREQ_BAN_NONE;
+    if(freq_in == 2.4)
+        band = WIFI_HAL_FREQ_BAND_24GHZ;
+    else if(freq_in == 5)
+        band = WIFI_HAL_FREQ_BAND_5GHZ;
+    else if (freq_in == 0 )
+        band = WIFI_HAL_FREQ_BAN_NONE;
+    else
+        return false;
+
+    bool ret = wifi_getSpecificSSIDInfo (SSID, band, &ssid_ap_array, &ssid_ap_array_size);
+
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] wifi_get wifi_getSpecificSSIDInfo returned %d, neighbor_ap_array_size %d\n",
+                    MODULE_NAME, __FUNCTION__, __LINE__, ret, ssid_ap_array_size);
+
+    if ((RETURN_OK != ret ) && ((NULL == ssid_ap_array) || (0 == ssid_ap_array_size)))
+        return false;
+
+    cJSON *rootObj = cJSON_CreateObject();
+    if (NULL == rootObj) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to create root json object.\n",  MODULE_NAME,__FUNCTION__, __LINE__);
+        return false;
+    }
+
+    cJSON *array_obj = NULL, *array_element = NULL;
+    char *ssid = NULL;
+    int signalStrength = 0;
+    double frequency = 0;
+    SsidSecurity encrptType = NET_WIFI_SECURITY_NONE;
+
+    cJSON_AddItemToObject(rootObj, "getAvailableSSIDsWithName", array_obj=cJSON_CreateArray());
+
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n*********** Start: SSID Scan List **************** \n");
+    for (int index = 0; index < ssid_ap_array_size; index++ )
+    {
+        ssid = ssid_ap_array[index].ap_SSID;
+        if (*ssid && (0 != strcmp (ssid, LNF_NON_SECURE_SSID)) && (0 != strcmp (ssid, LNF_SECURE_SSID)))
+        {
+            signalStrength = ssid_ap_array[index].ap_SignalStrength;
+            frequency = strtod(ssid_ap_array[index].ap_OperatingFrequencyBand, NULL);
+
+            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s] [%d] => SSID: %s | SignalStrength: %d | Frequency: %f | EncryptionMode: %s\n",
+                             MODULE_NAME, __FUNCTION__, index, ssid, signalStrength, frequency, ssid_ap_array[index].ap_EncryptionMode );
+
+            if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
+            {
+                /* The type of encryption the neighboring WiFi SSID advertises.*/
+                encrptType = get_wifiSecurityModeFromString((char *)ssid_ap_array[index].ap_EncryptionMode,NULL);
+            }
+            else
+            {
+                encrptType = get_wifiSecurityModeFromString((char *)ssid_ap_array[index].ap_SecurityModeEnabled,(char *)ssid_ap_array[index].ap_EncryptionMode);
+            }
+            cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
+            cJSON_AddStringToObject(array_element, "ssid", ssid);
+            cJSON_AddNumberToObject(array_element, "security", encrptType);
+            cJSON_AddNumberToObject(array_element, "signalStrength", signalStrength);
+            cJSON_AddNumberToObject(array_element, "frequency", frequency);
+        }
+    }
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n***********End: SSID Scan List **************** \n\n");
+
+
+    char *out = cJSON_PrintUnformatted(rootObj);
+    if (out)
+    {
+        strncpy(buffer, out, strlen(out)+1);
+    }
+
+    if(rootObj) cJSON_Delete(rootObj);
+
+    if(out) free(out);
+
+    if(ssid_ap_array)
+    {
+        RDK_LOG( RDK_LOG_DEBUG,LOG_NMGR, "[%s:%s:%d] malloc allocated = %d \n", MODULE_NAME,__FUNCTION__, __LINE__ , malloc_usable_size(ssid_ap_array));
+        free(ssid_ap_array);
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return true;
+#else    // ENABLE_XCAM_SUPPORT
+  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  return false;
+#endif   // ENABLE_XCAM_SUPPORT
+}
+
 bool scan_Neighboring_WifiAP(char *buffer)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
