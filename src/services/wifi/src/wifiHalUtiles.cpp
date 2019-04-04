@@ -290,7 +290,7 @@ void logMilestone(const char *msg_code)
 #ifdef ENABLE_IARM
 static IARM_Result_t WiFi_IARM_Bus_BroadcastEvent(const char *ownerName, IARM_EventId_t eventId, void *data, size_t len)
 {
-    if( !ethernet_on() )
+  //  if( !ethernet_on() )
         IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
 }
 #endif
