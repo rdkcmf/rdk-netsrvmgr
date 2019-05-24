@@ -1198,7 +1198,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if (wifi_getRadioIfName( radioIndex,  output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio ifname  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.name,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.name,BUFF_MIN,output_string);
     }
     else
     {
@@ -1243,7 +1243,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if (wifi_getRadioExtChannel( radioIndex,  output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio ext channel  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.extensionChannel,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.extensionChannel,BUFF_LENGTH_24,output_string);
     }
     else
     {
@@ -1252,7 +1252,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if (wifi_getRadioGuardInterval( radioIndex,  output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio guard is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.guardInterval,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.guardInterval,BUFF_LENGTH_24,output_string);
     }
     else
     {
@@ -1314,7 +1314,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if ( wifi_getRadioChannelsInUse(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio channels in use  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.channelsInUse,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.channelsInUse,BUFF_LENGTH_24,output_string);
     }
     else
     {
@@ -1323,7 +1323,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if ( wifi_getRadioOperatingChannelBandwidth(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] operating channel bandwith  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.operatingChannelBandwidth,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.operatingChannelBandwidth,BUFF_LENGTH_24,output_string);
     }
     else
     {
@@ -1332,7 +1332,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if(wifi_getRadioSupportedFrequencyBands(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Supported frequency band  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.supportedFrequencyBands,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.supportedFrequencyBands,BUFF_LENGTH_24,output_string);
     }
     else
     {
