@@ -97,6 +97,7 @@ static void logs_Period2_Params();
 #define LFAT_TTL                        "lfat_ttl"
 #define LFAT_CONF_FILE                  "/mnt/ramdisk/env/.lnf_conf"
 #define DATA_LEN			4096
+#define SCRIPT_FILE_TO_GET_DEVICE_ID    "/lib/rdk/getDeviceId.sh"
 
 typedef struct _wifi_securityModes
 {
@@ -2288,21 +2289,32 @@ bool isLAFCurrConnectedssid()
 bool getDeviceActivationState()
 {
 #ifndef ENABLE_XCAM_SUPPORT
+    char scriptOutput[BUFFER_SIZE_SCRIPT_OUTPUT] = {'\0'};
     unsigned int count=0;
     std::string str;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    if(! confProp.wifiProps.authServerURL)
-    {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Authserver URL is NULL \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-        return bDeviceActivated;
-    }
-    str.assign(confProp.wifiProps.authServerURL,strlen(confProp.wifiProps.authServerURL));
-    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Authserver URL is %s %s \n", MODULE_NAME,__FUNCTION__, __LINE__,confProp.wifiProps.authServerURL ,str.c_str());
-
     while(deviceID && !deviceID[0])
     {
-        CurlObject authServiceURL(str);
-        g_stpcpy(deviceID,authServiceURL.getCurlData());
+        if(access(SCRIPT_FILE_TO_GET_DEVICE_ID, F_OK ) != -1)
+        {
+            if(!netSrvMgrUtiles::getScriptOutput(SCRIPT_FILE_TO_GET_DEVICE_ID,scriptOutput))
+            {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in running device id script. \n", MODULE_NAME,__FUNCTION__, __LINE__);
+                return bDeviceActivated;
+            }
+            g_stpcpy(deviceID,scriptOutput);
+        }
+        else
+        {
+            if(! confProp.wifiProps.authServerURL)
+            {
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Authserver URL is NULL \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                return bDeviceActivated;
+            }
+            str.assign(confProp.wifiProps.authServerURL,strlen(confProp.wifiProps.authServerURL));
+            CurlObject authServiceURL(str);
+            g_stpcpy(deviceID,authServiceURL.getCurlData());
+        }
         if ((!deviceID && deviceID[0]) || (count >= 3))
             break;
         sleep(5);
