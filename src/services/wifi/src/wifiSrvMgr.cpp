@@ -724,10 +724,79 @@ IARM_Result_t WiFiNetworkMgr::isAutoSwitchToPrivateEnabled(void *arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
+
+/**
+ *   Convert Security mode to String based on the Broadband specification
+ *   Supported Security modes are 
+ *          None
+ *          WEP-64
+ *          WEP-128
+ *          WPA-Personal
+ *          WPA2-Personal
+ *          WPA-WPA2-Personal
+ *          WPA-Enterprise
+ *          WPA2-Enterprise
+ *          WPA-WPA2-Enterprise  
+ */
+bool convertSecurityModeToString(char* securityModeStr,SsidSecurity sec_mode)
+{
+   bool ret = true;
+
+   if(!securityModeStr)
+   {
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"securityModeStr is NULL, Failed to get Security mode string.\n");
+      ret = false;
+   }
+   else 
+   {
+      switch(sec_mode)
+      {
+         case NET_WIFI_SECURITY_WPA2_PSK_AES:
+            strncpy(securityModeStr,"WPA2-Personal",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA2_PSK_TKIP:
+            strncpy(securityModeStr,"WPA2-Personal",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA_PSK_AES:
+            strncpy(securityModeStr,"WPA-Personal",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA_PSK_TKIP:
+            strncpy(securityModeStr,"WPA-Personal",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES:
+            strncpy(securityModeStr,"WPA2-Enterprise",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP:
+            strncpy(securityModeStr,"WPA2-Enterprise",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA_ENTERPRISE_AES:
+            strncpy(securityModeStr,"WPA-Enterprise",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP:
+            strncpy(securityModeStr,"WPA-Enterprise",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WEP_64:
+            strncpy(securityModeStr,"WEP-64",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WEP_128:
+            strncpy(securityModeStr,"WEP-128",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_NONE:
+            strncpy(securityModeStr,"None",BUFF_LENGTH_32-1);
+            break;
+         default:
+            strncpy(securityModeStr,"None",BUFF_LENGTH_32-1);
+            break;
+      }
+   }
+   return ret;
+}
 IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
     bool retVal = false;
+    char securityModeString[BUFF_LENGTH_32];
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     memset(&param->data.getPairedSSIDInfo, '\0', sizeof(WiFiPairedSSIDInfo_t));
@@ -740,8 +809,9 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
         memcpy(param->data.getPairedSSIDInfo.ssid, ssid, SSID_SIZE);
         char *bssid = savedWiFiConnList.ssidSession.bssid;
         memcpy(param->data.getPairedSSIDInfo.bssid, bssid, BSSID_BUFF);
-        char *security = savedWiFiConnList.ssidSession.security;
-        memcpy(param->data.getPairedSSIDInfo.security, security, BUFF_LENGTH_64);
+        memset(securityModeString,0,BUFF_LENGTH_32);
+        convertSecurityModeToString(securityModeString,savedWiFiConnList.ssidSession.security_mode);
+        strncpy(param->data.getPairedSSIDInfo.security,securityModeString,BUFF_LENGTH_32-1);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSIDInfo SSID (%s) : BSSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid,bssid);
         param->status = true;
         ret = IARM_RESULT_SUCCESS;
