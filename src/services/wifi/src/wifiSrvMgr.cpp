@@ -58,6 +58,7 @@ extern bool bIsStopLNFWhileDisconnected;
 extern bool bAutoSwitchToPrivateEnabled;
 extern bool bSwitch2Private;
 #endif
+bool bStopProgressiveScanning;
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
 WiFiConnectionStatus savedWiFiConnList;
@@ -74,6 +75,7 @@ IARM_Bus_Daemon_SysMode_t sysModeParam;
 WiFiNetworkMgr* WiFiNetworkMgr::instance = NULL;
 bool WiFiNetworkMgr::instanceIsReady = false;
 pthread_mutex_t wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t wifiScanLock = PTHREAD_MUTEX_INITIALIZER;
 
 WiFiNetworkMgr::WiFiNetworkMgr() {}
 WiFiNetworkMgr::~WiFiNetworkMgr() { }
@@ -257,6 +259,8 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, getAvailableSSIDs);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, getAvailableSSIDsWithName);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync, getAvailableSSIDsAsync);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr, getAvailableSSIDsAsyncIncr);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning, stopProgressiveWifiScanning);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getCurrentState, getCurrentState);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setEnabled, setEnabled);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_connect, connect);
@@ -513,6 +517,161 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDsAsync(void *arg)
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_create(&getAvailableSSIDsPThread, &attr, getAvailableSSIDsThread, NULL);
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return IARM_RESULT_SUCCESS;
+}
+/**
+ * @brief Get Current time
+ *
+ * @param[in] Time spec timer
+ */
+void getCurrentTime(struct timespec *timer)
+{
+    clock_gettime(CLOCK_REALTIME, timer);
+}
+
+void getTimeValDiff(struct timespec *start, struct timespec *stop,
+                    struct timespec *timeDiff)
+{
+    if ((stop->tv_nsec - start->tv_nsec) < 0) {
+        timeDiff->tv_sec = stop->tv_sec - start->tv_sec - 1;
+        timeDiff->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
+    } else {
+        timeDiff->tv_sec = stop->tv_sec - start->tv_sec;
+        timeDiff->tv_nsec = stop->tv_nsec - start->tv_nsec;
+    }
+    return;
+}
+static IARM_Result_t scanAndBroadcastResults(bool moreData)
+{
+   IARM_Bus_WiFiSrvMgr_SsidList_Param_t param = {0};
+   IARM_Result_t ret = WiFiNetworkMgr::getAvailableSSIDs(&param);
+   if(ret == IARM_RESULT_SUCCESS)
+   {
+      RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] SSID List : [%s]\n", MODULE_NAME,__FUNCTION__, __LINE__, param.curSsids.jdata);
+      IARM_BUS_WiFiSrvMgr_EventData_t eventData;
+    
+      strncpy( eventData.data.wifiSSIDList.ssid_list, param.curSsids.jdata, MAX_SSIDLIST_BUF );
+      eventData.data.wifiSSIDList.ssid_list[MAX_SSIDLIST_BUF-1] = 0;
+      eventData.data.wifiSSIDList.more_data = moreData;
+
+      IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
+                                     IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDsIncr,
+                                     (void *)&eventData, sizeof(eventData));
+   }
+   else
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ret != IARM_RESULT_SUCCESS\n", MODULE_NAME,__FUNCTION__, __LINE__);
+   return ret;
+}
+
+void *getAvailableSSIDsIncrThread(void* arg)
+{
+   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+   int radioIndex = 0;
+   bool more_data = true;
+   struct timespec start, end,timeDiff;
+   bStopProgressiveScanning = false;
+   
+
+   // Scan for High priority 5GHz channels
+   RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 5GHz preferred channels...\n");
+   getCurrentTime(&start);
+   char freq_list[128] = "5785 5180 5220 5240 5805 5745 5200 5500 5825";
+   wifi_setRadioScanningFreqList(radioIndex, freq_list);
+   IARM_Result_t ret = scanAndBroadcastResults(more_data);
+   if(ret == IARM_RESULT_SUCCESS)
+   {
+      getCurrentTime(&end);
+      getTimeValDiff(&start,&end,&timeDiff);
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Successfully broadcasted scan results of 5GHz preferred channels in %ld.%09ld seconds.\n",(long)timeDiff.tv_sec,timeDiff.tv_nsec);
+   }
+   else 
+   {
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"Failed to broadcast 5GHz preferred scan results\n");
+   }
+   pthread_mutex_lock(&wifiScanLock);
+   if(bStopProgressiveScanning == true)
+   {
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"Progressive scanning stopped, Skipping further scanning..\n ");
+      pthread_mutex_unlock(&wifiScanLock);
+      goto exit_scan;
+   }
+   pthread_mutex_unlock(&wifiScanLock);
+
+   // Scan for 2.4GHz channels based on the dual-band capability
+   if(wif_getDualBandSupport() == true)
+   {
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 2.4GHz channels...\n");
+      getCurrentTime(&start);
+      memset(freq_list,0,128);
+      strcpy(freq_list,"2412 2417 2422 2427 2432 2437 2442 2447 2452 2457 2462");
+      wifi_setRadioScanningFreqList(radioIndex, freq_list);
+      ret = scanAndBroadcastResults(more_data);
+      if(ret == IARM_RESULT_SUCCESS)
+      {
+         getCurrentTime(&end);
+         getTimeValDiff(&start,&end,&timeDiff);
+         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Successfully broadcasted scan results of 2.4GHz channels in %ld.%09ld seconds.\n",(long)timeDiff.tv_sec,timeDiff.tv_nsec);
+      }
+      else
+      {
+         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"Failed to broadcast 2.4GHz scan results\n");
+      }
+   }
+
+   pthread_mutex_lock(&wifiScanLock);
+   if(bStopProgressiveScanning == true)
+   {
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"Progressive scanning stopped, Skipping further scanning..\n ");
+      pthread_mutex_unlock(&wifiScanLock);
+      goto exit_scan;
+   }
+   pthread_mutex_unlock(&wifiScanLock);
+
+   // Scan for Low priority 5GHz channels
+   RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 5GHz low priority channels...\n");
+   getCurrentTime(&start);
+   memset(freq_list,0,128);
+   strcpy(freq_list,"5260 5280 5300 5320 5520 5540 5560 5580 5600 5620 5640 5660 5680 5700 5720 5765");
+   wifi_setRadioScanningFreqList(radioIndex, freq_list);
+   more_data = false;
+   ret = scanAndBroadcastResults(more_data);
+   if(ret == IARM_RESULT_SUCCESS)
+   {
+      getCurrentTime(&end);
+      getTimeValDiff(&start,&end,&timeDiff);
+      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Successfully broadcasted scan results of 5GHz Non-preferred channels in %ld.%09ld seconds.\n",(long)timeDiff.tv_sec,timeDiff.tv_nsec);
+   }
+   else
+   {
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"Failed to broadcast 5GHz Non-preferred scan results\n");
+   }
+
+exit_scan:
+   // reset all scan frequency selection
+   wifi_setRadioScanningFreqList(radioIndex,"0");
+   return NULL;
+}
+
+IARM_Result_t WiFiNetworkMgr::stopProgressiveWifiScanning(void *arg)
+{
+   IARM_Result_t ret = IARM_RESULT_SUCCESS;
+   pthread_mutex_lock(&wifiScanLock);
+   bStopProgressiveScanning = true;
+   pthread_mutex_unlock(&wifiScanLock);
+   return ret;
+}
+
+IARM_Result_t WiFiNetworkMgr::getAvailableSSIDsAsyncIncr(void *arg)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    pthread_t getAvailableSSIDsIncrPThread;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(&getAvailableSSIDsIncrPThread, &attr, getAvailableSSIDsIncrThread, NULL);
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
