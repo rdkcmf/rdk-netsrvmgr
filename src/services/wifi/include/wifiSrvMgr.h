@@ -41,6 +41,8 @@ public:
     static IARM_Result_t getAvailableSSIDs(void *arg);
     static IARM_Result_t getAvailableSSIDsWithName(void *arg);
     static IARM_Result_t getAvailableSSIDsAsync(void *arg);
+    static IARM_Result_t getAvailableSSIDsAsyncIncr(void *arg);
+    static IARM_Result_t stopProgressiveWifiScanning(void *arg);
     static IARM_Result_t getCurrentState(void *arg);
     static IARM_Result_t setEnabled(void *arg);
     static IARM_Result_t connect(void *arg);
