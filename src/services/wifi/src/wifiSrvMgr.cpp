@@ -1,4 +1,5 @@
 /*
+
  * If not stated otherwise in this file or this component's Licenses.txt file the
  * following copyright and licenses apply:
  *
@@ -1344,6 +1345,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioSupportedFrequencyBands FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     memset(output_string,0,BUFF_MAX);
+    memset(freqBand,0,BUFF_MIN);
     if ( wifi_getRadioOperatingFrequencyBand(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] operating frequency band  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
         snprintf(param->data.radio.params.operatingFrequencyBand,BUFF_LENGTH_64,output_string);
@@ -1367,6 +1369,9 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioSupportedStandards FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
 
+    if(strncmp(freqBand,"5GHz",4) == 0)
+        actualRadioIndex = 1;
+
     if ( wifi_getRadioStandard(actualRadioIndex, output_string,NULL,NULL,NULL) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio standards  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
         snprintf(param->data.radio.params.operatingStandards,BUFF_MIN,output_string);
@@ -1376,9 +1381,9 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioStandard FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     memset(output_string,0,BUFF_MAX);
-    if ( wifi_getRadioPossibleChannels(radioIndex, output_string) == RETURN_OK) {
+    if ( wifi_getRadioPossibleChannels(actualRadioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio possible channels is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.possibleChannels,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.possibleChannels,BUFF_LENGTH_256,output_string);
     }
     else
     {
