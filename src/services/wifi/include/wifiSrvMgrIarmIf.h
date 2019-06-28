@@ -298,7 +298,7 @@ typedef struct _WiFi_Radio_Diag_Params {
     char operatingFrequencyBand[24];
     char supportedStandards[20];
     char operatingStandards[24];
-    char possibleChannels[24];
+    char possibleChannels[BUFF_LENGTH_256];
     char channelsInUse[24];
     unsigned int channel;
     bool autoChannelSupported;
