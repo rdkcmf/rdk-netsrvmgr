@@ -50,6 +50,8 @@ enum {
     Test_getConnectedSSID = 14,
     Test_getEndPointProps = 15,
     Test_getAvailableSSIDsWithName = 16,
+    Test_getAvailableSSIDsIncr = 17,
+    Test_stopProgressiveScanning = 18,
     Test_Max_Api,
 };
 
@@ -85,6 +87,44 @@ static void WIFI_MGR_API_getAvailableSSIDsWithName()
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 #endif
 }
+static void WIFI_MGR_API_stopProgressiveScanning()
+{
+#ifdef ENABLE_IARM
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_Bus_WiFiSrvMgr_Param_t param;
+
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    memset(&param, 0, sizeof(param));
+
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME,IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning, (void *)&param, sizeof(param));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning, ((retVal == IARM_RESULT_SUCCESS)?"true":"false"));
+    printf("\n***********************************\n");
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+
+}
+static void WIFI_MGR_API_getAvailableSSIDsIncr()
+{
+#ifdef ENABLE_IARM
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_Bus_WiFiSrvMgr_SsidList_Param_t param;
+    memset(&param, 0, sizeof(param));
+    int timeout = 5000;
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+    retVal = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr, (void *)&param, sizeof(IARM_Bus_WiFiSrvMgr_SsidList_Param_t),timeout);
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr, ((retVal == IARM_RESULT_SUCCESS)?"true":"false"));
+    printf("\n***********************************\n");
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+}
+
 
 static void WIFI_MGR_API_getAvailableSSIDs()
 {
@@ -521,6 +561,8 @@ int main()
         printf( "14. getConnectedSSID\n");
         printf( "15. getEndPointProps\n");
         printf( "16. getAvailableSSIDsWithName\n");
+        printf( "17. getAvailableSSIDsAsycIncr\n");
+        printf( "18. stopProgressiveWifiScanning\n");
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -579,6 +621,12 @@ int main()
             break;
         case Test_getEndPointProps:
             WIFI_MGR_API_getEndPointProps();
+            break;
+        case Test_getAvailableSSIDsIncr:
+            WIFI_MGR_API_getAvailableSSIDsIncr();
+            break;
+        case Test_stopProgressiveScanning:
+            WIFI_MGR_API_stopProgressiveScanning();
             break;
         default:
             loop = false;
