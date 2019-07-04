@@ -2050,7 +2050,7 @@ void *lafConnPrivThread(void* arg)
                 bIsStopLNFWhileDisconnected=false;
                 pthread_mutex_lock(&mutexTriggerLAF);
                 doLnFBackoff();
-                if (gWifiLNFStatus == CONNECTED_PRIVATE)
+                if ((gWifiLNFStatus == CONNECTED_PRIVATE) && (gWifiAdopterStatus == WIFI_CONNECTED))
                 {
                     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected to Private SSID already. Aborting requested LNF.\n",
                             MODULE_NAME, __FUNCTION__, __LINE__);
@@ -2059,6 +2059,7 @@ void *lafConnPrivThread(void* arg)
                 }
                 else
                 {
+                    setLNFState(LNF_IN_PROGRESS);
                     lnfReturnStatus = triggerLostFound(reqType);
                 }
                 pthread_mutex_unlock(&mutexTriggerLAF);
