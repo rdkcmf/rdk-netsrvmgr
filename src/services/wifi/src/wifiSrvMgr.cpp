@@ -1169,6 +1169,8 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     int output_INT = 0;
     unsigned long output_ulong = 0;
     int radioIndex=0;
+    char freqBand[BUFF_MIN] = {'\0'};
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
     IARM_BUS_WiFi_DiagsPropParam_t *param = (IARM_BUS_WiFi_DiagsPropParam_t *)arg;
@@ -1340,15 +1342,29 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     if ( wifi_getRadioOperatingFrequencyBand(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] operating frequency band  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
         snprintf(param->data.radio.params.operatingFrequencyBand,BUFF_LENGTH_64,output_string);
+        strncpy(freqBand,output_string,BUFF_MIN-1);
     }
     else
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioOperatingFrequencyBand FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
     memset(output_string,0,BUFF_MAX);
-    if ( wifi_getRadioStandard(radioIndex, output_string,NULL,NULL,NULL) == RETURN_OK) {
+    // Make sure that we are passing the correct Radio Index to wifi_hal
+    int actualRadioIndex = 0;
+    if(strncmp(freqBand,"5GHz",BUFF_MIN-1) == 0)
+        actualRadioIndex = 1;
+    
+    if ( wifi_getRadioSupportedStandards(actualRadioIndex, output_string) == RETURN_OK) {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio Supported standards  are %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
+        snprintf(param->data.radio.params.supportedStandards,BUFF_MIN,output_string);
+    }
+    else {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioSupportedStandards FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    }
+
+    if ( wifi_getRadioStandard(actualRadioIndex, output_string,NULL,NULL,NULL) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio standards  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.operatingStandards,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.operatingStandards,BUFF_MIN,output_string);
     }
     else
     {
