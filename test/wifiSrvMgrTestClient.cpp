@@ -388,11 +388,13 @@ static void WIFI_MGR_API_getConnectedSSID() {
 			\tBSSID : \"%s\"\n \
 			\tPhyRate : \"%f\"\n \
 			\tNoise : \"%f\" \n \
+                        \tBand : \"%s\"\n \
 			\tSignalStrength(rssi) : \"%f\" \n",
            param.data.getConnectedSSID.ssid, \
            param.data.getConnectedSSID.bssid, \
            param.data.getConnectedSSID.rate, \
            param.data.getConnectedSSID.noise, \
+           param.data.getConnectedSSID.band, \
            param.data.getConnectedSSID.signalStrength);
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
