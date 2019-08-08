@@ -200,6 +200,7 @@ typedef struct _WiFiConnectedSSIDInfo
 {
     char ssid[SSID_SIZE];		/* !< The name of connected SSID. */
     char bssid[BSSID_BUFF];   	        /* !< The the Basic Service Set ID (mac address). */
+    char band[BUFF_MIN];                /* !< The frequency band at which the client is conneted to. */
     float rate;				/* !< The Physical data rate in Mbps */
     float noise;			/* !< The average noise strength in dBm. */
     float signalStrength;		/* !< The RSSI value in dBm. */

@@ -1402,6 +1402,7 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     conSSIDInfo->rate = stats.sta_PhyRate;
     conSSIDInfo->noise = stats.sta_Noise;
     conSSIDInfo->signalStrength = stats.sta_RSSI;
+    strncpy((char *)conSSIDInfo->band,(const char *)stats.sta_BAND,(size_t)BUFF_MIN);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
     		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\"] \n",
