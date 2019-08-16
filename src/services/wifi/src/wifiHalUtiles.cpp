@@ -548,6 +548,7 @@ bool connect_WpsPush()
     bool ret = false;
     INT ssidIndex = 1;
     INT wpsStatus = RETURN_OK;
+    INT count=1;
 #ifdef ENABLE_IARM
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
@@ -556,12 +557,25 @@ bool connect_WpsPush()
 
     memset(&eventData, 0, sizeof(eventData));
 
-    if(WIFI_CONNECTING == get_WiFiStatusCode()) {
+/*    if(WIFI_CONNECTING == get_WiFiStatusCode()) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connecting to AP is in Progress..., please try after 120 seconds.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return ret;
-    }
+    }*/
 
-    if (WIFI_CONNECTED != get_WiFiStatusCode()) {
+//    if (WIFI_CONNECTED != get_WiFiStatusCode()) {
+
+// we have an issue in states where disconnect state is coming after connecting state so application
+// screens are getting messed up so to fix it we want make sure that disconnect is done before sending connecting state.
+        if (WIFI_CONNECTED == get_WiFiStatusCode())
+        {
+            wifi_disconnectEndpoint(1, wifiConnData.ssid);
+            usleep(100000);
+            while((WIFI_CONNECTED == get_WiFiStatusCode()) && count <= 30)
+            {
+                usleep(100000);
+                count++;
+            }
+        }
 
         set_WiFiConnectionType(WIFI_CON_WPS);
 
@@ -573,10 +587,10 @@ bool connect_WpsPush()
                      MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, wpsStatus);
             ret = true;
 
-            /*Generate Event for Connect State*/
+            /*Generate Event for Connect State
             eventData.data.wifiStateChange.state = WIFI_CONNECTING;
             set_WiFiStatusCode(WIFI_CONNECTING);
-            wifi_conn_type = WPS_PUSH_CONNECT;
+            wifi_conn_type = WPS_PUSH_CONNECT;*/
         }
         else
         {
@@ -584,9 +598,9 @@ bool connect_WpsPush()
                      MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, wpsStatus);
 
             eventData.data.wifiStateChange.state = WIFI_FAILED;
+            WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
         }
-        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
-    }
+#if 0
     else if (WIFI_CONNECTED == get_WiFiStatusCode())
     {
         /*If connected, do Disconnect first, the again re-connect to same or different AP.
@@ -643,6 +657,7 @@ bool connect_WpsPush()
         }
     }
 #endif
+#endif
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
@@ -682,7 +697,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_MAX;
     bool notify = false;
-    int xreReconnectReason = 19; //RECONNECT_REASON_WIFI_ACTIVATION
+    int xreReconnectReason=0;
     memset(&eventData, 0, sizeof(eventData));
 #endif
 
@@ -693,6 +708,29 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
+#ifdef ENABLE_IARM
+            notify = true;
+#endif
+#ifdef ENABLE_LOST_FOUND
+            if (! laf_is_lnfssid(ap_SSID))
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] savedWiFiConnList.ssidSession.ssid = %s ap_SSID = %s\n",MODULE_NAME,__FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid,ap_SSID);
+                if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
+                {
+                    storeMfrWifiCredentials();
+                    //bounce xre connection if we move from one private ssid to another ssid
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Moving from one SSID = %s  to another SSID = %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,savedWiFiConnList.ssidSession.ssid,ap_SSID);
+#ifndef ENABLE_XCAM_SUPPORT
+                    xreReconnectReason=20; //RECONNECT_REASON_WIFI_NETWORK_CHANGE
+                    if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
+                    {
+                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
+                    }
+#endif
+                }
+
+            }
+#endif
 #ifdef ENABLE_IARM
             notify = true;
 #if 0       /* Do not bounce for any network switch. Do it only from LF to private. */
@@ -720,8 +758,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enable LNF \n",__FUNCTION__, __LINE__ );
                     bStopLNFWhileDisconnected=false;
                 }
-                if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
-                    storeMfrWifiCredentials();
                 retVal = lastConnectedSSID(&savedWiFiConnList);
                 if(!retVal)
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -1983,10 +2019,10 @@ void *lafConnPrivThread(void* arg)
             {
                 if((bAutoSwitchToPrivateEnabled) || (bSwitch2Private))
                 {
-                    bSwitch2Private=false;
-                    if(gWifiLNFStatus == CONNECTED_LNF)
+                    if(bSwitch2Private == true)
                     {
                         reqType = LAF_REQUEST_SWITCH_TO_PRIVATE;
+                        bSwitch2Private=false;
                     }
                     else
                     {
@@ -2006,7 +2042,7 @@ void *lafConnPrivThread(void* arg)
 
                 if((gWifiAdopterStatus == WIFI_CONNECTED) && (false == isLAFCurrConnectedssid))
                 {
-                    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
                     setLNFState(CONNECTED_PRIVATE);
                     break;
                 }
@@ -2062,8 +2098,11 @@ void *lafConnPrivThread(void* arg)
                     }
                     else
                     {
-                        setLNFState(CONNECTED_PRIVATE);
-                        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
+                        if (gWifiLNFStatus == CONNECTED_PRIVATE)
+                        {
+                            setLNFState(CONNECTED_PRIVATE);
+                            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
+                        }
                     }
                     break;
                 }
@@ -2096,7 +2135,7 @@ void *lafConnThread(void* arg)
                 if (false == isLAFCurrConnectedssid)
                 {
                     setLNFState(CONNECTED_PRIVATE);
-                    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected through non LAF path\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected through non LAF path\n", MODULE_NAME,__FUNCTION__, __LINE__ );
                     bIsStopLNFWhileDisconnected=true;
                     bLnfActivationLoop=false;
                     return NULL;
@@ -2158,7 +2197,10 @@ void *lafConnThread(void* arg)
         bIsStopLNFWhileDisconnected=false;
         sleep(1);
         if((gWifiLNFStatus != CONNECTED_PRIVATE) && (false == isLAFCurrConnectedssid) && (gWifiAdopterStatus == WIFI_CONNECTED))
-                    gWifiLNFStatus=CONNECTED_PRIVATE;
+        {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] isLAFCurrConnectedssid = %d gWifiAdopterStatus = %d\n", MODULE_NAME,__FUNCTION__, __LINE__,isLAFCurrConnectedssid,gWifiAdopterStatus );
+            gWifiLNFStatus=CONNECTED_PRIVATE;
+        }
         if (true == bStopLNFWhileDisconnected)
         {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -2481,7 +2523,7 @@ bool storeMfrWifiCredentials(void)
         }
         else
         {
-            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] ssid info is different continue to store ssid %s new ssid %s \n",
+            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] ssid info is different continue to store ssid %s new ssid %s \n",
                     MODULE_NAME, __FUNCTION__, __LINE__, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
         }
     }
