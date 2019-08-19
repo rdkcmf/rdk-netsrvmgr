@@ -31,6 +31,10 @@
 #include "netlinkifc.h"
 #endif
 
+#ifdef INCLUDE_BREAKPAD
+#include <client/linux/handler/exception_handler.h>
+#endif
+
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
 
@@ -93,6 +97,15 @@ void NetworkMgr_SignalHandler (int sigNum)
     kill(getpid(), sigNum );
     exit(0);
 }
+
+#ifdef INCLUDE_BREAKPAD
+static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
+                        void* context,
+                        bool succeeded)
+{
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]breakpadDumpCallback: Netsrvmgr crashed ---- Dump path: %s\n", __FUNCTION__, __LINE__,descriptor.path());
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -169,6 +182,12 @@ int main(int argc, char *argv[])
 
 #else
     rdk_logger_init(debugConfigFile);
+#endif
+
+
+#ifdef INCLUDE_BREAKPAD
+    google_breakpad::MinidumpDescriptor descriptor("/opt/minidumps/");
+    google_breakpad::ExceptionHandler eh(descriptor, NULL, breakpadDumpCallback, NULL, true, -1);
 #endif
 
 #ifdef ENABLE_SD_NOTIFY
