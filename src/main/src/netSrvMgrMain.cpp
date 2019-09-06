@@ -29,6 +29,7 @@
 #include "netsrvmgrIarm.h"
 #ifdef ENABLE_NLMONITOR
 #include "netlinkifc.h"
+#include <sstream>
 #endif
 
 #ifdef INCLUDE_BREAKPAD
@@ -106,6 +107,94 @@ static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& desc
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]breakpadDumpCallback: Netsrvmgr crashed ---- Dump path: %s\n", __FUNCTION__, __LINE__,descriptor.path());
 }
 #endif
+
+#ifdef ENABLE_NLMONITOR
+const int DEFAULT_PRIORITY = 1024;
+const int MOCA_PRIORITY = 125;
+const int WIFI_PRIORITY = 150;
+const int MAX_DEFAULT_ROUTES_PER_INTERFACE = 20;
+
+static void defaultRouteCallback(string args)
+{
+    const char* debugConfigFile = NULL;
+    stringstream argStream(args);
+    std::string intermediateToken;
+
+    //Message Format: family interface destinationip  gatewayip preferred_src metric
+    vector<string> tokens;
+    while (getline(argStream,intermediateToken,' '))
+    {
+        tokens.push_back(intermediateToken);
+    }
+
+    if (tokens.size() < 6)
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Unexpected number of Tokens. Arguments received = %s\n", __FUNCTION__, __LINE__,args.c_str());
+	return;
+    }
+
+    char* wifi_iface = getenv("WIFI_INTERFACE");
+    char* moca_iface = getenv("MOCA_INTERFACE");
+    char* eth_iface  = getenv("ETHERNET_INTERFACE");
+
+    //wish string would set itself to empty string if we pass NULL pointer.
+    string wifi_iface_str = wifi_iface ? wifi_iface : "";
+    string moca_iface_str = moca_iface ? moca_iface : "";
+    string eth_iface_str = eth_iface ? eth_iface : "";
+
+    if ((tokens[1] != wifi_iface_str) && (tokens[1] != moca_iface_str) &&
+        (tokens[1] != eth_iface_str))
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Unrecognized interface %s\n", __FUNCTION__, __LINE__,tokens[1].c_str());
+	return;
+    }
+    if (!std::all_of(tokens.back().begin(), tokens.back().end(), ::isdigit))
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a Numerical value. Received Prority =%s\n", 
+	         __FUNCTION__, __LINE__,tokens[5].c_str());
+	return;
+    }
+    if (stoi(tokens.back()) != DEFAULT_PRIORITY)
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a default value. Received Prority =%s\n", 
+		__FUNCTION__, __LINE__,tokens[5].c_str());
+	return;
+    }
+
+    if (NetLinkIfc::get_instance()->userdefinedrouteexists(tokens[1],tokens[3],(unsigned int)stoul(tokens[0])))
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: User defined routes are present for Gateway : %s\n", __FUNCTION__, __LINE__,tokens[3].c_str());
+	return;
+    }
+
+    int priorityvalue = 0;
+    if ((tokens[1] == moca_iface_str ) || (tokens[1] == eth_iface_str))
+    {
+	priorityvalue = MOCA_PRIORITY;
+    }
+    else
+    {
+	priorityvalue = WIFI_PRIORITY;
+    }
+    int pririotystop = priorityvalue + MAX_DEFAULT_ROUTES_PER_INTERFACE;
+    for (;priorityvalue< pririotystop;++priorityvalue)
+    {
+	if (!NetLinkIfc::get_instance()->routeexists(tokens[1],tokens[3],(unsigned int)stoul(tokens[0]),priorityvalue))
+	{
+            break;
+	}
+
+    }
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Changing Route Protioy for interface %s, with gateway %s from %s to %d\n", 
+            __FUNCTION__, __LINE__,
+	    tokens[1].c_str(),tokens[3].c_str(),tokens[5].c_str(),priorityvalue);
+
+    NetLinkIfc::get_instance()->changedefaultroutepriority(tokens[1],tokens[3],
+		                                           (unsigned int)stoul(tokens[0]),
+							   (unsigned int)stoul(tokens.back()),
+							   priorityvalue);
+}
+#endif//ENABLE_NLMONITOR
 
 int main(int argc, char *argv[])
 {
@@ -244,6 +333,7 @@ void netSrvMgr_start()
 #ifdef ENABLE_NLMONITOR
     NetLinkIfc* netifc = NetLinkIfc::get_instance();
     netifc->initialize();
+    netifc->addSubscriber(new FunctionSubscriber(NlType::dfltroute,defaultRouteCallback));
     netifc->run(false);
 #endif
 #ifdef ENABLE_ROUTE_SUPPORT
