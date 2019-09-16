@@ -1971,7 +1971,6 @@ void *lafConnPrivThread(void* arg)
         pthread_mutex_lock(&mutexLAF);
         if(ret = pthread_cond_wait(&condLAF, &mutexLAF) == 0) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
-            setLNFState(LNF_IN_PROGRESS);
             pthread_mutex_unlock(&mutexLAF);
             if(bPrivConnectionLost)
             {
@@ -1996,6 +1995,7 @@ void *lafConnPrivThread(void* arg)
                 else
                 {
                     reqType = LAF_REQUEST_CONNECT_TO_LFSSID;
+                    setLNFState(LNF_IN_PROGRESS);
                 }
                 if (true == bStopLNFWhileDisconnected)
                 {
