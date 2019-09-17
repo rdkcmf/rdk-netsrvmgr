@@ -796,21 +796,22 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
     bool retVal = false;
     char securityModeString[BUFF_LENGTH_32];
-
+    WiFiConnectionStatus tmpSavedWiFiConnList;
+    memset(&tmpSavedWiFiConnList, '\0', sizeof(tmpSavedWiFiConnList));
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     memset(&param->data.getPairedSSIDInfo, '\0', sizeof(WiFiPairedSSIDInfo_t));
 #ifdef USE_RDK_WIFI_HAL
-    retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID(&tmpSavedWiFiConnList);
 #endif
     if( retVal == true )
     {
-        char *ssid = savedWiFiConnList.ssidSession.ssid;
+        char *ssid = tmpSavedWiFiConnList.ssidSession.ssid;
         memcpy(param->data.getPairedSSIDInfo.ssid, ssid, SSID_SIZE);
-        char *bssid = savedWiFiConnList.ssidSession.bssid;
+        char *bssid = tmpSavedWiFiConnList.ssidSession.bssid;
         memcpy(param->data.getPairedSSIDInfo.bssid, bssid, BSSID_BUFF);
         memset(securityModeString,0,BUFF_LENGTH_32);
-        convertSecurityModeToString(securityModeString,savedWiFiConnList.ssidSession.security_mode);
+        convertSecurityModeToString(securityModeString,tmpSavedWiFiConnList.ssidSession.security_mode);
         strncpy(param->data.getPairedSSIDInfo.security,securityModeString,BUFF_LENGTH_32-1);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSIDInfo SSID (%s) : BSSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid,bssid);
         param->status = true;
@@ -1040,6 +1041,8 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
     bool retVal = false;
 //    WiFiConnectionStatus currSsidInfo;
+    WiFiConnectionStatus tmpSavedWiFiConnList;
+    memset(&tmpSavedWiFiConnList, '\0', sizeof(tmpSavedWiFiConnList));
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
@@ -1050,11 +1053,11 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 
 //    if (currSsidInfo.ssidSession.ssid[0] != '\0')
 #ifdef USE_RDK_WIFI_HAL
-    retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID(&tmpSavedWiFiConnList);
 #endif
     if( retVal == true )
     {
-        char *ssid = savedWiFiConnList.ssidSession.ssid;
+        char *ssid = tmpSavedWiFiConnList.ssidSession.ssid;
 //        memcpy(param->data.getPairedSSID.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
         strncpy(param->data.getPairedSSID.ssid, ssid,SSID_SIZE);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSID SSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
@@ -1075,6 +1078,8 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
     bool retVal=false;
+    WiFiConnectionStatus tmpSavedWiFiConnList;
+    memset(&tmpSavedWiFiConnList, '\0', sizeof(tmpSavedWiFiConnList));
 //    WiFiConnectionStatus currSsidInfo;
 //    memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -1083,18 +1088,18 @@ IARM_Result_t WiFiNetworkMgr::isPaired(void *arg)
 
 //    get_CurrentSsidInfo(&currSsidInfo);
 #ifdef USE_RDK_WIFI_HAL
-    retVal=lastConnectedSSID(&savedWiFiConnList);
+    retVal=lastConnectedSSID(&tmpSavedWiFiConnList);
 #endif
 
-    int ssid_len = strlen(savedWiFiConnList.ssidSession.ssid);
+    int ssid_len = strlen(tmpSavedWiFiConnList.ssidSession.ssid);
 
     param->data.isPaired = (ssid_len) ? true : false; /*currSsidInfo.isConnected*/;
 
     if(param->data.isPaired) {
-        RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is Paired with \"%s\".\n", MODULE_NAME,__FUNCTION__, __LINE__, savedWiFiConnList.ssidSession.ssid);
+        RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is Paired with \"%s\".\n", MODULE_NAME,__FUNCTION__, __LINE__, tmpSavedWiFiConnList.ssidSession.ssid);
     }
     else {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] This is Not Paired with \"%s\".\n", MODULE_NAME,__FUNCTION__, __LINE__, savedWiFiConnList.ssidSession.ssid);
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] This is Not Paired with \"%s\".\n", MODULE_NAME,__FUNCTION__, __LINE__, tmpSavedWiFiConnList.ssidSession.ssid);
     }
     param->status = true;
 
