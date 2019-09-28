@@ -2007,6 +2007,11 @@ void *lafConnPrivThread(void* arg)
         pthread_mutex_lock(&mutexLAF);
         if(ret = pthread_cond_wait(&condLAF, &mutexLAF) == 0) {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+            if(gWifiLNFStatus != CONNECTED_LNF)
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n [%s:%s:%d] WifiLNFStatus = %d .Setting LNF state as in progress. \n",MODULE_NAME, __FUNCTION__, __LINE__,gWifiLNFStatus );
+                setLNFState(LNF_IN_PROGRESS);
+            }
             pthread_mutex_unlock(&mutexLAF);
             if(bPrivConnectionLost)
             {
