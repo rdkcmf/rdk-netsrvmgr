@@ -23,6 +23,10 @@
 #include "libIARMCore.h"
 #define MODULE_NAME "ROUTE_MODULE"
 
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 typedef struct _gwyDeviceData {
     GString* serial_num;
     GString* gwyip;
@@ -39,6 +43,7 @@ typedef struct _routeInfo
     GString* ipStr;
     GString* ipv6Pfix;
 } routeInfo;
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
 
 class RouteNetworkMgr
 {
@@ -76,7 +81,10 @@ private:
     static IARM_Result_t getCurrentRouteData(void *arg);
 };
 
-
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 #define IARM_BUS_ROUTE_MGR_API_getCurrentRouteData "getCurrentRouteData"
 typedef struct _routeEventData_t {
         char routeIp[46];
@@ -88,20 +96,74 @@ typedef struct _IARM_Bus_RouteSrvMgr_RouteData_Param_t {
     routeEventData_t route;
     bool status;
 } IARM_Bus_RouteSrvMgr_RouteData_Param_t;
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
 
+
+/**
+ * @addtogroup NETSRVMGR_APIS
+ * @{
+ */
+
+/**
+ * @brief This function is used to init thread attributes and create thread to send route data event.
+ */
 void sendDefaultGatewayRoute();
+
+/**
+ * @brief Thread function handles the current route data by identifying appropriate IP mode to send route data event.
+ * This functions sends event to IARM client, so that listeners are notified by this event.
+ */
 void* sendDefaultGatewayRouteThrd(void* arg);
+
+/**
+ * @brief This function is used to init thread attributes and create thread to get route data.
+ */
 void getGatewayRouteData();
 static void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+
+/**
+ * @brief When there is a new gateway data, this thread function used IARM Bus call to get XUPNP device information.
+ * Received gateway results would be parsed and append the gateway route data to the route list.
+ */
 void* getGatewayRouteDataThrd(void* arg);
+
+/**
+ * @brief This will check whether the input IP Address is a valid IPv4 or IPv6 address.
+ *
+ * @param[in] ipAddress IP Address in string format.
+ *
+ * @return Returns TRUE if IP address is valid else returns FALSE.
+ */
 gboolean checkvalidip( char* ipAddress);
+
+/**
+ * @brief This function will check whether a Host name is valid by validating all the associated IP addresses.
+ *
+ * @param[in] hostname Host name represented as a string.
+ *
+ * @return Returns TRUE if host name is valid else returns FALSE.
+ */
 gboolean checkvalidhostname( char* hostname);
+
+/**
+ * @brief This function is used to check whether the input IP Address belongs to IPv4 or IPv6 address.
+ *
+ * @param[in] v6Prefix IP prefix string.
+ *
+ * @return Returns TRUE if version 6 prefix is valid, Otherwise it belongs to IPV4 so returns FALSE.
+ */
 bool checkIpMode(char *v6Prefix);
+/** @} */  //END OF GROUP NETSRVMGR_APIS
+
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 typedef enum _NetworkManager_Route_EventId_t {
         IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA = 10,
         IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_MAX,
 } IARM_Bus_NetworkManager_Route_EventId_t;
-
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
 // xupnp dependency
 
 #define  _IARM_XUPNP_NAME							"XUPnP" /*!< Method to Get the Xupnp Info */
