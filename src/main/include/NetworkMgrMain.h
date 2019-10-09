@@ -49,6 +49,10 @@ extern "C" {
 #include "libIARM.h"
 #endif
 
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
 #define LOG_NMGR "LOG.RDK.NETSRVMGR"
@@ -124,4 +128,5 @@ typedef struct  _netMgrConfigProps
     wifiMgrConfigProps wifiProps;
 } netMgrConfigProps;
 
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
 #endif /* _NETWORKMGRMAIN_H_ */

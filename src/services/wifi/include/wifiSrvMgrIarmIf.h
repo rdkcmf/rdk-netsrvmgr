@@ -25,6 +25,10 @@
 #include "libIARM.h"
 #endif
 
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 #define MODULE_NAME "WIFI_MODULE"
 #define SUB_MODULE_NAME "LNF"
 #define MAX_FILE_PATH_LEN       4096
@@ -48,60 +52,61 @@
 #define LNF_SECURE_SSID "D375C1D9F8B041E2A1995B784064977B"
 
 /*IARM Interface for wifiManager_2 */
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /*!< Retrives the array of strings representing ssids*/
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName     "getAvailableSSIDsWithName"      /*!< Retrives the array of strings representing ssids info for a specifc ssid and band*/
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync "getAvailableSSIDsAsync"/*!< Retrives the array of strings representing ssids*/
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr "getAvailableSSIDsAsyncIncr"/*!< Retrives the array of strings representing ssids in incremental way*/
-#define IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning "stopProgressiveWifiScanning"  /*!< Stop any in-prpogress wifi progressive scanning thread*/
-#define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /*!< Retrives the current state*/
-#define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"		 /*!< Returns the properties of the currently connected SSID */
-#define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Returns the paired ssid as a string*/
-#define IARM_BUS_WIFI_MGR_API_setEnabled            "setEnabled"             /*!< Enable the wifi adapter on the box*/
-#define IARM_BUS_WIFI_MGR_API_connect               "connect"                /*!< Connect with given or saved ssid and passphrase */
-#define IARM_BUS_WIFI_MGR_API_initiateWPSPairing    "initiateWPSPairing"     /*!< Initiates the connection via WPS*/
-#define IARM_BUS_WIFI_MGR_API_saveSSID              "saveSSID"               /*!< Save the ssid and passphrase */
-#define IARM_BUS_WIFI_MGR_API_clearSSID             "clearSSID"              /*!< Clear the given ssid*/
-#define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /*!< Get the paired SSID */
-#define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /*!< Retrieve the paired status*/
-#define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"        /*!< Retrives the LNF state*/
-#define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected          "isStopLNFWhileDisconnected" 		/*!< Check if LNF is stopped */
-#define IARM_BUS_WIFI_MGR_API_getConnectionType     "getConnectionType"        /*!< Retrives the current state*/
-#define IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults        "getSwitchToPrivateResults" 		/*!< get all switch to private results*/
-#define IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled          "isAutoSwitchToPrivateEnabled" 		/*!< informs whether switch to private is enabled */
-#define IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo          "getPairedSSIDInfo" 		/*!< get last paired ssid info */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /**< Retrives the array of strings representing ssids */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName     "getAvailableSSIDsWithName"      /**< Retrives the array of strings representing ssids info for a specifc ssid and band */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync "getAvailableSSIDsAsync"    /**< Retrives the array of strings representing ssids */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr "getAvailableSSIDsAsyncIncr"    /**< Retrives the array of strings representing ssids in incremental way */
+#define IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning "stopProgressiveWifiScanning"    /**< Stop any in-prpogress wifi progressive scanning thread */
+#define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /**< Retrives the current state */
+#define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"       /**< Returns the properties of the currently connected SSID */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /**< Returns the paired ssid as a string */
+#define IARM_BUS_WIFI_MGR_API_setEnabled            "setEnabled"             /**< Enable the wifi adapter on the box */
+#define IARM_BUS_WIFI_MGR_API_connect               "connect"                /**< Connect with given or saved ssid and passphrase */
+#define IARM_BUS_WIFI_MGR_API_initiateWPSPairing    "initiateWPSPairing"     /**< Initiates the connection via WPS */
+#define IARM_BUS_WIFI_MGR_API_saveSSID              "saveSSID"               /**< Save the ssid and passphrase */
+#define IARM_BUS_WIFI_MGR_API_clearSSID             "clearSSID"              /**< Clear the given ssid */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /**< Get the paired SSID */
+#define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /**< Retrieve the paired status */
+#define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"            /**< Retrives the LNF state */
+#define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected          "isStopLNFWhileDisconnected"    /**< Check if LNF is stopped */
+#define IARM_BUS_WIFI_MGR_API_getConnectionType     "getConnectionType"    /**< Retrives the current state */
+#define IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults        "getSwitchToPrivateResults"    /**< get all switch to private results */
+#define IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled          "isAutoSwitchToPrivateEnabled"    /**< informs whether switch to private is enabled */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo          "getPairedSSIDInfo"    /**< get last paired ssid info */
 
 
 /*Diagnostic Apis */
-#define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /*!< Retrieve the get radio status properties*/
-#define IARM_BUS_WIFI_MGR_API_getRadioStatsProps    "getRadioStatsProps"      /*!< Retrieve the get radio stats properties*/
-#define IARM_BUS_WIFI_MGR_API_setRadioProps         "setRadioProps"           /*!< Set radio properties*/
-#define IARM_BUS_WIFI_MGR_API_getSSIDProps          "getSSIDProps"            /*!< Retrieve the ssid properties*/
-#define IARM_BUS_WIFI_MGR_API_getEndPointProps      "getEndPointProps"        /*!< Retrieve the Endpoint properties*/
+#define IARM_BUS_WIFI_MGR_API_getRadioProps         "getRadioProps"           /**< Retrieve the get radio status properties */
+#define IARM_BUS_WIFI_MGR_API_getRadioStatsProps    "getRadioStatsProps"      /**< Retrieve the get radio stats properties */
+#define IARM_BUS_WIFI_MGR_API_setRadioProps         "setRadioProps"           /**< Set radio properties */
+#define IARM_BUS_WIFI_MGR_API_getSSIDProps          "getSSIDProps"            /**< Retrieve the ssid properties */
+#define IARM_BUS_WIFI_MGR_API_getEndPointProps      "getEndPointProps"        /**< Retrieve the Endpoint properties */
 
 #ifdef WIFI_CLIENT_ROAMING
-#define IARM_BUS_WIFI_MGR_API_getRoamingCtrls       "getRoamingCtrls"        /* !< Retrieve the Roaming Controls */
-#define IARM_BUS_WIFI_MGR_API_setRoamingCtrls       "setRoamingCtrls"        /* !< set the Roaming Controls */
+#define IARM_BUS_WIFI_MGR_API_getRoamingCtrls       "getRoamingCtrls"        /**< Retrieve the Roaming Controls */
+#define IARM_BUS_WIFI_MGR_API_setRoamingCtrls       "setRoamingCtrls"        /**< set the Roaming Controls */
 #endif
 /*! Event states associated with WiFi connection  */
 typedef enum _WiFiStatusCode_t {
-    WIFI_UNINSTALLED,						/* !< The device was in an installed state, and was uninstalled	*/
-    WIFI_DISABLED,							/* !< The device is installed (or was just installed) and has not yet been enabled*/
-    WIFI_DISCONNECTED,						/* !< The device is not connected to a network */
-    WIFI_PAIRING,							/* !< The device is not connected to a network, but not yet connecting to a network*/
-    WIFI_CONNECTING,						/* !< The device is attempting to connect to a network */
-    WIFI_CONNECTED,							/* !< The device is successfully connected to a network */
-    WIFI_FAILED								/* !< The device has encountered an unrecoverable error with the wifi adapter */
+    WIFI_UNINSTALLED,        /**< The device was in an installed state, and was uninstalled */
+    WIFI_DISABLED,           /**< The device is installed (or was just installed) and has not yet been enabled */
+    WIFI_DISCONNECTED,       /**< The device is not connected to a network */
+    WIFI_PAIRING,            /**< The device is not connected to a network, but not yet connecting to a network */
+    WIFI_CONNECTING,         /**< The device is attempting to connect to a network */
+    WIFI_CONNECTED,          /**< The device is successfully connected to a network */
+    WIFI_FAILED              /**< The device has encountered an unrecoverable error with the wifi adapter */
 } WiFiStatusCode_t;
 
 /*! LNF states  */
 typedef enum _WiFiLNFStatusCode_t {
-    LNF_UNITIALIZED,  // Network manager hasn't started the LNF process
-    LNF_IN_PROGRESS, // Network manager has started LNF, and waiting for operation to complete
-    CONNECTED_LNF, // Connected to the LNF network
-    CONNECTED_PRIVATE, // Connected to a network that is not LNF
-    DISCONNECTED_NO_LNF_GATEWAY_DETECTED, // unable to connect to LNF network
-    DISCONNECTED_GET_LFAT_FAILED, // client wasn't able to acquire an LFAT
-    DISCONNECTED_CANT_CONNECT_TO_PRIVATE // client could obtain LFAT, but couldn't connect to private network                                                       /* !< The device has encountered an unrecoverable error with the wifi adapter */
+    LNF_UNITIALIZED,                       /**< Network manager hasn't started the LNF process */
+    LNF_IN_PROGRESS,                       /**< Network manager has started LNF, and waiting for operation to complete */
+    CONNECTED_LNF,                         /**< Connected to the LNF network */
+    CONNECTED_PRIVATE,                     /** Connected to a network that is not LNF */
+    DISCONNECTED_NO_LNF_GATEWAY_DETECTED,  /**< unable to connect to LNF network */
+    DISCONNECTED_GET_LFAT_FAILED,          /**< client wasn't able to acquire an LFAT */
+    DISCONNECTED_CANT_CONNECT_TO_PRIVATE // client could obtain LFAT, but couldn't connect to private network */
+                    /**< The device has encountered an unrecoverable error with the wifi adapter */
 } WiFiLNFStatusCode_t;
 
 typedef enum _WiFiConnectionTypeCode_t {
@@ -116,14 +121,14 @@ typedef enum _WiFiConnectionTypeCode_t {
 /*! Error code: A recoverable, unexpected error occurred,
  * as defined by one of the following values */
 typedef enum _WiFiErrorCode_t {
-    WIFI_SSID_CHANGED,              /* !< The SSID of the network changed */
-    WIFI_CONNECTION_LOST,           /* !< The connection to the network was lost */
-    WIFI_CONNECTION_FAILED,         /* !< The connection failed for an unknown reason */
-    WIFI_CONNECTION_INTERRUPTED,    /* !< The connection was interrupted */
-    WIFI_INVALID_CREDENTIALS,       /* !< The connection failed due to invalid credentials */
-    WIFI_NO_SSID,                   /* !< The SSID does not exist */
-    WIFI_UNKNOWN,                   /* !< Any other error */
-    WIFI_AUTH_FAILED                /* !< The connection failed due to auth failure */
+    WIFI_SSID_CHANGED,              /**< The SSID of the network changed */
+    WIFI_CONNECTION_LOST,           /**< The connection to the network was lost */
+    WIFI_CONNECTION_FAILED,         /**< The connection failed for an unknown reason */
+    WIFI_CONNECTION_INTERRUPTED,    /**< The connection was interrupted */
+    WIFI_INVALID_CREDENTIALS,       /**< The connection failed due to invalid credentials */
+    WIFI_NO_SSID,                   /**< The SSID does not exist */
+    WIFI_UNKNOWN,                   /**< Any other error */
+    WIFI_AUTH_FAILED                /**< The connection failed due to auth failure */
 } WiFiErrorCode_t;
 
 /*! Supported values are NONE - 0, WPA - 1, WEP - 2*/
@@ -160,13 +165,13 @@ typedef struct _ssidList
 
 
 typedef struct _wifiSsidData_t {
-    char jdata[MAX_SSIDLIST_BUF];                    		/**< Buffer containing the serialized data.                      */
-    size_t jdataLen;                      	/**< Length of the data buffer.                                  */
+    char jdata[MAX_SSIDLIST_BUF];    /**< Buffer containing the serialized data. */
+    size_t jdataLen;                 /**< Length of the data buffer. */
 } wifiSsidData_t;
 
 typedef struct _wifiLnfPrivateResults {
-    char jdata[MAX_SSIDLIST_BUF];                    		/**< Buffer containing the serialized data.                      */
-    size_t jdataLen;                      	/**< Length of the data buffer.                                  */
+    char jdata[MAX_SSIDLIST_BUF];    /**< Buffer containing the serialized data */
+    size_t jdataLen;                 /**< Length of the data buffer. */
 } wifiLnfPrivateResults_t;
 
 typedef struct _setWiFiAdapter
@@ -198,20 +203,20 @@ typedef struct _WiFiConnectionStatus
 
 typedef struct _WiFiConnectedSSIDInfo
 {
-    char ssid[SSID_SIZE];		/* !< The name of connected SSID. */
-    char bssid[BSSID_BUFF];   	        /* !< The the Basic Service Set ID (mac address). */
-    char band[BUFF_MIN];                /* !< The frequency band at which the client is conneted to. */
-    float rate;				/* !< The Physical data rate in Mbps */
-    float noise;			/* !< The average noise strength in dBm. */
-    float signalStrength;		/* !< The RSSI value in dBm. */
-    float avgSignalStrength;            /* !< The Average RSSI value in dBm. */
+    char ssid[SSID_SIZE];     /**< The name of connected SSID. */
+    char bssid[BSSID_BUFF];   /**< The the Basic Service Set ID (mac address). */
+    char band[BUFF_MIN];      /**< The frequency band at which the client is conneted to. */
+    float rate;               /**< The Physical data rate in Mbps */
+    float noise;              /**< The average noise strength in dBm. */
+    float signalStrength;     /**< The RSSI value in dBm. */
+    float avgSignalStrength;  /**< The Average RSSI value in dBm. */
 } WiFiConnectedSSIDInfo_t;
 
 typedef struct _WiFiPairedSSIDInfo
 {
-    char ssid[SSID_SIZE];		/* !< The name of connected SSID. */
-    char bssid[BSSID_BUFF];		/* !< The the Basic Service Set ID (mac address). */
-    char security[BUFF_LENGTH_64];	/* !< security of AP */
+    char ssid[SSID_SIZE];      /**< The name of connected SSID. */
+    char bssid[BSSID_BUFF];    /**< The the Basic Service Set ID (mac address). */
+    char security[BUFF_LENGTH_64];    /**< security of AP */
 } WiFiPairedSSIDInfo_t;
 
 typedef struct _WiFiLnfSwitchPrivateResults
@@ -428,5 +433,7 @@ typedef struct _WiFi_RoamingCtrl_t {
         int postAssnAPcontrolTimeframe;
     
 } WiFi_RoamingCtrl_t;
+
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
 #endif
 #endif
