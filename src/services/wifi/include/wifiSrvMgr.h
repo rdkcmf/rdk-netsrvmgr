@@ -26,7 +26,6 @@
 #include "libIARM.h"
 #endif
 
-
 class WiFiNetworkMgr/*: public NetworkMedium*/
 {
 public:
@@ -80,7 +79,39 @@ private:
     virtual ~WiFiNetworkMgr();
 
 #ifndef ENABLE_XCAM_SUPPORT
+/**
+ * @addtogroup NETSRVMGR_APIS
+ * @{
+ */
+
+/**
+ * @brief This function 1. Extract "SSID", "BSSID", "Password", "Security" from specified netapp_db_file.
+ * 2. Write into specified wpa_supplicant_conf_file in following format:
+ *        network={
+ *            ssid="<SSID>"
+ *            scan_ssid=1
+ *            bssid=<BSSID>
+ *            psk="<Password"
+ *            key_mgmt=<Security>
+ *            auth_alg=OPEN
+ *            }
+ *    example:
+ *        network={
+ *            ssid="tukken-axb3-5GHz"
+ *            scan_ssid=1
+ *            bssid=5C:B0:66:00:4D:10
+ *            psk="Comcast2015"
+ *            key_mgmt=Wpa2PskAes
+ *            auth_alg=OPEN
+ *            }
+ *
+ * @param[in] wpa_supplicant_conf_file    WPA supplicant configuration file to be created.
+ * @param[in] netapp_db_file              NetAPP DB file to query configuration information.
+ *
+ * @return  Returns 0 if successfully created wpa_supplicant_conf_file, Otherwise 1.
+ */
     int create_wpa_supplicant_conf_from_netapp_db (const char* wpa_supplicant_conf_file, const char* netapp_db_file);
+/** @} */  //END OF GROUP NETSRVMGR_APIS
 #endif // ENABLE_XCAM_SUPPORT
 
     static bool m_isenabled;

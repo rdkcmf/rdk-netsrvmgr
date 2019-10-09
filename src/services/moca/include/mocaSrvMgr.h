@@ -36,7 +36,21 @@ private:
     static MocaNetworkMgr* instance;
 };
 
+/**
+ * @addtogroup NETSRVMGR_APIS
+ * @{
+ */
+
+/**
+ * @brief Initializes a thread to retrieve and send MoCA related telemetry data.
+ */
 void startMocaTelemetry();
+
+/**
+ * @brief This Thread function prints the statistics information on MOCA interface if the MOCA link is up.
+ */
 void *mocaTelemetryThread(void* arg);
 static void _mocaEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 static void eventCallback(const enum RMH_Event event, const struct RMH_EventData *eventData, void* userContext);
+
+/** @} */  //END OF GROUP NETSRVMGR_APIS

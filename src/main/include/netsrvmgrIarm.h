@@ -40,6 +40,10 @@
 #ifndef _NETSRVMGRIARM_H_
 #define _NETSRVMGRIARM_H_
 
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 #define INTERFACE_SIZE 10
 #define INTERFACE_LIST 50
@@ -74,6 +78,8 @@ typedef struct _IARM_BUS_NetSrvMgr_Iface_EventData_t {
    char interfaceCount;
    bool isInterfaceEnabled;
 } IARM_BUS_NetSrvMgr_Iface_EventData_t;
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
+
 #endif /* _NETSRVMGRIARM_H_ */
 
 /** @} */
