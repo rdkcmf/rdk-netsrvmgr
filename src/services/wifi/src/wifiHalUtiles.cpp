@@ -89,6 +89,10 @@ static void logs_Period1_Params();
 static void logs_Period2_Params();
 #endif
 
+#ifdef ENABLE_NLMONITOR
+#include "netlinkifc.h"
+#endif //ENABLE_NLMONITOR
+
 #define RDK_ASSERT_NOT_NULL(P)          if ((P) == NULL) return EINVAL
 #define SECURITY_MODE_WPA_EAP           "WPA-EAP"
 #define SECURITY_MODE_WPA_PSK           "WPA-PSK"
@@ -727,8 +731,28 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
                     }
 #endif
+#ifdef ENABLE_NLMONITOR
+                   char const* intface=getenv("WIFI_INTERFACE");
+                   if(intface != NULL)
+                   {
+                       std::string ifcStr(intface);
+                       //cleanup Global IPv6s assigned.
+                       NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
+                       NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
+                       RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Clearing ipv6 ip and routes .\n",__FUNCTION__, __LINE__);
+                       std::string enableV6 = "/lib/rdk/enableIpv6Autoconf.sh ";
+                       enableV6 += ifcStr;  //adding interface
+                       enableV6 += " &";
+#ifdef YOCTO_BUILD
+                       v_secure_system(enableV6.c_str());
+#else
+                       system(enableV6.c_str());
+#endif
+                   }
+                   else
+                       RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No WiFi interface .\n",__FUNCTION__, __LINE__);
+#endif
                 }
-
             }
 #endif
 #ifdef ENABLE_IARM
