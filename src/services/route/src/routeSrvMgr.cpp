@@ -87,7 +87,7 @@ int  RouteNetworkMgr::Start()
     IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME,IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE,_evtHandler);
     IARM_Bus_RegisterCall(IARM_BUS_ROUTE_MGR_API_getCurrentRouteData, getCurrentRouteData);
 
-#ifdef ENABLE_NLMONITOR
+
     //Check to see the preferred Gateway contents.
     std::ifstream cfgFile(PREFERRED_GATEWAY_FILE);
     std::string prefgw;
@@ -97,10 +97,11 @@ int  RouteNetworkMgr::Start()
        if (prefgw == "XB3")
        {
           xb3Selected = true;
+          RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Preferred Gateway is XB \n", MODULE_NAME,__FUNCTION__, __LINE__ );
        }
        cfgFile.close();
     }
-#endif
+
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
@@ -269,9 +270,12 @@ void* getGatewayRouteDataThrd(void* arg)
         {
             if (!upnpGwyLost)
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
-                netSrvMgrUtiles::triggerDhcpLease();
-                upnpGwyLost=true;
+                if (!xb3Selected)
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Triggering dhcp lease since no XG gateway  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+                    netSrvMgrUtiles::triggerDhcpLease();
+                    upnpGwyLost=true;
+                }
             }
 #ifdef ENABLE_NLMONITOR
             //Clear out /tmp/resolv.dnsmasq.upnp
