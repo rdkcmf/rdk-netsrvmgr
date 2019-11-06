@@ -771,7 +771,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
 #ifdef ENABLE_LOST_FOUND
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
-            strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
+            strncpy(wifiConnData.ssid, ap_SSID, sizeof(wifiConnData.ssid));
+            wifiConnData.ssid[SSID_SIZE-1] = '\0';
             if (! laf_is_lnfssid(ap_SSID))
             {
                 logMilestone("PWIFI_CONNECTED");
@@ -835,8 +836,8 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         } else if (ACTION_ON_DISCONNECT == action) {
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
-            strncpy(wifiConnData.ssid, ap_SSID, strlen(ap_SSID)+1);
-
+            strncpy(wifiConnData.ssid, ap_SSID, sizeof(wifiConnData.ssid));
+            wifiConnData.ssid[SSID_SIZE-1] = '\0';
 #ifdef ENABLE_IARM
             notify = true;
             /*Generate Event for Disconnect State*/
