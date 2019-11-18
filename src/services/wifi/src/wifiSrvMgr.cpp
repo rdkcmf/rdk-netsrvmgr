@@ -1204,7 +1204,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(output_string,0,BUFF_MAX);
     if (wifi_getRadioIfName( radioIndex,  output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio ifname  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.name,BUFF_MIN,output_string);
+        snprintf(param->data.radio.params.name,BUFF_LENGTH_24,output_string);
     }
     else
     {
@@ -1348,7 +1348,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     memset(freqBand,0,BUFF_MIN);
     if ( wifi_getRadioOperatingFrequencyBand(radioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] operating frequency band  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.operatingFrequencyBand,BUFF_LENGTH_64,output_string);
+        snprintf(param->data.radio.params.operatingFrequencyBand,BUFF_LENGTH_24,output_string);
         strncpy(freqBand,output_string,BUFF_MIN-1);
     }
     else
@@ -1363,15 +1363,13 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     
     if ( wifi_getRadioSupportedStandards(actualRadioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio Supported standards  are %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
-        snprintf(param->data.radio.params.supportedStandards,BUFF_MIN,output_string);
+        snprintf(param->data.radio.params.supportedStandards,BUFF_LENGTH_24,output_string);
     }
     else {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioSupportedStandards FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
     }
 
-    if(strncmp(freqBand,"5GHz",4) == 0)
-        actualRadioIndex = 1;
-
+    memset(output_string,0,BUFF_MAX);
     if ( wifi_getRadioStandard(actualRadioIndex, output_string,NULL,NULL,NULL) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio standards  is %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
         snprintf(param->data.radio.params.operatingStandards,BUFF_MIN,output_string);
@@ -1409,6 +1407,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #endif
+    param->status = true;
     return ret;
 }
 
