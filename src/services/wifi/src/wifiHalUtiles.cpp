@@ -2159,7 +2159,11 @@ void *lafConnPrivThread(void* arg)
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get previous SSID, Manual connect failed.  \n",MODULE_NAME, __FUNCTION__, __LINE__ );
                     }
-                    sleep(confProp.wifiProps.lnfRetryInSecs);
+                    if (last_laf_status.backoff == 0.0f)
+                    {
+                        last_laf_status.backoff = (float)confProp.wifiProps.lnfRetryInSecs;
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added default lnf back off time %fs \n",MODULE_NAME, __FUNCTION__, __LINE__,last_laf_status.backoff );
+                    }
                 }
                 else
                 {
