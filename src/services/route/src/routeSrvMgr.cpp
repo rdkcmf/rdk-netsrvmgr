@@ -89,7 +89,7 @@ int  RouteNetworkMgr::Start()
 
 
     //Check to see the preferred Gateway contents.
-    ifstream cfgFile(PREFERRED_GATEWAY_FILE);
+    std::ifstream cfgFile(PREFERRED_GATEWAY_FILE);
     std::string prefgw;
     if (cfgFile.is_open())
     {
