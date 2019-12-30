@@ -20,20 +20,19 @@
  * @file netSrvMgrUtiles.h
  * @brief The header file provides components netSrvMgrUtiles information APIs.
  */
+
 /**
- * @defgroup netSrvMgr Utility api's.
- * Describe the details about netSrvMgr Utility api's.
- * @ingroup netsrvmgr
+ * @defgroup NETSRVMGR Network Service Manager
+ * - Network Service Manager dynamically detect Network interfaces, send notifications to subscribers.
+ * - Provides 3 major functionalities such as Wi-Fi, Route, MoCA.
  *
- */
-
-/**
-* @defgroup netsrvmgr
-* @{
-* @defgroup netsermgr
-* @{
-**/
-
+ * @defgroup NETSRVMGR_TYPES Network Service Manager Types
+ * @ingroup  NETSRVMGR
+ *
+ * @defgroup NETSRVMGR_APIS Network Service Manager APIs
+ * @ingroup  NETSRVMGR
+ *
+ **/
 
 #ifndef _NETSRVMGRUTILES_H_
 #define _NETSRVMGRUTILES_H_
@@ -41,12 +40,18 @@
 
 #include <iostream>
 
+/**
+ * @addtogroup NETSRVMGR_TYPES
+ * @{
+ */
 #define MAC_ADDR_BUFF_LEN 	18
 
 #define SYSTEM_COMMAND_SHELL_NOT_FOUND 127
 #define SYSTEM_COMMAND_SHELL_SUCESS 23
 #define SYSTEM_COMMAND_ERROR -1
 #define BUFFER_SIZE_SCRIPT_OUTPUT 512
+
+/** @} */  //END OF GROUP NETSRVMGR_TYPES
 
 class EntryExitLogger
 {
@@ -65,28 +70,176 @@ enum Dhcp_Lease_Operation {
     DHCP_LEASE_RENEW = 0,
     DHCP_LEASE_RELEASE_AND_RENEW
 };
+
+/**
+ * @addtogroup NETSRVMGR_APIS
+ * @{
+ */
+
+/**
+ * @brief This function gets the interface name based on the device/properties file.
+ *
+ * @param[in] void.
+ *
+ * @return  Returns interface name.
+ */
 char* get_IfName_devicePropsFile(void);
+
+/**
+ * @brief This function is used to get the MAC address for the provided interface.
+ *
+ * @param[in] ifName_in Indicates the interface name which the mac address is required.
+ * @param[out] macAddress_out Indicates the mac address of ifname_in interface name.
+ *
+ * @return  Returns true if successfully gets the mac address of interface provided or else false.
+ */
 bool getMacAddress_IfName(char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN]);
+
+/**
+ * @brief This function trigger the process by which the DHCP client renews or updates its IP address configuration data with the
+ * DHCP server.
+ *
+ * @param[in] op      DHCP lease operation in order to renew/release and renew.
+ */
 void triggerDhcpLease(Dhcp_Lease_Operation op = DHCP_LEASE_RENEW);
+
+/**
+ * @brief This function retrieves information about the active routing interface.
+ *
+ * @param[out] devname Device name buffer to be filled.
+ *
+ * @return  Returns true if successfully found the route interface or else false.
+ */
 bool getRouteInterface(char* devname);
+
+/**
+ * @brief This function gets the device interface type(Ethernet/MOCA/WIFI) of the input device name.
+ * This function reads the device interface type from device properties file.
+ *
+ * @param[in/out] Interface deviceName as input and Device type buffer to be filled as output.
+ *
+ * @return  Returns true if successfully gets the route interface type or else false.
+ */
 bool readDevFile(char *deviceName);
+
+/**
+ * @brief This function parse all the device interface details and gives all the network interface device name in the output buffer.
+ * This function also returns the total network interface count.
+ *
+ * @param[out] devAllInterface Every interface device names.
+ *
+ * @return  Returns total network interface count.
+ */
 char getAllNetworkInterface(char* devAllInterface);
+
+/**
+ * @brief This function retrieves the current time using the requested format specifier.
+ *
+ * @param[out] currTime    Current time to be filled.
+ * @param[in]  timeFormat    Requested time format to give the current time.
+ *
+ * @return  Returns true if successfully gets the current time and converted to specified format or else false.
+ */
 bool getCurrentTime(char* currTime,const char *timeFormat);
+
+/**
+ * @brief This function returns the Ethernet active status of the interface, if finds the status from interface status file.
+ *
+ * @param[out] interfaceName    Interface name for which network status required.
+ *
+ * @return  Returns true if Ethernet mode is "Up" or else false.
+ */
 bool checkInterfaceActive(char *interfaceName);
+
+/**
+ * @brief This function retrieves the interface configuration.
+ *
+ * @param[in] interface    Interface name for which config details required.
+ * @param[out] enable    config info to be filled.
+ *
+ * @return  Returns false if no saved enable/disable config exists for given interface. Otherwise true if saved config details exists.
+ */
 bool getSavedInterfaceConfig(const char *interface, bool& enable);
+
+/**
+ * @brief This function is used to save the configuration for the given interface.
+ *
+ * @param[in] interface    Interface name for which config details to be updated.
+ * @param[in] enable    config info to be saved.
+ *
+ * @return  Returns true if given interface config could be persisted, Otherwise returns false.
+ */
 bool saveInterfaceConfig(const char *interface, bool enable);
+
+/**
+ * @brief This function is used to remove the persisted config from interfacePersistent data file.
+ *
+ * @param[in] interface    Interface name in which config data to be removed.
+ *
+ * @return  Returns true if persisted config for given interface could be removed / does not already exist, Otherwise returns false.
+ */
 bool removeSavedInterfaceConfig(const char *interface);
+
+/**
+ * @brief This function is used to get STB IP address and its IP version.
+ *
+ * @param[out] stbip    STB IP.
+ * @param[out] isIpv6    Internet Protocol Version.
+ *
+ * @return  Returns true if successfully gets the IP details, Otherwise returns false.
+ */
 bool getSTBip(char *stbip,bool *isIpv6);
+
+/**
+ * @brief This function gets the active interface device type(Ethernet/MOCA/WIFI).
+ *
+ * @param[out] devname Device type buffer to be filled.
+ *
+ * @return  Returns true if successfully gets the route interface type or else false.
+ */
 bool getRouteInterfaceType(char* devname);
+
+/**
+ * @brief This function checks whether IP string(IPv4 and IPv6) is link local address or not.
+ *
+ * @param[in] stbip    STB IP.
+ * @param[in] family    Interface family.
+ *
+ * @return  Returns false in case of not supported interface family data passed.
+ */
 bool chk_ipaddr_linklocal(const char *stbip,unsigned int family);
+
+/**
+ * @brief This function is used to get the current active interface(WIFI/MOCA).
+ *
+ * @param[out] currentInterface    Current active Interface.
+ *
+ * @return  Returns true is successfully gets the current active interface details.
+ */
 bool currentActiveInterface(char *currentInterface);
+
+/**
+ * @brief This function checks whether the input ipv6 address is based on specified mac address.
+ *
+ * @param[in] ipv6Addr    IP address.
+ * @param[in] macAddr    MAC address.
+ *
+ * @return  Returns true if global ipv6 address is on mac based, Otherwise false.
+ */
 bool check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr);
+
+/**
+ * @brief This function is used to get the script output from the specified script file.
+ *
+ * @param[in] scriptPath          Script file name.
+ * @param[out] scriptOutput        Buffer to store script output.
+ *
+ * @return  Returns true if successfully gets the output data from script file, Otherwise false.
+ */
 bool getScriptOutput(char *scriptPath,char *scriptOutput);
 }
 
 
-
+/** @} */  //END OF GROUP NETSRVMGR_APIS
 #endif /* _NETSRVMGRUTILES_H_ */
 
-/** @} */
-/** @} */
