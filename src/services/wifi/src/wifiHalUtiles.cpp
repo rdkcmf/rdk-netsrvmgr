@@ -1446,6 +1446,45 @@ bool clearSSID_On_Disconnect_AP()
     return ret;
 }
 
+bool disconnectFromCurrentSSID()
+{
+    bool ret = true;
+    int radioIndex = 1;
+    char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
+
+    if(RETURN_OK != wifi_disconnectEndpoint(radioIndex, ap_ssid))
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".\n",\
+                 MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+        ret = false;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
+                MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+    }
+    return ret;
+}
+
+bool cancelWPSPairingOperation()
+{
+    bool ret = true;
+#ifndef ENABLE_XCAM_SUPPORT
+    if(wifi_cancelWpsPairing() == RETURN_OK)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully Cancelled WPS operation.\n",\
+                MODULE_NAME,__FUNCTION__, __LINE__);
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to Cancel WPS operation, Looks like no in-progress wps operation.  : \"%s\".\n",\
+                MODULE_NAME,__FUNCTION__, __LINE__);
+        ret = false;
+    }
+#endif //ENABLE_LOST_FOUND
+    return ret;
+}
+
 void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
 {
     bool ret = true;
@@ -1463,12 +1502,14 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     conSSIDInfo->noise = stats.sta_Noise;
     conSSIDInfo->signalStrength = stats.sta_RSSI;
     conSSIDInfo->avgSignalStrength = stats.sta_AvgRSSI;
+    conSSIDInfo->frequency = stats.sta_Frequency;
     strncpy((char *)conSSIDInfo->band,(const char *)stats.sta_BAND,(size_t)BUFF_MIN);
+    strncpy((char *)conSSIDInfo->securityMode,(const char *)stats.sta_SecMode,BUFF_LENGTH_32-1);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
-    		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" ] \n",
+    		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" | Frequency : \"%d\" Security Mode : \"%s\"] \n",
             MODULE_NAME,__FUNCTION__, __LINE__,
-            stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI,conSSIDInfo->avgSignalStrength);
+            stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI,conSSIDInfo->avgSignalStrength,conSSIDInfo->frequency,conSSIDInfo->securityMode);
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
@@ -3234,3 +3275,5 @@ bool shutdownWifi()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return result;
 }
+
+
