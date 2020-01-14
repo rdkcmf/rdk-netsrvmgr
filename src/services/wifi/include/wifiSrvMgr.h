@@ -48,9 +48,11 @@ public:
     static IARM_Result_t initiateWPSPairing(void *arg);
     static IARM_Result_t saveSSID(void* arg);
     static IARM_Result_t clearSSID(void* arg);
+    static IARM_Result_t disconnectSSID(void* arg);
     static IARM_Result_t getPairedSSID(void *arg);
     static IARM_Result_t isPaired(void *arg);
     static IARM_Result_t getConnectedSSID(void *arg);
+    static IARM_Result_t cancelWPSPairing(void *arg);
 
     static IARM_Result_t getRadioProps(void *arg);
     static IARM_Result_t setRadioProps(void *arg);

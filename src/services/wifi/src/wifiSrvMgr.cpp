@@ -269,8 +269,10 @@ int  WiFiNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getPairedSSID, getPairedSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_saveSSID, saveSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_clearSSID, clearSSID);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_disconnectSSID, disconnectSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isPaired, isPaired);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectedSSID, getConnectedSSID);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_cancelWPSPairing, cancelWPSPairing);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getConnectionType, getCurrentConnectionType);
 #ifdef  WIFI_CLIENT_ROAMING
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRoamingCtrls, getRoamingCtrls);
@@ -1021,6 +1023,19 @@ IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
     return ret;
 }
 
+IARM_Result_t WiFiNetworkMgr::disconnectSSID(void* arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+    param->status = false;
+#ifdef USE_RDK_WIFI_HAL
+    param->status = disconnectFromCurrentSSID();
+#endif
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
+
 IARM_Result_t WiFiNetworkMgr::clearSSID(void* arg)
 {
     IARM_Result_t ret = IARM_RESULT_SUCCESS;
@@ -1130,7 +1145,25 @@ IARM_Result_t WiFiNetworkMgr::getConnectedSSID(void *arg)
     return ret;
 }
 
+/*
+ *  Cancel WPS pairing operation
+ */
+IARM_Result_t WiFiNetworkMgr::cancelWPSPairing (void *arg)
+{
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool retVal=false;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
+    IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
+
+#ifdef USE_RDK_WIFI_HAL
+    retVal = cancelWPSPairingOperation(); 
+#endif
+    param->status = retVal;
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
+}
 
 #ifdef USE_RDK_WIFI_HAL
 static void _irEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)

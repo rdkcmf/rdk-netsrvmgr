@@ -52,6 +52,8 @@ enum {
     Test_getAvailableSSIDsWithName = 16,
     Test_getAvailableSSIDsIncr = 17,
     Test_stopProgressiveScanning = 18,
+    Test_disconnectSSID = 19,
+    Test_cancelWPSPairing = 20,
     Test_Max_Api,
 };
 
@@ -107,6 +109,49 @@ static void WIFI_MGR_API_stopProgressiveScanning()
 #endif
 
 }
+
+static void WIFI_MGR_API_disconnectSSID()
+{
+#ifdef ENABLE_IARM
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_Bus_WiFiSrvMgr_Param_t param;
+
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    memset(&param, 0, sizeof(param));
+
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_disconnectSSID, (void *)&param, sizeof(param));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_disconnectSSID, ((retVal == IARM_RESULT_SUCCESS && param.status)?"true":"false"));
+    printf("\n***********************************\n");
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+
+}
+
+static void WIFI_MGR_API_cancelWPSPairing()
+{
+#ifdef ENABLE_IARM
+    IARM_Result_t retVal = IARM_RESULT_SUCCESS;
+    IARM_Bus_WiFiSrvMgr_Param_t param;
+
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    memset(&param, 0, sizeof(param));
+
+    retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_cancelWPSPairing, (void *)&param, sizeof(param));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_cancelWPSPairing, ((retVal == IARM_RESULT_SUCCESS && param.status)?"true":"false"));
+    printf("\n***********************************\n");
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+
+}
+
 static void WIFI_MGR_API_getAvailableSSIDsIncr()
 {
 #ifdef ENABLE_IARM
@@ -390,14 +435,18 @@ static void WIFI_MGR_API_getConnectedSSID() {
 			\tNoise : \"%f\" \n \
                         \tBand : \"%s\"\n \
 			\tSignalStrength(rssi) : \"%f\" \n \
-                        \tAvgSignalStrength(avgRssi): \"%f\" \n" ,
+                        \tAvgSignalStrength(avgRssi): \"%f\" \n \
+                        \tFrequency : \"%d\"\n \
+                        \tSecurityMode : \"%s\"\n  ",
            param.data.getConnectedSSID.ssid, \
            param.data.getConnectedSSID.bssid, \
            param.data.getConnectedSSID.rate, \
            param.data.getConnectedSSID.noise, \
            param.data.getConnectedSSID.band, \
            param.data.getConnectedSSID.signalStrength, \
-           param.data.getConnectedSSID.avgSignalStrength);
+           param.data.getConnectedSSID.avgSignalStrength, \
+           param.data.getConnectedSSID.frequency, \
+           param.data.getConnectedSSID.securityMode);
 
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 #endif
@@ -567,6 +616,8 @@ int main()
         printf( "16. getAvailableSSIDsWithName\n");
         printf( "17. getAvailableSSIDsAsycIncr\n");
         printf( "18. stopProgressiveWifiScanning\n");
+        printf( "19. disconnectSSID\n");
+        printf( "20. cancelWPSPairing\n");
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -631,6 +682,12 @@ int main()
             break;
         case Test_stopProgressiveScanning:
             WIFI_MGR_API_stopProgressiveScanning();
+            break;
+        case Test_disconnectSSID:
+            WIFI_MGR_API_disconnectSSID();
+            break;
+        case Test_cancelWPSPairing:
+            WIFI_MGR_API_cancelWPSPairing();
             break;
         default:
             loop = false;

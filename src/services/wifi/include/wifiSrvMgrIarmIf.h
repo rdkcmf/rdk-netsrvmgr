@@ -59,12 +59,14 @@
 #define IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning "stopProgressiveWifiScanning"    /**< Stop any in-prpogress wifi progressive scanning thread */
 #define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /**< Retrives the current state */
 #define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"       /**< Returns the properties of the currently connected SSID */
+#define IARM_BUS_WIFI_MGR_API_cancelWPSPairing      "cancelWPSPairing"       /**< Cancel in progress WPS Opearion */
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /**< Returns the paired ssid as a string */
 #define IARM_BUS_WIFI_MGR_API_setEnabled            "setEnabled"             /**< Enable the wifi adapter on the box */
 #define IARM_BUS_WIFI_MGR_API_connect               "connect"                /**< Connect with given or saved ssid and passphrase */
 #define IARM_BUS_WIFI_MGR_API_initiateWPSPairing    "initiateWPSPairing"     /**< Initiates the connection via WPS */
 #define IARM_BUS_WIFI_MGR_API_saveSSID              "saveSSID"               /**< Save the ssid and passphrase */
 #define IARM_BUS_WIFI_MGR_API_clearSSID             "clearSSID"              /**< Clear the given ssid */
+#define IARM_BUS_WIFI_MGR_API_disconnectSSID        "disconnectSSID"         /**< Disconnect from current SSID*/
 #define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /**< Get the paired SSID */
 #define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /**< Retrieve the paired status */
 #define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"            /**< Retrives the LNF state */
@@ -206,10 +208,13 @@ typedef struct _WiFiConnectedSSIDInfo
     char ssid[SSID_SIZE];     /**< The name of connected SSID. */
     char bssid[BSSID_BUFF];   /**< The the Basic Service Set ID (mac address). */
     char band[BUFF_MIN];      /**< The frequency band at which the client is conneted to. */
+    char securityMode[BUFF_LENGTH_32];  /**< Current WiFi Security Mode used for connection. */
+    int  frequency;                    /**< The Frequency wt which the client is connected to. */
     float rate;               /**< The Physical data rate in Mbps */
     float noise;              /**< The average noise strength in dBm. */
     float signalStrength;     /**< The RSSI value in dBm. */
     float avgSignalStrength;  /**< The Average RSSI value in dBm. */
+  
 } WiFiConnectedSSIDInfo_t;
 
 typedef struct _WiFiPairedSSIDInfo
