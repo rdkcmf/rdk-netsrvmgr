@@ -603,7 +603,7 @@ void *getAvailableSSIDsIncrThread(void* arg)
    pthread_mutex_unlock(&wifiScanLock);
 
    // Scan for 2.4GHz channels based on the dual-band capability
-   if(wif_getDualBandSupport() == true)
+   if(wifi_getDualBandSupport() == true)
    {
       RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 2.4GHz channels...\n");
       getCurrentTime(&start);
