@@ -53,7 +53,9 @@ extern "C" {
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
+#ifndef ENABLE_NLMONITOR
 #include <net/if.h>
+#endif
 //}
 
 #define WIFI_DEFAULT_INTERFACE "wlan0"
