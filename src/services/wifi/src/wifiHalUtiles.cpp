@@ -1926,7 +1926,6 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
 //        }
 //#endif
     }
-
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return 0;
 }
@@ -2089,7 +2088,8 @@ void *lafConnPrivThread(void* arg)
                 }
                 else
                 {
-                    setLNFState(LNF_IN_PROGRESS);
+                    if (gWifiLNFStatus == LNF_UNITIALIZED)
+                        setLNFState(LNF_IN_PROGRESS);
                     lnfReturnStatus = triggerLostFound(reqType);
                 }
                 pthread_mutex_unlock(&mutexTriggerLAF);
