@@ -111,9 +111,10 @@ extern "C" {
  */
 #ifdef ENABLE_RTMESSAGE
 void rtConnection_init();
-static void* rtMessage_Receive(void * arg);
+void* rtMessage_Receive(void* arg);
 void rtConnection_destroy();
-static void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure);
+void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure);
+void onConnectWifi(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure);
 #endif
 
 #ifdef ENABLE_IARM

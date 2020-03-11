@@ -27,7 +27,7 @@
 #endif // ENABLE_LOST_FOUND
 
 #ifdef ENABLE_RTMESSAGE
-static rtConnection con = NULL;
+rtConnection con_recv = NULL;
 #endif
 
 #define WIFI_HAL_VERSION_SIZE   6
@@ -102,6 +102,7 @@ static void logs_Period2_Params();
 #define LFAT_CONF_FILE                  "/mnt/ramdisk/env/.lnf_conf"
 #define DATA_LEN			4096
 #define SCRIPT_FILE_TO_GET_DEVICE_ID    "/lib/rdk/getDeviceId.sh"
+#define WIFI_CONNECT_TIME               30
 
 typedef struct _wifi_securityModes
 {
@@ -144,18 +145,22 @@ void rtConnection_init()
 {
   rtLog_SetLevel(RT_LOG_INFO);
   rtLog_SetOption(rdkLog);
-  rtConnection_Create(&con, "NETSRVMGR_WIFI", SOCKET_ADDRESS);
-  rtConnection_AddListener(con, "RDKC.WIFI", onMessage, con);
+  rtConnection_Create(&con_recv, "NETSRVMGR_WIFI", SOCKET_ADDRESS);
+  rtConnection_AddListener(con_recv, "RDKC.WIFI", onMessage, con_recv);
+#ifdef XHB1
+  rtConnection_AddListener(con_recv, "RDKC.WIFI.CONNECT", onConnectWifi, con_recv);
+#endif
+  RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): rtConnection_init done ", __FILE__, __LINE__);
 }
 
 void rtConnection_destroy()
 {
-  rtConnection_Destroy(con);
+  rtConnection_Destroy(con_recv);
 }
 
 void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure)
 {
-  rtConnection con = (rtConnection) closure;
+  rtConnection con_recv = (rtConnection) closure;
 
   rtMessage req;
   rtMessage_FromBytes(&req, buff, n);
@@ -173,23 +178,96 @@ void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void
     rtMessage res;
     rtMessage_Create(&res);
     rtMessage_SetString(res, "reply", "Success");
-    rtConnection_SendResponse(con, hdr, res, 1000);
+    rtConnection_SendResponse(con_recv, hdr, res, 1000);
     rtMessage_Release(res);
   }
   rtMessage_Release(req);
 }
 
-
-void* rtMessage_Receive(void* arg)
+void onConnectWifi(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure)
 {
+  RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Called onConnectWifi ", __FILE__, __LINE__);
+
+  rtConnection con_recv = (rtConnection) closure;
+
+  int ssidIndex = 1;
+  char const* ap_SSID = NULL;
+  int32_t securityMode = 0;
+  char const* ap_security_PreSharedKey = NULL;
+  int saveSSID = 1;
+  int32_t retVal = 1;
+
+  rtMessage req;
+  rtMessage_FromBytes(&req, buff, n);
+
+  if (rtMessageHeader_IsRequest(hdr))
+  {
+    char* buff = NULL;
+    uint32_t buff_length = 0;
+    char jbuff[MAX_SSIDLIST_BUF] = {'\0'};
+    int jBuffLen = 0;
+
+    rtMessage_ToString(req, &buff, &buff_length);
+    rtLog_Info("Req : %.*s", buff_length, buff);
+    free(buff);
+
+    rtMessage_GetString(req, "ap_SSID", &ap_SSID);
+    rtMessage_GetInt32(req, "securityMode", &securityMode);
+    rtMessage_GetString(req, "ap_security_PreSharedKey", &ap_security_PreSharedKey);
+    RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Received ap_SSID : %s securityMode : %d ap_security_PreSharedKey : %s", __FILE__, __LINE__, ap_SSID, securityMode, ap_security_PreSharedKey);
+
+#ifdef USE_RDK_WIFI_HAL
+/*    int status = scan_Neighboring_WifiAP(jbuff);
+    jBuffLen = strlen(jbuff);
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Scan AP's SSID list buffer size : \n\"%d\"\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);*/
+#endif
+
+    retVal = connect_withSSID(ssidIndex, const_cast<char*>(ap_SSID), (SsidSecurity)6, NULL, const_cast<char*>(ap_security_PreSharedKey), const_cast<char*>(ap_security_PreSharedKey), saveSSID, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
+
+    if (retVal)
+    {
+      int retry = 0;
+
+      while (false == isWifiConnected() && retry <= WIFI_CONNECT_TIME)
+      {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d):  Waiting for wifi connection\n", __FILE__, __LINE__);
+        sleep(1);
+        retry++;
+      }
+
+      if (true == isWifiConnected())
+      {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Wifi connection success\n", __FILE__, __LINE__);
+        retVal = 0;
+      }
+      else if (retry >= WIFI_CONNECT_TIME)
+      {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Wifi connection time out\n", __FILE__, __LINE__);
+      }
+    }
+
+    // create response
+    rtMessage res;
+    rtMessage_Create(&res);
+    rtMessage_SetInt32(res, "reply", retVal);
+    rtConnection_SendResponse(con_recv, hdr, res, 1000);
+    rtMessage_Release(res);
+  }
+  rtMessage_Release(req);
+}
+
+void* rtMessage_Receive(void*)
+{
+  RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): rtMessage_Receive\n", __FILE__, __LINE__);
   while (1)
   {
-    rtError err = rtConnection_Dispatch(con);
+    rtError err = rtConnection_Dispatch(con_recv);
     if (err != RT_OK)
-      RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
+      RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
   }
 }
 #endif
+
 
 #ifdef USE_RDK_WIFI_HAL
 bool getHALVersion()
@@ -725,11 +803,14 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     //bounce xre connection if we move from one private ssid to another ssid
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Moving from one SSID = %s  to another SSID = %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,savedWiFiConnList.ssidSession.ssid,ap_SSID);
 #ifndef ENABLE_XCAM_SUPPORT
+#ifndef XHB1
                     xreReconnectReason=20; //RECONNECT_REASON_WIFI_NETWORK_CHANGE
                     if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
+ 
                     }
+#endif                   
 #endif
 #ifdef ENABLE_NLMONITOR
                    char const* intface=getenv("WIFI_INTERFACE");
@@ -787,6 +868,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 if(!retVal)
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n", MODULE_NAME,__FUNCTION__, __LINE__ );
 #ifndef ENABLE_XCAM_SUPPORT
+#ifndef XHB1
                 if(!switchPriv2Lnf)
                     switchPriv2Lnf=1;
                 if(switchLnf2Priv)
@@ -798,6 +880,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     }
                     switchLnf2Priv=0;
                 }
+#endif
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
                 memset(&stats, 0, sizeof(wifi_sta_stats_t));
                 wifi_getStats(radioIndex, &stats);
@@ -808,12 +891,14 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is a LNF SSID so no storing \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
 #ifndef ENABLE_XCAM_SUPPORT
+#ifndef XHB1
                 if(!switchLnf2Priv)
                     switchLnf2Priv=1;
                 if(switchPriv2Lnf)
                 {
                     switchPriv2Lnf=0;
                 }
+#endif
 #endif // ENABLE_XCAM_SUPPORT
                 setLNFState(CONNECTED_LNF);
             }

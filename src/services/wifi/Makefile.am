@@ -38,11 +38,12 @@ AM_LDFLAGS = $(IARM_LFLAGS)  $(NLMONITOR_LINK)
 
 if XCAM_SUPPORT
 AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
+AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
+endif
+
 if RTMESSAGE
 AM_CXXFLAGS += -DENABLE_RTMESSAGE -std=c++11 -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
 AM_LDFLAGS += -L$(RDK_SOURCE_PATH)/../opensource/lib/ -lrtMessage -ldataProvider
-endif
-AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
 endif
 
 if RDKWIFIHAL
@@ -58,12 +59,10 @@ noinst_LTLIBRARIES = libwifiservices.la
 libwifiservices_la_SOURCES += src/wifiSrvMgr.cpp src/wifiHalUtiles.cpp
 endif
 
-if XCAM_SUPPORT
 if RTMESSAGE
-libwifiservices_la_SOURCES += src/wifi_provider.cpp
+#libwifiservices_la_SOURCES += src/wifi_provider.cpp
 install-data-local:
 	mkdir -p $(RDK_FSROOT_PATH)/etc/model
 	cp -fpR data/* $(RDK_FSROOT_PATH)/etc/model/
-endif
 endif
 

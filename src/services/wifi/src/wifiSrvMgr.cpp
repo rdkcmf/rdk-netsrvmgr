@@ -70,6 +70,7 @@ IARM_Bus_Daemon_SysMode_t sysModeParam;
 #endif
 
 #ifdef ENABLE_RTMESSAGE
+#include <pthread.h>
 #include "wifi_provider.h"
 #endif
 
@@ -329,6 +330,19 @@ int  WiFiNetworkMgr::Start()
     create_wpa_supplicant_conf_from_netapp_db ("/opt/wifi/wpa_supplicant.conf", "/opt/wifi/NetApp.db");
 #endif // ENABLE_XCAM_SUPPORT
 
+#ifdef ENABLE_RTMESSAGE
+    rtConnection_init();
+#ifdef XHB1
+    pthread_t wifiMsgThread;
+    if( 0 != pthread_create(&wifiMsgThread, NULL, &rtMessage_Receive, NULL))
+    {
+      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Can't create thread.\n", __FUNCTION__, __LINE__);
+    }
+    else
+      RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Thread created successfully and waiting for message.\n", __FUNCTION__, __LINE__);
+#endif
+#endif
+
 #ifdef USE_RDK_WIFI_HAL
     monitor_WiFiStatus();
 
@@ -339,13 +353,13 @@ int  WiFiNetworkMgr::Start()
     }
 
     #ifdef ENABLE_RTMESSAGE
-      int ret = start_dmProvider();
+      /*int ret = start_dmProvider();
       if (ret)
       {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error starting netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__);
       }
       else
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully started netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully started netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );*/
     #endif
 
     getHALVersion();
@@ -387,6 +401,13 @@ int  WiFiNetworkMgr::Start()
         }
     }
 #endif
+
+#ifdef ENABLE_RTMESSAGE
+#ifdef XHB1
+    pthread_kill(wifiMsgThread, 0);
+#endif
+    rtConnection_destroy();
+#endif
     /*Register connect and disconnect call back */
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
@@ -398,13 +419,13 @@ int  WiFiNetworkMgr::Stop()
     shutdownWifi();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     #ifdef ENABLE_RTMESSAGE
-      int ret = stop_dmProvider();
+      /*int ret = stop_dmProvider();
       if (ret)
        {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Error Stopping netsrvmgr wifi dm provider!\n", MODULE_NAME,__FUNCTION__, __LINE__ );
        }
        else
-         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully stopped netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully stopped netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );*/
     #endif
  }
 
