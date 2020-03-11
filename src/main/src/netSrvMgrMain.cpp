@@ -42,7 +42,11 @@
 #endif
 
 #ifdef INCLUDE_BREAKPAD
+#ifndef ENABLE_XCAM_SUPPORT
 #include <client/linux/handler/exception_handler.h>
+#else
+#include "breakpadwrap.h"
+#endif
 #endif
 
 char configProp_FilePath[100] = {'\0'};;
@@ -123,12 +127,14 @@ void NetworkMgr_SignalHandler (int sigNum)
 }
 
 #ifdef INCLUDE_BREAKPAD
+#ifndef ENABLE_XCAM_SUPPORT
 static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
                         void* context,
                         bool succeeded)
 {
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]breakpadDumpCallback: Netsrvmgr crashed ---- Dump path: %s\n", __FUNCTION__, __LINE__,descriptor.path());
 }
+#endif
 #endif
 
 // TODO: move this into the utility file?
@@ -420,8 +426,14 @@ int main(int argc, char *argv[])
 
 
 #ifdef INCLUDE_BREAKPAD
+#ifndef ENABLE_XCAM_SUPPORT
     google_breakpad::MinidumpDescriptor descriptor("/opt/minidumps/");
     google_breakpad::ExceptionHandler eh(descriptor, NULL, breakpadDumpCallback, NULL, true, -1);
+#else
+    sleep(1);
+    BreakPadWrapExceptionHandler eh;
+    eh = newBreakPadWrapExceptionHandler();
+#endif
 #endif
 
     if(false == read_ConfigProps()) {

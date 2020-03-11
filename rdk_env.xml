@@ -20,7 +20,7 @@
 <environment>
   <components>
     <netsrvmgr>
-     <dependencies>sdk,glib-2.42.2,rdklogger,wifi-hal-sercomm,sysapps,lostandfound</dependencies>
+     <dependencies>sdk,glib-2.42.2,sqlite3,rdklogger,wifi-hal-sercomm,sysapps,lostandfound</dependencies>
      <is_coverity_supported>True</is_coverity_supported>
     </netsrvmgr>
    </components>

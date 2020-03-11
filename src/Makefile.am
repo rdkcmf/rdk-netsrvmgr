@@ -37,13 +37,13 @@ AM_CXXFLAGS += -DENABLE_LOST_FOUND
 endif
 
 if XCAM_SUPPORT
-AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include -I$(RDK_SOURCE_PATH)/../opensource/include/cjson
-if RTMESSAGE
-AM_CXXFLAGS += -DENABLE_RTMESSAGE -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
-endif
+AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include -I$(RDK_SOURCE_PATH)/../opensource/include/cjson -I$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/
 sysconf_DATA = $(top_srcdir)/conf/netsrvmgr.conf
 endif
 
+if RTMESSAGE
+AM_CXXFLAGS += -DENABLE_RTMESSAGE -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
+endif
 
 if ROUTE_SUPPORT
 AM_CXXFLAGS += -DENABLE_ROUTE_SUPPORT
@@ -52,7 +52,7 @@ endif
 AM_CXXFLAGS += $(IARM_CFLAGS)
 
 AM_LDFLAGS = $(GLIB_LDFLAGS) $(GLIB_LIBS) \
-	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) -lpthread -lcjson
+	$(G_THREAD_LIBS) -lrdkloggers $(LOG4C_LIBS) -lpthread -lcjson -lsqlite3
 
 AM_LDFLAGS += $(IARM_LFLAGS) $(NLMONITOR_LINK) $(BREAKPAD_LFLAGS)
 
@@ -64,10 +64,11 @@ AM_LDFLAGS += -llaf -lcurl
 endif
 
 if XCAM_SUPPORT
-AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
+AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound -L$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/ -lbreakpadwrap
+endif
+
 if RTMESSAGE
 AM_LDFLAGS += -L$(RDK_SOURCE_PATH)/../opensource/lib/ -lrtMessage -ldataProvider
-endif
 endif
 
 AM_CFLAGS =  $(GLIB_CFLAGS) $(GTHREAD_CFLAGS) $(BREAKPAD_CFLAGS)
@@ -89,12 +90,10 @@ if RDKWIFIHAL
 netsrvmgr_LDADD += $(top_builddir)/src/services/wifi/libwifiservices.la
 endif
 
-if XCAM_SUPPORT
 if RTMESSAGE
 install-data-local:
 	mkdir -p $(RDK_FSROOT_PATH)/etc/model
 	cp -fpR $(top_builddir)/src/services/wifi/data/* $(RDK_FSROOT_PATH)/etc/model/
-endif
 endif
 
 if ROUTE_SUPPORT

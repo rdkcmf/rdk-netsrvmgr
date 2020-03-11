@@ -50,9 +50,21 @@ export RDK_TOOLCHAIN_PATH=${RDK_TOOLCHAIN_PATH-`readlink -m $RDK_PROJECT_ROOT_PA
 # default component name
 export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
 export RDK_DIR=$RDK_PROJECT_ROOT_PATH
+if [ "$XCAM_MODEL" == "SCHC2" ]; then
+. ${RDK_PROJECT_ROOT_PATH}/build/components/amba/sdk/setenv2
+else
+. ${RDK_PROJECT_ROOT_PATH}/build/components/sdk/setenv2
+fi
+
+if  [ "$XCAM_MODEL" != "XHB1" ]; then
 source $RDK_SCRIPTS_PATH/soc/build/soc_env.sh
+fi
 
-
+if  [ "$XCAM_MODEL" == "XHB1" ]; then
+  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson -DXHB1"
+  export CXXFLAGS=$CFLAGS
+  export LDFLAGS="-L$RDK_FSROOT_PATH/usr/lib -L$PROJ_INSTALL/usr/lib"
+fi
 
 # parse arguments
 INITIAL_ARGS=$@
@@ -114,7 +126,11 @@ function configure()
         if [ "x$DEFAULT_HOST" != "x" ]; then
         configure_options="--host $DEFAULT_HOST"
         fi
-        configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=no"
+	if  [ "$XCAM_MODEL" == "XHB1" ]; then
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes"
+	else
+                configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes"
+	fi
         generic_options="$configure_options"
 
         export ac_cv_func_malloc_0_nonnull=yes
