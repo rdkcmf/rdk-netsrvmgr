@@ -260,6 +260,7 @@ void monitor_WiFiStatus();
  * @return  Returns true if successfully disconnect all SSID, Otherwise false.
  */
 bool clearSSID_On_Disconnect_AP();
+bool disconnectFromCurrentSSID();
 
 /**
  * @brief This function gets WIFI hal version.
@@ -502,6 +503,7 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *);
  * @param[out] WiFi_EndPoint_Diag_Params    WIFI end point diagnostic parameter.
  */
 void getEndPointInfo(WiFi_EndPoint_Diag_Params *);
+bool cancelWPSPairingOperation();
 
 /** @} */  //END OF GROUP NETSRVMGR_APIS
 #endif /* WIFIHALUTILES_H_ */
