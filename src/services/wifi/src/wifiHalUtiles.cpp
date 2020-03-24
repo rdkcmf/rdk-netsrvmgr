@@ -871,6 +871,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_IARM
             notify = true;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
+            eventData.data.wifiError.code = WIFI_NO_SSID;
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
+                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
+#endif
 #ifdef ENABLE_LOST_FOUND
             /* Event Id & Code */
             if(confProp.wifiProps.bEnableLostFound)
@@ -879,11 +884,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 lnfConnectPrivCredentials();
             }
 #endif // ENABLE_LOST_FOUND
-            eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
-            eventData.data.wifiError.code = WIFI_NO_SSID;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
-#endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
         break;
