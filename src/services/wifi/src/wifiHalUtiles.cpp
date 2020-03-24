@@ -76,6 +76,7 @@ void setLNFState(WiFiLNFStatusCode_t status);
 
 void set_WiFiConnectionType( WiFiConnectionTypeCode_t value);
 WiFiConnectionTypeCode_t get_WifiConnectionType();
+int getSecurityBssid(char *bssid);
 
 extern WiFiConnectionStatus savedWiFiConnList;
 extern char gWifiMacAddress[MAC_ADDR_BUFF_LEN];
@@ -1288,6 +1289,21 @@ bool scan_Neighboring_WifiAP(char *buffer)
     return true;
 }
 
+int getSecurityBssid(char *bssid)
+{
+    wifi_neighbor_ap_t *neighbor_ap_array = NULL;
+    UINT neighbor_ap_array_size = 0;
+    bool ret = wifi_getSecurityForBssid (bssid, &neighbor_ap_array, &neighbor_ap_array_size);
+    SsidSecurity encrptType = NET_WIFI_SECURITY_NONE;
+
+    if(neighbor_ap_array && neighbor_ap_array_size > 0)
+    {
+        encrptType = get_wifiSecurityModeFromString((char *)neighbor_ap_array[0].ap_SecurityModeEnabled,(char *)neighbor_ap_array[0].ap_EncryptionMode);
+    }
+
+    return (int) encrptType;
+}
+
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -1504,10 +1520,10 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     conSSIDInfo->avgSignalStrength = stats.sta_AvgRSSI;
     conSSIDInfo->frequency = stats.sta_Frequency;
     strncpy((char *)conSSIDInfo->band,(const char *)stats.sta_BAND,(size_t)BUFF_MIN);
-    strncpy((char *)conSSIDInfo->securityMode,(const char *)stats.sta_SecMode,BUFF_LENGTH_32-1);
+    conSSIDInfo->securityMode = getSecurityBssid(stats.sta_BSSID);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
-    		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" | Frequency : \"%d\" Security Mode : \"%s\"] \n",
+            [SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" | Frequency : \"%d\" Security Mode : \"%d\"] \n",
             MODULE_NAME,__FUNCTION__, __LINE__,
             stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI,conSSIDInfo->avgSignalStrength,conSSIDInfo->frequency,conSSIDInfo->securityMode);
 
