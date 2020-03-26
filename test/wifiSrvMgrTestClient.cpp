@@ -437,7 +437,7 @@ static void WIFI_MGR_API_getConnectedSSID() {
 			\tSignalStrength(rssi) : \"%f\" \n \
                         \tAvgSignalStrength(avgRssi): \"%f\" \n \
                         \tFrequency : \"%d\"\n \
-                        \tSecurityMode : \"%s\"\n  ",
+                        \tSecurityMode : \"%d\"\n  ",
            param.data.getConnectedSSID.ssid, \
            param.data.getConnectedSSID.bssid, \
            param.data.getConnectedSSID.rate, \
