@@ -1505,7 +1505,7 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     conSSIDInfo->avgSignalStrength = stats.sta_AvgRSSI;
     conSSIDInfo->frequency = stats.sta_Frequency;
     strncpy((char *)conSSIDInfo->band,(const char *)stats.sta_BAND,(size_t)BUFF_MIN);
-    strncpy((char *)conSSIDInfo->securityMode,(const char *)stats.sta_SecMode,BUFF_LENGTH_32-1);
+    conSSIDInfo->securityMode = get_wifiSecurityModeFromString(stats.sta_SecMode, stats.sta_SecMode);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
     		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" | Frequency : \"%d\" Security Mode : \"%s\"] \n",
