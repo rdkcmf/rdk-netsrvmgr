@@ -2003,6 +2003,22 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     else
     {
         bLNFConnect=false;
+        retVal=lastConnectedSSID(&savedWiFiConnList);
+        if (retVal && savedWiFiConnList.ssidSession.ssid[0] != '\0')
+        {
+          if((strcmp(wificred->ssid, savedWiFiConnList.ssidSession.ssid) != 0) && (strcmp(wificred->passphrase, savedWiFiConnList.ssidSession.passphrase) != 0))
+          {
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Lnf response status Credentials changed : BOTH \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+          }
+          else if(strcmp(wificred->ssid, savedWiFiConnList.ssidSession.ssid) != 0)
+          {
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Lnf response status Credentials changed : SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+          }
+          else if(strcmp(wificred->passphrase, savedWiFiConnList.ssidSession.passphrase) != 0)
+          {
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Lnf response status Credentials changed : KeyPassphrase \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+          }
+        }
     }
 #ifdef USE_RDK_WIFI_HAL
     if(gWifiLNFStatus != CONNECTED_PRIVATE)
