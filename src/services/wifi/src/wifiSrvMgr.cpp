@@ -41,6 +41,7 @@
 #endif // ENABLE_XCAM_SUPPORT 
 
 #define SAVE_SSID 1
+#define DELAY_LNF_TIMER_COUNT 5  //Each time wait will be 60 seconds
 
 #ifdef USE_RDK_WIFI_HAL
 #ifdef ENABLE_IARM
@@ -364,7 +365,20 @@ int  WiFiNetworkMgr::Start()
             
             if(false == isWifiConnected())
             {
+#ifdef ENABLE_XCAM_SUPPORT
+                int retry = 0;
+                while (false == isWifiConnected() && retry < DELAY_LNF_TIMER_COUNT)
+                {
+                  sleep(60);
+                  retry++;
+                }
+                if (false == isWifiConnected())
+                {
+                  connectToLAF();
+                }
+#else
                 connectToLAF();
+#endif
             }
         }
         else
