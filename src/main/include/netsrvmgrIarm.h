@@ -50,12 +50,15 @@
 #define MAX_IP_ADDRESS_LEN 46
 #define IARM_BUS_NETSRVMGR_API_getActiveInterface "getActiveInterface"
 #define IARM_BUS_NETSRVMGR_API_getNetworkInterfaces "getNetworkInterfaces"
+#define IARM_BUS_NETSRVMGR_API_getInterfaceList "getInterfaceList"
+#define IARM_BUS_NETSRVMGR_API_getDefaultInterface "getDefaultInterface"
+#define IARM_BUS_NETSRVMGR_API_setDefaultInterface "setDefaultInterface"
+#define IARM_BUS_NETSRVMGR_API_isInterfaceEnabled "isInterfaceEnabled"
+#define IARM_BUS_NETSRVMGR_API_setInterfaceEnabled "setInterfaceEnabled"
+#define IARM_BUS_NETSRVMGR_API_getSTBip "getSTBip"
 #define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus "getTelemetryLogStatus"
 #define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration "getTelemetryLogDuration"
-#define IARM_BUS_NETSRVMGR_API_isInterfaceEnabled "isInterfaceEnabled"
-#define IARM_BUS_NETSRVMGR_API_getInterfaceControlPersistence  "getInterfaceControlPersistence"
 
-#define IARM_BUS_NETSRVMGR_API_getSTBip "getSTBip"
 typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG=20,
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG_DURATION,
@@ -65,6 +68,11 @@ typedef enum _NetworkManager_MoCA_EventId_t {
 typedef enum _NetworkManager_EventId_t {
         IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED=50,
         IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE,
+        IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE,
+        IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS,
+        IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS,
+        IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS,
+        IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE,
         IARM_BUS_NETWORK_MANAGER_MAX,
 } IARM_Bus_NetworkManager_EventId_t;
  
@@ -77,7 +85,45 @@ typedef struct _IARM_BUS_NetSrvMgr_Iface_EventData_t {
 	};
    char interfaceCount;
    bool isInterfaceEnabled;
+   bool persist;
 } IARM_BUS_NetSrvMgr_Iface_EventData_t;
+
+typedef struct {
+    char name[16];
+    char mac[20];
+    unsigned int flags;
+} NetSrvMgr_Interface_t;
+
+typedef struct {
+    unsigned char         size;
+    NetSrvMgr_Interface_t interfaces[8];
+} IARM_BUS_NetSrvMgr_InterfaceList_t;
+
+typedef struct {
+    char interface[16];
+    char gateway[MAX_IP_ADDRESS_LEN];
+} IARM_BUS_NetSrvMgr_DefaultRoute_t;
+
+typedef struct {
+    char interface[16];
+    bool status;
+} IARM_BUS_NetSrvMgr_Iface_EventInterfaceStatus_t;
+
+typedef IARM_BUS_NetSrvMgr_Iface_EventInterfaceStatus_t IARM_BUS_NetSrvMgr_Iface_EventInterfaceEnabledStatus_t;
+typedef IARM_BUS_NetSrvMgr_Iface_EventInterfaceStatus_t IARM_BUS_NetSrvMgr_Iface_EventInterfaceConnectionStatus_t;
+
+typedef struct {
+    char interface[16];
+    char ip_address[MAX_IP_ADDRESS_LEN];
+    bool is_ipv6;
+    bool acquired;
+} IARM_BUS_NetSrvMgr_Iface_EventInterfaceIPAddress_t;
+
+typedef struct {
+    char oldInterface[16];
+    char newInterface[16];
+} IARM_BUS_NetSrvMgr_Iface_EventDefaultInterface_t;
+
 /** @} */  //END OF GROUP NETSRVMGR_TYPES
 
 #endif /* _NETSRVMGRIARM_H_ */
