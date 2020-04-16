@@ -19,17 +19,26 @@
 
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
+#include "netsrvmgrUtiles.h"
+#include "netsrvmgrIarm.h"
+#include <string>
+#include <vector>
+#include <sstream>
+
 #ifdef ENABLE_ROUTE_SUPPORT
 #include "routeSrvMgr.h"
 #endif
+
 #ifdef USE_RDK_MOCA_HAL
 #include "mocaSrvMgr.h"
 #endif
-#include "netsrvmgrUtiles.h"
-#include "netsrvmgrIarm.h"
+
 #ifdef ENABLE_NLMONITOR
 #include "netlinkifc.h"
-#include <sstream>
+#endif
+
+#ifndef ENABLE_XCAM_SUPPORT
+#include "rfcapi.h"     // for RFC queries
 #endif
 
 #ifdef INCLUDE_BREAKPAD
@@ -63,20 +72,34 @@ static void NetworkMgr_SignalHandler (int sigNum);
 static bool read_ConfigProps();
 void Read_Telemetery_Param_File();
 static bool update_telemetryParams_list(gchar *, telemetryParams *, gchar *, gchar *);
+
 #ifdef ENABLE_IARM
 static void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 static IARM_Result_t getActiveInterface(void *arg);
 static IARM_Result_t getNetworkInterfaces(void *arg);
+#ifdef ENABLE_NLMONITOR
+static IARM_Result_t getInterfaceList(void *arg);
+static IARM_Result_t getDefaultInterface(void *arg);
+#endif // ifdef ENABLE_NLMONITOR
+static IARM_Result_t setDefaultInterface(void *arg);
 static IARM_Result_t isInterfaceEnabled(void *arg);
-static IARM_Result_t getInterfaceControlPersistence(void *arg);
-static void setInterfaceEnabled(const char* interface, bool enabled);
-static void setInterfaceControlPersistence(const char* interface, bool interfaceControlPersistence);
+static IARM_Result_t setInterfaceEnabled(void *arg);
 static IARM_Result_t getSTBip(void *arg);
-#endif // ENABLE_IARM
+#endif // ifdef ENABLE_IARM
 
+#ifndef ENABLE_XCAM_SUPPORT
+static bool isFeatureEnabled(const char* feature);
 static bool validate_interface_can_be_disabled (const char* interface);
+#ifdef ENABLE_NLMONITOR
+static bool getDefaultInterface(std::string &interface, std::string &gateway);
+#endif // ifdef ENABLE_NLMONITOR
+static bool setDefaultInterface(const char* interface, bool persist);
+static bool isInterfaceEnabled(const char* interface, bool& enabled);
+static bool setInterfaceEnabled(const char* interface, bool enabled, bool persist);
+static bool setInterfaceState(std::string interface_name, bool enabled);
+#endif // ifndef ENABLE_XCAM_SUPPORT
+
 #ifdef USE_RDK_WIFI_HAL
-static bool bWiFiEnabled = false; // assumes WiFi is disabled when netsrvmgr starts
 static bool setWifiEnabled (bool newState);
 #endif // USE_RDK_WIFI_HAL
 
@@ -108,93 +131,215 @@ static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& desc
 }
 #endif
 
+// TODO: move this into the utility file?
+/**
+ * Returns:
+ * the specified environment variable's value if it is not NULL.
+ * the specified default value otherwise.
+ */
+char* getenvOrDefault (const char* name, char* defaultValue)
+{
+    char* value = getenv (name);
+    return value ? value : defaultValue;
+}
+
+static bool split (const std::string &str, char delimiter, std::vector<std::string> &tokens, int min_expected_tokens = 0)
+{
+    std::stringstream stream (str);
+    std::string token;
+    tokens.clear();
+    while (getline (stream, token, delimiter))
+        tokens.push_back (token);
+    if (min_expected_tokens > 0 && tokens.size () < min_expected_tokens)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: Unexpected number of tokens. Arguments received = %s\n", __FUNCTION__, __LINE__, str.c_str ());
+        return false;
+    }
+    return true;
+}
+
+#ifdef ENABLE_IARM
+
+static void eventInterfaceEnabledStatusChanged(std::string& interface, bool enabled)
+{
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, enabled=%d\n", __FUNCTION__, __LINE__, interface.c_str(), enabled);
+
+    IARM_BUS_NetSrvMgr_Iface_EventInterfaceEnabledStatus_t e;
+    snprintf(e.interface, sizeof(e.interface), "%s", interface.c_str());
+    e.status = enabled;
+
+    if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS, &e, sizeof(e)))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+    }
+}
+
+static void eventInterfaceConnectionStatusChanged(std::string& interface, bool connected)
+{
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, connected=%d\n", __FUNCTION__, __LINE__, interface.c_str(), connected);
+
+    IARM_BUS_NetSrvMgr_Iface_EventInterfaceConnectionStatus_t e;
+    snprintf(e.interface, sizeof(e.interface), "%s", interface.c_str());
+    e.status = connected;
+
+    if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS, &e, sizeof(e)))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+    }
+}
+
+static void eventInterfaceIPAddressStatusChanged (std::string& interface, std::string ip_address, bool is_ipv6, bool acquired)
+{
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, ip_address=%s, is_ipv6=%d, acquired=%d\n",
+            __FUNCTION__, __LINE__, interface.c_str(), ip_address.c_str(), is_ipv6, acquired);
+
+    IARM_BUS_NetSrvMgr_Iface_EventInterfaceIPAddress_t e;
+    snprintf(e.interface, sizeof(e.interface), "%s", interface.c_str());
+    snprintf(e.ip_address, sizeof(e.ip_address), "%s", ip_address.c_str());
+    e.is_ipv6 = is_ipv6;
+    e.acquired = acquired;
+
+    if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS, &e, sizeof(e)))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+    }
+}
+
+static void eventDefaultInterfaceChanged(std::string& oldInterface, std::string& newInterface)
+{
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: oldInterface=%s, newInterface=%s\n", __FUNCTION__, __LINE__, oldInterface.c_str(), newInterface.c_str());
+
+    IARM_BUS_NetSrvMgr_Iface_EventDefaultInterface_t e;
+    snprintf(e.oldInterface, sizeof(e.oldInterface), "%s", oldInterface.c_str());
+    snprintf(e.newInterface, sizeof(e.newInterface), "%s", newInterface.c_str());
+
+    if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE, &e, sizeof(e)))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+    }
+}
+
+#endif // ifdef ENABLE_IARM
+
 #ifdef ENABLE_NLMONITOR
+
+static void detectDefaultInterfaceChange()
+{
+    static std::string default_interface ("");
+    std::string old_default_interface = default_interface;
+    std::string gateway;
+    getDefaultInterface (default_interface, gateway);
+    if (old_default_interface != default_interface)
+        eventDefaultInterfaceChanged (old_default_interface, default_interface);
+}
+
+static void linkCallback(std::string args)
+{
+    // Message Format: interface up/down/add/delete
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Arguments received = %s\n", __FUNCTION__, __LINE__, args.c_str());
+    std::vector<std::string> tokens;
+    if (split(args, ' ', tokens, 2) == false)
+        return;
+
+    if (tokens[1] == "up")
+        eventInterfaceEnabledStatusChanged(tokens[0], true);
+    else if (tokens[1] == "down")
+    {
+        eventInterfaceEnabledStatusChanged(tokens[0], false);
+        detectDefaultInterfaceChange(); // needed as netlink events are not sent for ipv4 route deletes that occur implicitly when a physical interface goes down
+    }
+    else if (tokens[1] == "add")
+        eventInterfaceConnectionStatusChanged(tokens[0], true);
+    else if (tokens[1] == "delete")
+        eventInterfaceConnectionStatusChanged(tokens[0], false);
+}
+
+static void addressCallback(std::string args)
+{
+    // Message Format: add/delete ipv4/ipv6 interface address global/local
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Arguments received = %s\n", __FUNCTION__, __LINE__, args.c_str());
+    std::vector<std::string> tokens;
+    if (split(args, ' ', tokens, 5) == false)
+        return;
+
+    if (tokens[4] != "global")
+        return; // we are only interested in global addresses
+
+    eventInterfaceIPAddressStatusChanged(tokens[2], tokens[3], tokens[1] == "ipv6", tokens[0] == "add");
+
+    if ((tokens[2].find(':') != std::string::npos) && (tokens[0] == "delete")) // virtual interface deleted
+        detectDefaultInterfaceChange(); // needed as netlink events are not sent for ipv4 route deletes that occur implicitly when a virtual interface goes down
+}
+
 const int DEFAULT_PRIORITY = 1024;
-const int MOCA_PRIORITY = 125;
-const int WIFI_PRIORITY = 150;
 const int MAX_DEFAULT_ROUTES_PER_INTERFACE = 20;
 
-static void defaultRouteCallback(string args)
+static void defaultRouteCallback(std::string args)
 {
-    const char* debugConfigFile = NULL;
-    stringstream argStream(args);
-    std::string intermediateToken;
+    // Message Format: family interface destinationip gatewayip preferred_src metric add/delete
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Arguments received = %s\n", __FUNCTION__, __LINE__, args.c_str());
+    std::vector<std::string> tokens;
+    if (split(args, ' ', tokens, 7) == false)
+        return;
 
-    //Message Format: family interface destinationip  gatewayip preferred_src metric
-    vector<string> tokens;
-    while (getline(argStream,intermediateToken,' '))
+    detectDefaultInterfaceChange();
+
+    if (tokens[6] != "add")
+        return; // rest of the function is only relevant to "default route add" messages
+
+    unsigned int family = (unsigned int)stoul(tokens[0]);
+    std::string &interface = tokens[1];
+    std::string &gatewayip = tokens[3];
+    std::string &metric = tokens[5];
+
+    std::string wifi_interface (getenvOrDefault("WIFI_INTERFACE", ""));
+    std::string moca_interface (getenvOrDefault("MOCA_INTERFACE", ""));
+    std::string ethernet_interface (getenvOrDefault("ETHERNET_INTERFACE", ""));
+
+    if ((interface != wifi_interface) && (interface != moca_interface) && (interface != ethernet_interface))
     {
-        tokens.push_back(intermediateToken);
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Unrecognized interface %s\n", __FUNCTION__, __LINE__, interface.c_str());
+        return;
     }
-
-    if (tokens.size() < 6)
+    if (!std::all_of(metric.begin(), metric.end(), ::isdigit))
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Unexpected number of Tokens. Arguments received = %s\n", __FUNCTION__, __LINE__,args.c_str());
-	return;
-    }
-
-    char* wifi_iface = getenv("WIFI_INTERFACE");
-    char* moca_iface = getenv("MOCA_INTERFACE");
-    char* eth_iface  = getenv("ETHERNET_INTERFACE");
-
-    //wish string would set itself to empty string if we pass NULL pointer.
-    string wifi_iface_str = wifi_iface ? wifi_iface : "";
-    string moca_iface_str = moca_iface ? moca_iface : "";
-    string eth_iface_str = eth_iface ? eth_iface : "";
-
-    if ((tokens[1] != wifi_iface_str) && (tokens[1] != moca_iface_str) &&
-        (tokens[1] != eth_iface_str))
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Unrecognized interface %s\n", __FUNCTION__, __LINE__,tokens[1].c_str());
-	return;
-    }
-    if (!std::all_of(tokens.back().begin(), tokens.back().end(), ::isdigit))
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a Numerical value. Received Prority =%s\n", 
-	         __FUNCTION__, __LINE__,tokens[5].c_str());
-	return;
-    }
-    if (stoi(tokens.back()) != DEFAULT_PRIORITY)
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a default value. Received Prority =%s\n", 
-		__FUNCTION__, __LINE__,tokens[5].c_str());
-	return;
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a Numerical value. Received Priority =%s\n", __FUNCTION__, __LINE__, metric.c_str());
+        return;
     }
 
-    if (NetLinkIfc::get_instance()->userdefinedrouteexists(tokens[1],tokens[3],(unsigned int)stoul(tokens[0])))
+    unsigned int ui_metric = (unsigned int)stoul(metric);
+
+    if (ui_metric != DEFAULT_PRIORITY)
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: User defined routes are present for Gateway : %s\n", __FUNCTION__, __LINE__,tokens[3].c_str());
-	return;
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a default value. Received Priority =%u\n", __FUNCTION__, __LINE__, ui_metric);
+        return;
+    }
+    if (NetLinkIfc::get_instance()->userdefinedrouteexists(interface, gatewayip, family))
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: User defined routes are present for Gateway : %s\n", __FUNCTION__, __LINE__, gatewayip.c_str());
+        return;
+    }
+    if ( ( ( ( interface == moca_interface ) || ( interface == ethernet_interface ) ) && ( access("/tmp/ani_wifi", F_OK) == 0 ) )
+        || ( ( interface == wifi_interface ) && ( access("/tmp/ani_wifi", F_OK) != 0 ) ) )
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Not Changing Priority for default route via %s\n", __FUNCTION__, __LINE__, interface.c_str());
+        return;
     }
 
-    int priorityvalue = 0;
-    if ((tokens[1] == moca_iface_str ) || (tokens[1] == eth_iface_str))
+    // prioritize (assign lower metric to) the default route via the interface that should be made the active network interface (ani)
+    int priorityvalue = DEFAULT_PRIORITY / 2;
+    int prioritystop = priorityvalue + MAX_DEFAULT_ROUTES_PER_INTERFACE;
+    for (;priorityvalue< prioritystop;++priorityvalue)
     {
-	priorityvalue = MOCA_PRIORITY;
-    }
-    else
-    {
-	priorityvalue = WIFI_PRIORITY;
-    }
-    int pririotystop = priorityvalue + MAX_DEFAULT_ROUTES_PER_INTERFACE;
-    for (;priorityvalue< pririotystop;++priorityvalue)
-    {
-	if (!NetLinkIfc::get_instance()->routeexists(tokens[1],tokens[3],(unsigned int)stoul(tokens[0]),priorityvalue))
-	{
+        if (!NetLinkIfc::get_instance()->routeexists(interface, gatewayip, family, priorityvalue))
             break;
-	}
-
     }
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Changing Route Protioy for interface %s, with gateway %s from %s to %d\n", 
-            __FUNCTION__, __LINE__,
-	    tokens[1].c_str(),tokens[3].c_str(),tokens[5].c_str(),priorityvalue);
-
-    NetLinkIfc::get_instance()->changedefaultroutepriority(tokens[1],tokens[3],
-		                                           (unsigned int)stoul(tokens[0]),
-							   (unsigned int)stoul(tokens.back()),
-							   priorityvalue);
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Changing Priority for default route via %s, with gateway %s from %u to %d\n",
+            __FUNCTION__, __LINE__, interface.c_str(), gatewayip.c_str(), ui_metric, priorityvalue);
+    NetLinkIfc::get_instance()->changedefaultroutepriority(interface, gatewayip, family, ui_metric, priorityvalue);
 }
-#endif//ENABLE_NLMONITOR
+
+#endif // ifdef ENABLE_NLMONITOR
 
 int main(int argc, char *argv[])
 {
@@ -279,12 +424,6 @@ int main(int argc, char *argv[])
     google_breakpad::ExceptionHandler eh(descriptor, NULL, breakpadDumpCallback, NULL, true, -1);
 #endif
 
-#ifdef ENABLE_SD_NOTIFY
-    sd_notifyf(0, "READY=1\n"
-               "STATUS=netsrvmgr is Successfully Initialized\n"
-               "MAINPID=%lu",
-               (unsigned long) getpid());
-#endif
     if(false == read_ConfigProps()) {
         confProp.wifiProps.max_timeout = MAX_TIME_OUT_PERIOD;
         confProp.wifiProps.statsParam_PollInterval = MAX_TIME_OUT_PERIOD;
@@ -299,19 +438,46 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_IARM
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getActiveInterface, getActiveInterface);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getNetworkInterfaces, getNetworkInterfaces);
+#ifdef ENABLE_NLMONITOR
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getInterfaceList, getInterfaceList);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getDefaultInterface, getDefaultInterface);
+#endif // ifdef ENABLE_NLMONITOR
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setDefaultInterface, setDefaultInterface);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isInterfaceEnabled, isInterfaceEnabled);
-    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getInterfaceControlPersistence, getInterfaceControlPersistence);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setInterfaceEnabled, setInterfaceEnabled);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getSTBip, getSTBip);
-    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED, _eventHandler);
-    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE, _eventHandler);
+    IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE, _eventHandler);
+#endif
+#ifdef ENABLE_SD_NOTIFY
+    sd_notifyf(0, "READY=1\n"
+               "STATUS=netsrvmgr is Successfully Initialized\n"
+               "MAINPID=%lu",
+               (unsigned long) getpid());
 #endif
     netSrvMgr_start();
     netSrvMgr_Loop();
 
 }
 
+#ifndef ENABLE_XCAM_SUPPORT
+
+bool isFeatureEnabled(const char* feature)
+{
+    RFC_ParamData_t param = {0};
+    if (WDMP_SUCCESS != getRFCParameter("netsrvmgr", feature, &param))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] getRFCParameter for %s failed.\n", __FUNCTION__, feature);
+        return false;
+    }
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] name = %s, type = %d, value = %s\n", __FUNCTION__, param.name, param.type, param.value);
+    return (strcmp(param.value, "true") == 0);
+}
+
 bool validate_interface_can_be_disabled (const char* interface)
 {
+    if (isFeatureEnabled("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.AllowDisableDefaultNetwork.Enable"))
+        return true;
+
     char activeInterface[INTERFACE_SIZE];
     if (!netSrvMgrUtiles::getRouteInterfaceType (activeInterface))
     {
@@ -326,6 +492,19 @@ bool validate_interface_can_be_disabled (const char* interface)
     return true;
 }
 
+#ifdef USE_RDK_WIFI_HAL
+
+// pni_controller.service determines, enables and configures the interface to make active (wifi/ethernet)
+static void launch_pni_controller ()
+{
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] systemctl restart pni_controller.service\n", __FUNCTION__);
+    system("systemctl restart pni_controller.service");
+}
+
+#endif // USE_RDK_WIFI_HAL
+
+#endif // ifndef ENABLE_XCAM_SUPPORT
+
 void netSrvMgr_start()
 {
     LOG_ENTRY_EXIT;
@@ -333,22 +512,22 @@ void netSrvMgr_start()
 #ifdef ENABLE_NLMONITOR
     NetLinkIfc* netifc = NetLinkIfc::get_instance();
     netifc->initialize();
-    netifc->addSubscriber(new FunctionSubscriber(NlType::dfltroute,defaultRouteCallback));
+    netifc->addSubscriber(new FunctionSubscriber(NlType::link, linkCallback));
+    netifc->addSubscriber(new FunctionSubscriber(NlType::address, addressCallback));
+    netifc->addSubscriber(new FunctionSubscriber(NlType::dfltroute, defaultRouteCallback));
     netifc->run(false);
 #endif
+
 #ifdef ENABLE_ROUTE_SUPPORT
     RouteNetworkMgr::getInstance()->Start();
 #endif
 
 #ifdef USE_RDK_WIFI_HAL
-    bool enable_wifi = true; // enable WiFi by default;
 #ifndef ENABLE_XCAM_SUPPORT
-    if (netSrvMgrUtiles::getSavedInterfaceConfig ("WIFI", enable_wifi) == false) // no saved enable/disable config
-        enable_wifi = true;
-    if (enable_wifi == false && validate_interface_can_be_disabled ("WIFI") == false)
-        enable_wifi = true;
+    launch_pni_controller();
+#else
+    setWifiEnabled (true); // enable WiFi by default for XCAMs
 #endif // ifndef ENABLE_XCAM_SUPPORT
-    setWifiEnabled (enable_wifi);
 #endif // USE_RDK_WIFI_HAL
 
 #ifdef USE_RDK_MOCA_HAL
@@ -674,142 +853,91 @@ IARM_Result_t getNetworkInterfaces(void *arg)
     return ret;
 }
 
-void _eventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+void _eventHandler (const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     LOG_ENTRY_EXIT;
 
-    if (strcmp(owner, IARM_BUS_NM_SRV_MGR_NAME)  == 0) {
-        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t  *)data;
-        switch (eventId) {
-        case IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED:
-        {
-            setInterfaceEnabled (param->setInterface, param->isInterfaceEnabled);
-            break;
-        }
-        case IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE:
-        {
-            setInterfaceControlPersistence (param->setInterface, param->isInterfaceEnabled);
-            break;
-        }
-        default:
-            break;
-        }
+    if (strcmp (owner, IARM_BUS_NM_SRV_MGR_NAME) != 0)
+        return;
+
+    IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *) data;
+
+    switch (eventId)
+    {
+#ifdef USE_RDK_WIFI_HAL
+    case IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE:
+    {
+        setWifiEnabled (param->isInterfaceEnabled);
+        break;
     }
+#endif // USE_RDK_WIFI_HAL
+    default:
+        break;
+    }
+}
+
+#ifdef ENABLE_NLMONITOR
+
+IARM_Result_t getInterfaceList(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    IARM_BUS_NetSrvMgr_InterfaceList_t *list = (IARM_BUS_NetSrvMgr_InterfaceList_t*) arg;
+    std::vector<iface_info> interfaces;
+    NetLinkIfc::get_instance()->getInterfaces(interfaces);
+    list->size = interfaces.size();
+    for (int i = 0; i < list->size; i++)
+    {
+        snprintf(list->interfaces[i].name, sizeof(list->interfaces[i].name), "%s", interfaces[i].m_if_name.c_str());
+        snprintf(list->interfaces[i].mac, sizeof(list->interfaces[i].mac), "%s", interfaces[i].m_if_macaddr.c_str());
+        list->interfaces[i].flags = interfaces[i].m_if_flags;
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] name=%s, mac=%s, flags=0x%08x\n",
+                __FUNCTION__, __LINE__, list->interfaces[i].name, list->interfaces[i].mac, list->interfaces[i].flags);
+    }
+    return IARM_RESULT_SUCCESS;
+}
+
+IARM_Result_t getDefaultInterface(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    IARM_BUS_NetSrvMgr_DefaultRoute_t *default_route = (IARM_BUS_NetSrvMgr_DefaultRoute_t*) arg;
+    std::string interface;
+    std::string gateway;
+    if (getDefaultInterface(interface, gateway))
+    {
+        snprintf(default_route->interface, sizeof(default_route->interface), "%s", interface.c_str());
+        snprintf(default_route->gateway, sizeof(default_route->gateway), "%s", gateway.c_str());
+    }
+    else
+    {
+        memset(default_route, 0, sizeof(IARM_BUS_NetSrvMgr_DefaultRoute_t)); // default_route->interface[0] = '\0';
+    }
+    return IARM_RESULT_SUCCESS;
+}
+
+#endif // ifdef ENABLE_NLMONITOR
+
+IARM_Result_t setDefaultInterface(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t*) arg;
+    return setDefaultInterface (param->setInterface, param->persist) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
 }
 
 IARM_Result_t isInterfaceEnabled(void *arg)
 {
     LOG_ENTRY_EXIT;
-
     IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
-    param->isInterfaceEnabled = false;
-    if (false)
-        ;
-#ifdef USE_RDK_WIFI_HAL
-    else if (strcmp (param->setInterface, "WIFI") == 0)
-        param->isInterfaceEnabled = bWiFiEnabled;
-#endif // USE_RDK_WIFI_HAL
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] interface [%s] not supported\n", __FUNCTION__, param->setInterface);
-    }
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enabled = [%s]\n",
-            __FUNCTION__, param->setInterface, param->isInterfaceEnabled ? "true" : "false");
-
-    return IARM_RESULT_SUCCESS;
+    return isInterfaceEnabled(param->setInterface, param->isInterfaceEnabled) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
 }
 
-IARM_Result_t getInterfaceControlPersistence(void *arg)
+// TODO - Fix HomeNetworkingService references to
+// - IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED
+// - IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE
+IARM_Result_t setInterfaceEnabled(void *arg)
 {
     LOG_ENTRY_EXIT;
-
     IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
-    bool persistedValue;
-    param->isInterfaceEnabled = netSrvMgrUtiles::getSavedInterfaceConfig (param->setInterface, persistedValue);
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] interfaceControlPersistence = [%s]\n",
-            __FUNCTION__, param->setInterface, param->isInterfaceEnabled ? "true" : "false");
-
-    return IARM_RESULT_SUCCESS;
-}
-
-void setInterfaceEnabled (const char* interface, bool enabled)
-{
-    LOG_ENTRY_EXIT;
-
-    bool (*fnPtrSetInterfaceEnabled)(bool) = NULL;
-    if (false)
-        ;
-#ifdef USE_RDK_WIFI_HAL
-    else if (strcmp (interface, "WIFI") == 0)
-        fnPtrSetInterfaceEnabled = setWifiEnabled;
-#endif // USE_RDK_WIFI_HAL
-//    else if (strcmp (interface, "ETHERNET") == 0)
-//        fnPtrSetInterfaceEnabled = setEthernetEnabled;
-//    else if (strcmp (interface, "MOCA") == 0)
-//        fnPtrSetInterfaceEnabled = setMocaEnabled;
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] not supported\n", __FUNCTION__, interface);
-        return;
-    }
-
-    if ((enabled || validate_interface_can_be_disabled (interface)) &&
-            (fnPtrSetInterfaceEnabled != NULL && fnPtrSetInterfaceEnabled (enabled)))
-    {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] success. interface = [%s] enabled = [%s]\n",
-                __FUNCTION__, interface, enabled ? "true" : "false");
-
-        // HomeNetworking - Servicemanager spec for "setInterfaceControlPersistence"
-        // "When true, ... Furthermore, any time an existing interface is enabled or disabled,
-        // the persisted configuration must also be updated."
-        bool value;
-        if (netSrvMgrUtiles::getSavedInterfaceConfig (interface, value)) // if interface config persistence is active
-            netSrvMgrUtiles::saveInterfaceConfig (interface, enabled); // persist new interface enable/disable config
-    }
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface = [%s] enabled = [%s]\n",
-                __FUNCTION__, interface, enabled ? "true" : "false");
-    }
-}
-
-void setInterfaceControlPersistence (const char* interface, bool interfaceControlPersistence)
-{
-    LOG_ENTRY_EXIT;
-
-    bool valueToPersist;
-    if (false)
-        ;
-#ifdef USE_RDK_WIFI_HAL
-    else if (strcmp (interface, "WIFI") == 0)
-        valueToPersist = bWiFiEnabled;
-#endif // USE_RDK_WIFI_HAL
-//    else if (strcmp (interface, "ETHERNET") == 0)
-//        valueToPersist = bEthernetEnabled;
-//    else if (strcmp (interface, "MOCA") == 0)
-//        valueToPersist = bMocaEnabled;
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] not supported\n", __FUNCTION__, interface);
-        return;
-    }
-
-    bool result = false;
-    if (interfaceControlPersistence)
-        result = netSrvMgrUtiles::saveInterfaceConfig (interface, valueToPersist); // persist interface enable/disable config
-    else
-        result = netSrvMgrUtiles::removeSavedInterfaceConfig (interface); // remove persisted interface enable/disable config
-
-    if (result == true)
-    {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] success. interface = [%s] interfaceControlPersistence = [%s]\n",
-                __FUNCTION__, interface, interfaceControlPersistence ? "true" : "false");
-    }
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface = [%s] interfaceControlPersistence = [%s]\n",
-                __FUNCTION__, interface, interfaceControlPersistence ? "true" : "false");
-    }
+    return setInterfaceEnabled (param->setInterface, param->isInterfaceEnabled, param->persist) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
 }
 
 IARM_Result_t getSTBip(void *arg)
@@ -829,12 +957,220 @@ IARM_Result_t getSTBip(void *arg)
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
         return ret;
 }
+
 #endif // ENABLE_IARM
+
+
+#ifndef ENABLE_XCAM_SUPPORT
+
+/*
+ * touches /tmp/<filename>
+ * touches /opt/persistent/<filename> also if persist = true
+ */
+static void mark(const char* filename, bool persist)
+{
+    char fqn[64];
+    snprintf (fqn, sizeof(fqn), "/tmp/%s", filename);
+    FILE *fp = fopen(fqn, "w"); // TODO: not expecting errors but handle failure
+    fclose(fp);
+    if (persist)
+    {
+        snprintf (fqn, sizeof(fqn), "/opt/persistent/%s", filename);
+        FILE *fp = fopen(fqn, "w"); // TODO: not expecting errors but handle failure
+        fclose(fp);
+    }
+}
+
+/*
+ * removes /tmp/<filename>
+ * removes /opt/persistent/<filename> also if persist = true
+ */
+static void unmark(const char* filename, bool persist)
+{
+    char fqn[64];
+    snprintf (fqn, sizeof(fqn), "/tmp/%s", filename);
+    remove (fqn);
+    if (persist)
+    {
+        snprintf (fqn, sizeof(fqn), "/opt/persistent/%s", filename);
+        remove (fqn);
+    }
+}
+
+#ifdef ENABLE_NLMONITOR
+bool getDefaultInterface(std::string &interface, std::string &gateway)
+{
+    LOG_ENTRY_EXIT;
+
+    if (NetLinkIfc::get_instance()->getDefaultRoute(true, interface, gateway) || // ipv6 default route exists
+        NetLinkIfc::get_instance()->getDefaultRoute(false, interface, gateway))  // ipv4 default route exists
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] default route interface = %s gateway = %s\n",
+                __FUNCTION__, __LINE__, interface.c_str(), gateway.c_str());
+        return true;
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] no default route\n", __FUNCTION__, __LINE__);
+        interface.clear();
+        gateway.clear();
+        return false;
+    }
+}
+#endif // ifdef ENABLE_NLMONITOR
+
+bool setDefaultInterface (const char* interface, bool persist)
+{
+    LOG_ENTRY_EXIT;
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s], persist = [%d]\n", __FUNCTION__, interface, persist);
+
+#ifdef USE_RDK_WIFI_HAL
+    if (strcmp (interface, "ETHERNET") == 0)
+    {
+        unmark("pni_wifi", persist); // remove marker file (if present) that says "WIFI is the preferred network interface"
+        launch_pni_controller();
+        return true;
+    }
+    else if (strcmp (interface, "WIFI") == 0)
+    {
+        const char* RFC_PNI_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable";
+        if (isFeatureEnabled(RFC_PNI_ENABLE) == false)
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] can be set as default interface only if RFC %s = true.\n",
+                    __FUNCTION__, interface, RFC_PNI_ENABLE);
+            return false;
+        }
+        bool enabled;
+        if (isInterfaceEnabled(interface, enabled) && !enabled) // even if this check is not done here, pni_controller will not use wifi if "/tmp/wifi_disallowed" exists
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is disabled.\n", __FUNCTION__, interface);
+            return false;
+        }
+        mark("pni_wifi", persist); // touch marker file that says "WIFI is the preferred network interface"
+        launch_pni_controller();
+        return true;
+    }
+#else
+    if (strcmp (interface, "ETHERNET") == 0)
+    {
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] nothing to do. interface [%s] is always the default interface.\n", __FUNCTION__, interface);
+        return true;
+    }
+#endif // #ifdef USE_RDK_WIFI_HAL
+    else
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is invalid.\n", __FUNCTION__, interface);
+        return false;
+    }
+}
+
+bool isInterfaceEnabled(const char* interface, bool& enabled)
+{
+    LOG_ENTRY_EXIT;
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s]\n", __FUNCTION__, interface);
+
+    std::string interface_name;
+    if (strcmp (interface, "ETHERNET") == 0)
+    {
+        interface_name = getenvOrDefault("ETHERNET_INTERFACE", "");
+    }
+#ifdef USE_RDK_WIFI_HAL
+    else if (strcmp (interface, "WIFI") == 0)
+    {
+        interface_name = getenvOrDefault("WIFI_INTERFACE", "");
+    }
+#endif // USE_RDK_WIFI_HAL
+    else
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] interface [%s] is invalid\n", __FUNCTION__, interface);
+        return false;
+    }
+#ifdef ENABLE_NLMONITOR
+    std::vector<iface_info> interfaces;
+    NetLinkIfc::get_instance()->getInterfaces(interfaces);
+    for (const auto& i : interfaces)
+    {
+        if (i.m_if_name == interface_name)
+        {
+            enabled = ((i.m_if_flags & IFF_UP) != 0);
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enabled = [%d]\n", __FUNCTION__, interface, enabled);
+            return true;
+        }
+    }
+#endif // ifdef ENABLE_NLMONITOR
+    RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] interface = [%s] enabled = [NA]\n", __FUNCTION__, interface);
+    return false;
+}
+
+bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
+{
+    LOG_ENTRY_EXIT;
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enable = [%d] persist = [%d]\n", __FUNCTION__, interface, enabled, persist);
+
+    if (strcmp (interface, "ETHERNET") == 0)
+    {
+        if (enabled)
+        {
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] nothing to do. interface [%s] is always enabled.\n", __FUNCTION__, interface);
+            return true;
+        }
+        else
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] cannot be disabled.\n", __FUNCTION__, interface);
+            return false;
+        }
+    }
+#ifdef USE_RDK_WIFI_HAL
+    else if (strcmp (interface, "WIFI") == 0)
+    {
+        if (enabled)
+        {
+            unmark("wifi_disallowed", persist); // remove marker file (if present) that says "WIFI is disallowed"
+            return setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), true);
+        }
+        else if (validate_interface_can_be_disabled(interface))
+        {
+            mark("wifi_disallowed", persist); // touch marker file that says "WIFI is disallowed"
+            setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), false);
+            setDefaultInterface("ETHERNET", persist);
+            return true;
+        }
+        else
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] cannot be disabled.\n", __FUNCTION__, interface);
+            return false;
+        }
+    }
+#endif // USE_RDK_WIFI_HAL
+    else
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is invalid.\n", __FUNCTION__, interface);
+        return false;
+    }
+}
+
+bool setInterfaceState (std::string interface_name, bool enabled)
+{
+    if (interface_name.empty())
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] no interface name\n", __FUNCTION__);
+        return false;
+    }
+    char command[64];
+    snprintf (command, sizeof(command), "ip link set dev %s %s", interface_name.c_str(), enabled ? "up" : "down");
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__, command);
+    system (command);
+    return true;
+}
+
+#endif // ifndef ENABLE_XCAM_SUPPORT
 
 #ifdef USE_RDK_WIFI_HAL
 // TODO: move this into WifiSrvMgr.cpp as WiFiNetworkMgr::setWifiEnabled(bool newState) ?
 bool setWifiEnabled (bool newState)
 {
+    static bool bWiFiEnabled = false; // TODO: assumes WiFi is disabled when netsrvmgr starts. correct assumption?
+
     LOG_ENTRY_EXIT;
 
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] WiFi state: current [%d] requested [%d]\n", __FUNCTION__, bWiFiEnabled, newState);

@@ -152,35 +152,6 @@ bool getCurrentTime(char* currTime,const char *timeFormat);
 bool checkInterfaceActive(char *interfaceName);
 
 /**
- * @brief This function retrieves the interface configuration.
- *
- * @param[in] interface    Interface name for which config details required.
- * @param[out] enable    config info to be filled.
- *
- * @return  Returns false if no saved enable/disable config exists for given interface. Otherwise true if saved config details exists.
- */
-bool getSavedInterfaceConfig(const char *interface, bool& enable);
-
-/**
- * @brief This function is used to save the configuration for the given interface.
- *
- * @param[in] interface    Interface name for which config details to be updated.
- * @param[in] enable    config info to be saved.
- *
- * @return  Returns true if given interface config could be persisted, Otherwise returns false.
- */
-bool saveInterfaceConfig(const char *interface, bool enable);
-
-/**
- * @brief This function is used to remove the persisted config from interfacePersistent data file.
- *
- * @param[in] interface    Interface name in which config data to be removed.
- *
- * @return  Returns true if persisted config for given interface could be removed / does not already exist, Otherwise returns false.
- */
-bool removeSavedInterfaceConfig(const char *interface);
-
-/**
  * @brief This function is used to get STB IP address and its IP version.
  *
  * @param[out] stbip    STB IP.

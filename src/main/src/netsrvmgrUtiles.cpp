@@ -65,8 +65,6 @@
 #define INTERFACE_STATUS_FILE_PATH "/sys/class/net/%s/operstate"
 #define ETHERNET_UP_STATUS "UP"
 
-static const char INTERFACE_PERSISTENCE_FILE[] = "/opt/persistent/interfacePersistent.dat";
-
 EntryExitLogger::EntryExitLogger (const char* func, const char* file) :
         func (func), file (file)
 {
@@ -478,85 +476,6 @@ bool writeKeyFile (const char* filename, GKeyFile* keyFile)
         ret = false;
     }
     g_free (contents);
-    return ret;
-}
-
-// returns:
-// false if no saved enable/disable config exists for given interface (interfaceControlPersistence = false)
-// true otherwise (interfaceControlPersistence = true) and also returns the saved enable/disable config by reference
-bool netSrvMgrUtiles::getSavedInterfaceConfig(const char *interface, bool& enable)
-{
-    LOG_ENTRY_EXIT;
-
-    bool saved_config_exists = false; // default
-    GKeyFile *keyFile = g_key_file_new ();
-    if (loadKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile) && g_key_file_has_key (keyFile, "Interface", interface, NULL))
-    {
-        saved_config_exists = true;
-        enable = g_key_file_get_boolean (keyFile, "Interface", interface, NULL);
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enable = [%s]\n", __FUNCTION__, interface, enable ? "true" : "false");
-    }
-    else
-    {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] no saved config\n", __FUNCTION__, interface);
-    }
-    g_key_file_free (keyFile);
-    return saved_config_exists;
-}
-
-// returns:
-// true if given interface config could be persisted
-// false otherwise
-bool netSrvMgrUtiles::saveInterfaceConfig(const char *interface, bool enable)
-{
-    LOG_ENTRY_EXIT;
-
-    bool ret = false;
-    GKeyFile *keyFile = g_key_file_new ();
-    loadKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile);
-    // if loadKeyFile is
-    // successful:   updated persistence file will contain given interface/key and value; other keys are unaffected
-    // unsuccessful: updated persistence file will contain only given interface/key and value
-    g_key_file_set_boolean (keyFile, "Interface", interface, enable);
-    if (writeKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile))
-    {
-        ret = true;
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] success. interface = [%s] enable = [%s]\n",
-                __FUNCTION__, interface, enable ? "true" : "false");
-    }
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface = [%s] enable = [%s]\n",
-                __FUNCTION__, interface, enable ? "true" : "false");
-    }
-    g_key_file_free (keyFile);
-    return ret;
-}
-
-// returns:
-// true if persisted config for given interface could be removed / does not already exist
-// false otherwise
-bool netSrvMgrUtiles::removeSavedInterfaceConfig(const char *interface)
-{
-    LOG_ENTRY_EXIT;
-
-    bool ret = false;
-    GKeyFile *keyFile = g_key_file_new ();
-    // remove only provided interface/key leaving other keys unaffected
-
-    if (loadKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile) &&
-            (g_key_file_has_key (keyFile, "Interface", interface, NULL) == false || // key does not exist; already removed = success
-                (g_key_file_remove_key (keyFile, "Interface", interface, NULL) &&
-                        writeKeyFile (INTERFACE_PERSISTENCE_FILE, keyFile))))
-    {
-        ret = true;
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] success. interface = [%s]\n", __FUNCTION__, interface);
-    }
-    else
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface = [%s]\n", __FUNCTION__, interface);
-    }
-    g_key_file_free (keyFile);
     return ret;
 }
 
