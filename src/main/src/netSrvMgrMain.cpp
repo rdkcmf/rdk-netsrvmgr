@@ -31,6 +31,9 @@
 #include "netlinkifc.h"
 #include <sstream>
 #endif
+#ifndef ENABLE_XCAM_SUPPORT
+#include "rfcapi.h"     // for RFC queries
+#endif
 
 #ifdef INCLUDE_BREAKPAD
 #include <client/linux/handler/exception_handler.h>
@@ -74,6 +77,10 @@ static void setInterfaceControlPersistence(const char* interface, bool interface
 static IARM_Result_t getSTBip(void *arg);
 #endif // ENABLE_IARM
 
+#ifndef ENABLE_XCAM_SUPPORT
+bool isFeatureEnabled(const char* feature);
+#endif
+
 static bool validate_interface_can_be_disabled (const char* interface);
 #ifdef USE_RDK_WIFI_HAL
 static bool bWiFiEnabled = false; // assumes WiFi is disabled when netsrvmgr starts
@@ -110,8 +117,6 @@ static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& desc
 
 #ifdef ENABLE_NLMONITOR
 const int DEFAULT_PRIORITY = 1024;
-const int MOCA_PRIORITY = 125;
-const int WIFI_PRIORITY = 150;
 const int MAX_DEFAULT_ROUTES_PER_INTERFACE = 20;
 
 static void defaultRouteCallback(string args)
@@ -167,25 +172,24 @@ static void defaultRouteCallback(string args)
 	return;
     }
 
-    int priorityvalue = 0;
-    if ((tokens[1] == moca_iface_str ) || (tokens[1] == eth_iface_str))
+    if ( ( ( ( tokens[1] == moca_iface_str ) || ( tokens[1] == eth_iface_str ) ) && ( access("/tmp/ani_wifi", F_OK) == 0 ) )
+        || ( ( tokens[1] == wifi_iface_str ) && ( access("/tmp/ani_wifi", F_OK) != 0 ) ) )
     {
-	priorityvalue = MOCA_PRIORITY;
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Not Changing Priority for default route via %s\n", __FUNCTION__, __LINE__, tokens[1].c_str());
+        return;
     }
-    else
-    {
-	priorityvalue = WIFI_PRIORITY;
-    }
-    int pririotystop = priorityvalue + MAX_DEFAULT_ROUTES_PER_INTERFACE;
-    for (;priorityvalue< pririotystop;++priorityvalue)
+
+    // prioritize (assign lower metric to) the default route via the interface that should be made the active interface
+    int priorityvalue = DEFAULT_PRIORITY / 2;
+    int prioritystop = priorityvalue + MAX_DEFAULT_ROUTES_PER_INTERFACE;
+    for (;priorityvalue< prioritystop;++priorityvalue)
     {
 	if (!NetLinkIfc::get_instance()->routeexists(tokens[1],tokens[3],(unsigned int)stoul(tokens[0]),priorityvalue))
 	{
             break;
 	}
-
     }
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Changing Route Protioy for interface %s, with gateway %s from %s to %d\n", 
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Changing Priority for default route via %s, with gateway %s from %s to %d\n",
             __FUNCTION__, __LINE__,
 	    tokens[1].c_str(),tokens[3].c_str(),tokens[5].c_str(),priorityvalue);
 
@@ -279,12 +283,6 @@ int main(int argc, char *argv[])
     google_breakpad::ExceptionHandler eh(descriptor, NULL, breakpadDumpCallback, NULL, true, -1);
 #endif
 
-#ifdef ENABLE_SD_NOTIFY
-    sd_notifyf(0, "READY=1\n"
-               "STATUS=netsrvmgr is Successfully Initialized\n"
-               "MAINPID=%lu",
-               (unsigned long) getpid());
-#endif
     if(false == read_ConfigProps()) {
         confProp.wifiProps.max_timeout = MAX_TIME_OUT_PERIOD;
         confProp.wifiProps.statsParam_PollInterval = MAX_TIME_OUT_PERIOD;
@@ -305,10 +303,30 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED, _eventHandler);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE, _eventHandler);
 #endif
+#ifdef ENABLE_SD_NOTIFY
+    sd_notifyf(0, "READY=1\n"
+               "STATUS=netsrvmgr is Successfully Initialized\n"
+               "MAINPID=%lu",
+               (unsigned long) getpid());
+#endif
     netSrvMgr_start();
     netSrvMgr_Loop();
 
 }
+
+#ifndef ENABLE_XCAM_SUPPORT
+bool isFeatureEnabled(const char* feature)
+{
+    RFC_ParamData_t param = {0};
+    if (WDMP_SUCCESS != getRFCParameter("netsrvmgr", feature, &param))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] getRFCParameter for %s FAILED.\n", __FUNCTION__, feature);
+        return false;
+    }
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] name = %s, type = %d, value = %s\n", __FUNCTION__, param.name, param.type, param.value);
+    return (strcmp(param.value, "true") == 0);
+}
+#endif // ifndef ENABLE_XCAM_SUPPORT
 
 bool validate_interface_can_be_disabled (const char* interface)
 {
@@ -341,14 +359,24 @@ void netSrvMgr_start()
 #endif
 
 #ifdef USE_RDK_WIFI_HAL
-    bool enable_wifi = true; // enable WiFi by default;
 #ifndef ENABLE_XCAM_SUPPORT
-    if (netSrvMgrUtiles::getSavedInterfaceConfig ("WIFI", enable_wifi) == false) // no saved enable/disable config
-        enable_wifi = true;
-    if (enable_wifi == false && validate_interface_can_be_disabled ("WIFI") == false)
-        enable_wifi = true;
+    if (isFeatureEnabled("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable"))
+    {
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] RFC is enabled. systemctl restart pni_controller.service\n", __FUNCTION__);
+        system("systemctl restart pni_controller.service"); // pni_controller.service decides whether or not to enable wifi
+    }
+    else
+    {
+        bool enable_wifi = true; // enable WiFi by default;
+        if (netSrvMgrUtiles::getSavedInterfaceConfig ("WIFI", enable_wifi) == false) // no saved enable/disable config
+            enable_wifi = true;
+        if (enable_wifi == false && validate_interface_can_be_disabled ("WIFI") == false)
+            enable_wifi = true;
+        setWifiEnabled (enable_wifi);
+    }
+#else
+    setWifiEnabled (true); // enable WiFi by default for XCAMs
 #endif // ifndef ENABLE_XCAM_SUPPORT
-    setWifiEnabled (enable_wifi);
 #endif // USE_RDK_WIFI_HAL
 
 #ifdef USE_RDK_MOCA_HAL
