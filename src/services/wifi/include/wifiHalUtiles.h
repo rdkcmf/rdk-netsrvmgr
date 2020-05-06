@@ -479,6 +479,15 @@ bool storeMfrWifiCredentials(void);
  */
 bool eraseMfrWifiCredentials(void);
 
+#ifdef ENABLE_IARM
+/**
+ * @brief This function connects to the ssid details stored by MFR
+ *
+ * @return  Returns true if successfully connects to MFR WIFI credentials, Otherwise false.
+ */
+bool connectToMfrWifiCredentials(void);
+#endif
+
 /**
  * @brief This function is used to get detail radio traffic statistics information.
  *

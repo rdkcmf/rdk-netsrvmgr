@@ -355,6 +355,20 @@ int  WiFiNetworkMgr::Start()
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
 #endif
 
+#ifndef ENABLE_XCAM_SUPPORT
+    WiFiConnectionStatus tmpWiFiConnList;
+    memset(&tmpWiFiConnList, '\0', sizeof(tmpWiFiConnList));
+    retVal = lastConnectedSSID(&tmpWiFiConnList);
+    if(false == retVal) {
+        retVal = connectToMfrWifiCredentials();
+        if(true == retVal) {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully connected to the SSID in the MFR \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        }
+        else {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Failed to connect to the SSID in the MFR \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        }
+    }
+#endif // ENABLE_XCAM_SUPPORT
 
 #ifdef ENABLE_LOST_FOUND
     if(confProp.wifiProps.bEnableLostFound)
