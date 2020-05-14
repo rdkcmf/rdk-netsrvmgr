@@ -114,7 +114,11 @@ function configure()
         if [ "x$DEFAULT_HOST" != "x" ]; then
         configure_options="--host $DEFAULT_HOST"
         fi
-        configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=no"
+	if  [ "$XCAM_MODEL" == "XHB1" ]; then
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes"
+	else
+                configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes"
+	fi
         generic_options="$configure_options"
 
         export ac_cv_func_malloc_0_nonnull=yes
