@@ -2568,6 +2568,28 @@ void put_int(char *ptr, int val)
     *tmp = val;
 }
 
+#ifdef ENABLE_IARM
+bool connectToMfrWifiCredentials()
+{
+    int ssidIndex=1;
+    bool retVal=false;
+    IARM_BUS_MFRLIB_API_WIFI_Credentials_Param_t param = {0};
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    param.requestType=WIFI_GET_CREDENTIALS;
+    if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
+    {
+        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        retVal = connect_withSSID(ssidIndex, param.wifiCredentials.cSSID, NET_WIFI_SECURITY_WPA_PSK_AES, NULL, param.wifiCredentials.cPassword, param.wifiCredentials.cPassword, true, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM failure in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+    }
+    return retVal;
+}
+#endif
+
 bool storeMfrWifiCredentials(void)
 {
     bool retVal=false;
