@@ -372,8 +372,11 @@ int  WiFiNetworkMgr::Start()
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
     WiFiConnectionStatus tmpWiFiConnList;
     memset(&tmpWiFiConnList, '\0', sizeof(tmpWiFiConnList));
+#ifdef  USE_RDK_WIFI_HAL
     retVal = lastConnectedSSID(&tmpWiFiConnList);
+#endif
     if(false == retVal) {
+#ifdef ENABLE_IARM
         retVal = connectToMfrWifiCredentials();
         if(true == retVal) {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully connected to the SSID in the MFR \n", MODULE_NAME,__FUNCTION__, __LINE__);
@@ -381,6 +384,7 @@ int  WiFiNetworkMgr::Start()
         else {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Failed to connect to the SSID in the MFR \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
+#endif
     }
 #endif // ENABLE_XCAM_SUPPORT
 
