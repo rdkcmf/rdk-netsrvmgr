@@ -41,6 +41,11 @@ AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
 AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
 endif
 
+if XHB1
+AM_CXXFLAGS += -DXHB1 -I$(RDK_PROJECT_ROOT_PATH)/mfrlibs/include
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound
+endif
+
 if RTMESSAGE
 AM_CXXFLAGS += -DENABLE_RTMESSAGE -std=c++11 -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage -I$(RDK_SOURCE_PATH)/../opensource/src/rtmessage/dataProvider
 AM_LDFLAGS += -L$(RDK_SOURCE_PATH)/../opensource/lib/ -lrtMessage -ldataProvider

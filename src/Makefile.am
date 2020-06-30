@@ -64,7 +64,13 @@ AM_LDFLAGS += -llaf -lcurl
 endif
 
 if XCAM_SUPPORT
-AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound -L$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/ -lbreakpadwrap
+AM_LDFLAGS += -L$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/ -lbreakpadwrap
+AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
+endif
+
+if XHB1
+AM_CXXFLAGS += -DXHB1
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound
 endif
 
 if RTMESSAGE
