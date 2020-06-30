@@ -802,16 +802,14 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     storeMfrWifiCredentials();
                     //bounce xre connection if we move from one private ssid to another ssid
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Moving from one SSID = %s  to another SSID = %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,savedWiFiConnList.ssidSession.ssid,ap_SSID);
-#ifndef ENABLE_XCAM_SUPPORT
-#ifndef XHB1
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
                     xreReconnectReason=20; //RECONNECT_REASON_WIFI_NETWORK_CHANGE
                     if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
                     {
                         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
  
                     }
-#endif                   
-#endif
+#endif // ENABLE_XCAM_SUPPORT and XHB1 not enabled
 #ifdef ENABLE_NLMONITOR
                    char const* intface=getenv("WIFI_INTERFACE");
                    if(intface != NULL)
@@ -867,8 +865,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 retVal = lastConnectedSSID(&savedWiFiConnList);
                 if(!retVal)
                     RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-#ifndef ENABLE_XCAM_SUPPORT
-#ifndef XHB1
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
                 if(!switchPriv2Lnf)
                     switchPriv2Lnf=1;
                 if(switchLnf2Priv)
@@ -881,26 +878,23 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                     }
                     switchLnf2Priv=0;
                 }
-#endif
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
                 memset(&stats, 0, sizeof(wifi_sta_stats_t));
                 wifi_getStats(radioIndex, &stats);
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d,%d,%d,%s,%d\n",stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI,(int)stats.sta_LastDataDownlinkRate,(int)stats.sta_LastDataUplinkRate,stats.sta_BAND,(int)stats.sta_AvgRSSI);
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT and XHB1 not enabled
             }
             else {
                 RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is a LNF SSID so no storing \n", MODULE_NAME,__FUNCTION__, __LINE__ );
                 isLAFCurrConnectedssid=true;
-#ifndef ENABLE_XCAM_SUPPORT
-#ifndef XHB1
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
                 if(!switchLnf2Priv)
                     switchLnf2Priv=1;
                 if(switchPriv2Lnf)
                 {
                     switchPriv2Lnf=0;
                 }
-#endif
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT and XHB1 not enabled
                 setLNFState(CONNECTED_LNF);
             }
 
@@ -1556,7 +1550,7 @@ bool disconnectFromCurrentSSID()
 bool cancelWPSPairingOperation()
 {
     bool ret = true;
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined (ENABLE_XCAM_SUPPORT) && !defined (XHB1)
     if(wifi_cancelWpsPairing() == RETURN_OK)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully Cancelled WPS operation.\n",\
@@ -1875,7 +1869,7 @@ out:
 
 #else // ENABLE_IARM
 
-#ifdef ENABLE_XCAM_SUPPORT
+#if defined (ENABLE_XCAM_SUPPORT) || defined (XHB1)
 char* getlfatfilename()
 {
     static char *lfat_file = NULL;
@@ -1933,15 +1927,44 @@ int get_laf_token(char* token,unsigned int tokenlength)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
     return 0;
 }
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT or XHB1
+
+#ifdef XHB1
+int getMfrDeviceInfo(mfrSerializedType_t stdatatype, char* data)
+{
+        mfrSerializedData_t stdata = {NULL, 0, NULL};
+
+        if(NULL == data)
+        {
+                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Accessing ivalid memory locatio\n", MODULE_NAME, __FUNCTION__, __LINE__);
+                return 1;
+        }
+
+        if(mfrGetSerializedData(stdatatype, &stdata) == mfrERR_NONE)
+        {
+                strncpy(data,stdata.buf,stdata.bufLen);
+                if (stdata.freeBuf != NULL)
+                {
+                        stdata.freeBuf(stdata.buf);
+                        stdata.buf = NULL;
+                }
+        }
+        else
+        {
+                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error retriving required device info.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+                return 1;
+        }
+        return 0;
+}
+#endif
 
 bool getDeviceInfo( laf_device_info_t *dev_info )
 {
     bool ret = false;
-#ifdef ENABLE_XCAM_SUPPORT
-    struct basic_info xcam_dev_info;
     unsigned int tokenlength=0;
     int readtoken=0;
+#ifdef ENABLE_XCAM_SUPPORT
+    struct basic_info xcam_dev_info;
     memset((void*)&xcam_dev_info, 0, sizeof(struct basic_info));
     if (!rdkc_get_device_basic_info(&xcam_dev_info))
     {
@@ -1955,7 +1978,22 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] rdkc_get_device_basic_info failed\n", MODULE_NAME, __FUNCTION__, __LINE__);
         return ret;
     }
+#elif XHB1
+    if(1 == getMfrDeviceInfo(mfrSERIALIZED_TYPE_SERIALNUMBER, dev_info->serial_num))
+    {
+       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error reteiving device serial number.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+    }
+    if(1 == getMfrDeviceInfo(mfrSERIALIZED_TYPE_MODELNAME, dev_info->model))
+    {
+       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error reteiving device model.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+    }
 
+    if(1 == getMfrDeviceInfo(mfrSERIALIZED_TYPE_DEVICEMAC, dev_info->mac))
+    {
+      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d]Error reteiving device MAC.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+    }
+#endif
+#if defined(ENABLE_XCAM_SUPPORT) || defined(XHB1)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] auth token update for xcam\n", MODULE_NAME,__FUNCTION__, __LINE__);
     memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
     readtoken = get_token_length(tokenlength);
@@ -1970,7 +2008,7 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - token is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__,dev_info->auth_token);
     ret = true;
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT and XHB1 defined
     return ret;
 }
 
@@ -2329,7 +2367,7 @@ void *lafConnThread(void* arg)
                 setLNFState(LNF_UNITIALIZED);
                 return NULL;
             }
-#ifdef ENABLE_XCAM_SUPPORT
+#if defined(ENABLE_XCAM_SUPPORT) || defined(XHB1)
             int readtoken=0;
             unsigned int tokenlength=0;
             readtoken = get_token_length(tokenlength);
@@ -2430,6 +2468,14 @@ void connectToLAF()
         } else {
             set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
+#elif XHB1
+        set_WiFiStatusCode(WIFI_CONNECTED);
+        //signal to monitor wifi status
+        pthread_mutex_lock(&mutexGo);
+        if(0 == pthread_cond_signal(&condGo)) {
+          RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        }
+        pthread_mutex_unlock(&mutexGo);
 #endif
         retVal=lastConnectedSSID(&savedWiFiConnList);
         if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
@@ -2510,7 +2556,7 @@ bool isLAFCurrConnectedssid()
 #endif
 bool getDeviceActivationState()
 {
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
     char scriptOutput[BUFFER_SIZE_SCRIPT_OUTPUT] = {'\0'};
     unsigned int count=0;
     std::string str;
@@ -2582,7 +2628,7 @@ bool getDeviceActivationState()
     return bDeviceActivated;
 #else
     return true;
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT and XHB1
 }
 bool isWifiConnected()
 {
@@ -3129,7 +3175,7 @@ int readValues(FILE *pFile, char *pToken, char *data)
 }
 
 #ifdef ENABLE_LOST_FOUND
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 /* get lfat from auth service */
 int laf_get_lfat(laf_lfat_t *lfat)
 {
@@ -3169,7 +3215,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
     cJSON_Delete(response);
     return 0;
 }
-#else // ENABLE_XCAM_SUPPORT
+#else // ENABLE_XCAM_SUPPORT or XHB1
 int laf_get_lfat(laf_lfat_t *lfat)
 {
 	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -3235,7 +3281,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
 }
 #endif // ENABLE_XCAM_SUPPORT
 
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined (ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 /* store lfat with auth service */
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
@@ -3274,7 +3320,7 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 
     return 0;
 }
-#else // ENABLE_XCAM_SUPPORT
+#else // ENABLE_XCAM_SUPPORT or XHB1
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
@@ -3291,7 +3337,7 @@ int laf_set_lfat(laf_lfat_t* const lfat)
   }
   return 0;
 }
-#endif // ENABLE_XCAM_SUPPORT
+#endif // ENABLE_XCAM_SUPPORT or XHB1
 
 bool addSwitchToPrivateResults(int lnfError,char *currTime)
 {

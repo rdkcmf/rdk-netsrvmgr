@@ -34,6 +34,12 @@ extern "C" {
 }
 #endif
 
+#ifdef XHB1
+extern "C" {
+#include "mfrApi.h"
+}
+#endif
+
 #ifdef ENABLE_LOST_FOUND
 #ifdef ENABLE_IARM
 #include "authserviceIARM.h"
@@ -337,6 +343,18 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType);
  * @return  Returns true if successfully returns the mac address, Otherwise false.
  */
 bool getmacaddress(gchar* ifname,GString *data);
+
+#ifdef XHB1
+/**
+ * @brief This function is used to get basic device info from camera.
+ *
+ * @param[in] stdatatype  Device parameter to get value
+ * @param[out] data       Buffer to return value.
+ *
+ * @return  Returns true if successfully returns the parameter value, Otherwise false.
+ */
+int getMfrDeviceInfo(mfrSerializedType_t stdatatype, char* data);
+#endif
 
 /**
  * @brief This function is used to get LAF device info details such as serial number, mac address, model name.

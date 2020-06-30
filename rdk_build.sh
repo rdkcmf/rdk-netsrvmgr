@@ -61,7 +61,7 @@ source $RDK_SCRIPTS_PATH/soc/build/soc_env.sh
 fi
 
 if  [ "$XCAM_MODEL" == "XHB1" ]; then
-  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson -DXHB1"
+  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson"
   export CXXFLAGS=$CFLAGS
   export LDFLAGS="-L$RDK_FSROOT_PATH/usr/lib -L$PROJ_INSTALL/usr/lib"
 fi
@@ -127,9 +127,9 @@ function configure()
         configure_options="--host $DEFAULT_HOST"
         fi
 	if  [ "$XCAM_MODEL" == "XHB1" ]; then
-		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes"
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=yes"
 	else
-                configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes"
+                configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes --enable-xhb1=no"
 	fi
         generic_options="$configure_options"
 

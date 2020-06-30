@@ -369,7 +369,7 @@ int  WiFiNetworkMgr::Start()
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
 #endif
 
-#ifndef ENABLE_XCAM_SUPPORT
+#ifndef ENABLE_XCAM_SUPPORT 
     WiFiConnectionStatus tmpWiFiConnList;
     memset(&tmpWiFiConnList, '\0', sizeof(tmpWiFiConnList));
     retVal = lastConnectedSSID(&tmpWiFiConnList);

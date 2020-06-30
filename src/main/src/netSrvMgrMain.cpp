@@ -37,12 +37,12 @@
 #include "netlinkifc.h"
 #endif
 
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 #include "rfcapi.h"     // for RFC queries
 #endif
 
 #ifdef INCLUDE_BREAKPAD
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 #include <client/linux/handler/exception_handler.h>
 #else
 #include "breakpadwrap.h"
@@ -91,7 +91,7 @@ static IARM_Result_t setInterfaceEnabled(void *arg);
 static IARM_Result_t getSTBip(void *arg);
 #endif // ifdef ENABLE_IARM
 
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 static bool isFeatureEnabled(const char* feature);
 static bool validate_interface_can_be_disabled (const char* interface);
 #ifdef ENABLE_NLMONITOR
@@ -101,7 +101,7 @@ static bool setDefaultInterface(const char* interface, bool persist);
 static bool isInterfaceEnabled(const char* interface, bool& enabled);
 static bool setInterfaceEnabled(const char* interface, bool enabled, bool persist);
 static bool setInterfaceState(std::string interface_name, bool enabled);
-#endif // ifndef ENABLE_XCAM_SUPPORT
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
 
 #ifdef USE_RDK_WIFI_HAL
 static bool setWifiEnabled (bool newState);
@@ -127,7 +127,7 @@ void NetworkMgr_SignalHandler (int sigNum)
 }
 
 #ifdef INCLUDE_BREAKPAD
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
                         void* context,
                         bool succeeded)
@@ -426,7 +426,7 @@ int main(int argc, char *argv[])
 
 
 #ifdef INCLUDE_BREAKPAD
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
     google_breakpad::MinidumpDescriptor descriptor("/opt/minidumps/");
     google_breakpad::ExceptionHandler eh(descriptor, NULL, breakpadDumpCallback, NULL, true, -1);
 #else
@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
 
 }
 
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 
 bool isFeatureEnabled(const char* feature)
 {
@@ -515,7 +515,7 @@ static void launch_pni_controller ()
 
 #endif // USE_RDK_WIFI_HAL
 
-#endif // ifndef ENABLE_XCAM_SUPPORT
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
 
 void netSrvMgr_start()
 {
@@ -535,11 +535,11 @@ void netSrvMgr_start()
 #endif
 
 #ifdef USE_RDK_WIFI_HAL
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
     launch_pni_controller();
 #else
     setWifiEnabled (true); // enable WiFi by default for XCAMs
-#endif // ifndef ENABLE_XCAM_SUPPORT
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
 #endif // USE_RDK_WIFI_HAL
 
 #ifdef USE_RDK_MOCA_HAL
@@ -553,7 +553,7 @@ void netSrvMgr_Loop()
     while(1)
     {
         time(&curr);
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
         printf("I-ARM NET-SRV-MGR: HeartBeat at %s\r\n", ctime(&curr));
 #endif
         sleep(60);
@@ -973,7 +973,7 @@ IARM_Result_t getSTBip(void *arg)
 #endif // ENABLE_IARM
 
 
-#ifndef ENABLE_XCAM_SUPPORT
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 
 /*
  * touches /tmp/<filename>
@@ -1175,7 +1175,7 @@ bool setInterfaceState (std::string interface_name, bool enabled)
     return true;
 }
 
-#endif // ifndef ENABLE_XCAM_SUPPORT
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
 
 #ifdef USE_RDK_WIFI_HAL
 // TODO: move this into WifiSrvMgr.cpp as WiFiNetworkMgr::setWifiEnabled(bool newState) ?

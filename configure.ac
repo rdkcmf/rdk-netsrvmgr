@@ -144,6 +144,19 @@ AC_ARG_ENABLE([rtmessage],
          [echo " rtmessage is enable"])
 AM_CONDITIONAL([RTMESSAGE], [test x$RTMESSAGE = xtrue])
 
+XHB1=" "
+AC_ARG_ENABLE([xhb1],
+        AS_HELP_STRING([--enable-xhb1],[This will be to enable/disable doorbell camera]),
+        [
+          case "${enableval}" in
+           yes) XHB1=true ;;
+           no) XHB1=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-xhb1]) ;;
+           esac
+           ],
+         [echo " Doorbell camera is enabled"])
+AM_CONDITIONAL([XHB1], [test x$XHB1 = xtrue])
+
 AC_ARG_ENABLE([nlmonitor],
         AS_HELP_STRING([--enable-nlmonitor],[This will enable/disable netlink monitor support.]),
         [
