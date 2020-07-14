@@ -307,7 +307,7 @@ SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryption
         else
         {
             int len = sizeof(wifi_securityModesMap)/sizeof(wifi_securityModes);
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] securitymode = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,secModeString);
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] securitymode = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,secModeString);
             for(int i = len-1 ; i >= 0; i--) {
                 if(NULL != strcasestr(secModeString,wifi_securityModesMap[i].modeString)) {
                     if(((encryptionType != NULL) && (NULL != strcasestr(encryptionType,"AES"))) ||  (NULL != strcasestr(secModeString,"WEP"))) {
