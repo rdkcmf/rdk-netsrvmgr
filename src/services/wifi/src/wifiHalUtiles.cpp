@@ -1713,8 +1713,9 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
                 if(bRet)
                     bLastLnfSuccess=true;
                 netSrvMgrUtiles::getCurrentTime(currTime,(char *)TIME_FORMAT);
-                addSwitchToPrivateResults(err,currTime);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added Time=%s lnf error=%d to list,length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,currTime,err,g_list_length(lstLnfPvtResults));
+                if (addSwitchToPrivateResults(err,currTime) != 0) {
+                   RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added Time=%s lnf error=%d to list,length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,currTime,err,g_list_length(lstLnfPvtResults));
+                }
             }
         }
     }
@@ -3341,13 +3342,29 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 
 bool addSwitchToPrivateResults(int lnfError,char *currTime)
 {
+  bool ret = false;
+  guint lstLnfPvtResultsLength=0;
+  WiFiLnfSwitchPrivateResults_t *WiFiLnfSwitchPrivateResultsData=NULL;
   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-  WiFiLnfSwitchPrivateResults_t *WiFiLnfSwitchPrivateResultsData = g_new(WiFiLnfSwitchPrivateResults_t,1);
-  WiFiLnfSwitchPrivateResultsData->lnfError = lnfError;
-  strcpy((char *)WiFiLnfSwitchPrivateResultsData->currTime,currTime);
-  lstLnfPvtResults=g_list_append(lstLnfPvtResults,WiFiLnfSwitchPrivateResultsData);
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Time = %s lnf error = %d length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError,g_list_length(lstLnfPvtResults));
+  WiFiLnfSwitchPrivateResultsData = g_new0(WiFiLnfSwitchPrivateResults_t,1);
+  if(NULL == WiFiLnfSwitchPrivateResultsData) {
+    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to allocate memory \n",  MODULE_NAME,__FUNCTION__, __LINE__);
+  }
+  else { 
+    WiFiLnfSwitchPrivateResultsData->lnfError = (unsigned char)lnfError;
+    g_stpcpy((gchar*)WiFiLnfSwitchPrivateResultsData->currTime,currTime);
+    lstLnfPvtResults=g_list_append(lstLnfPvtResults,WiFiLnfSwitchPrivateResultsData);
+    lstLnfPvtResultsLength=g_list_length(lstLnfPvtResults);
+    if ((lstLnfPvtResults != NULL)&&(lstLnfPvtResultsLength > 0)) {
+         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Time = %s lnf error = %d length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError,g_list_length(lstLnfPvtResults));
+         ret = true;
+    }
+    else {
+         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in added Time and lnf error to list, error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,ret );
+    }
+  }  
   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  return ret;
 }
 
 bool convertSwitchToPrivateResultsToJson(char *buffer)
@@ -3368,7 +3385,7 @@ bool convertSwitchToPrivateResultsToJson(char *buffer)
   GList *element = g_list_first(lstLnfPvtResults);
   privateResultsLength=g_list_length(lstLnfPvtResults);
 
-  while ((element)&&(privateResultsLength > 0))
+  while ((element != NULL)&&(privateResultsLength > 0))
   {
     WiFiLnfSwitchPrivateResultsData = (WiFiLnfSwitchPrivateResults_t*)element->data;
     cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
@@ -3396,7 +3413,11 @@ bool clearSwitchToPrivateResults()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     if((lstLnfPvtResults) && (g_list_length(lstLnfPvtResults) != 0))
     {
-	g_list_free_full(lstLnfPvtResults,g_free);
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+           g_list_free_full((GList *)g_steal_pointer(&lstLnfPvtResults),g_free);
+#else
+           g_list_free_full(lstLnfPvtResults,g_free);
+#endif
     }
     else
     {
