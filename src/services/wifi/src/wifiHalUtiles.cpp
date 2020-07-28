@@ -2563,9 +2563,9 @@ bool getDeviceActivationState()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     while(deviceID && !deviceID[0])
     {
-        if(access(SCRIPT_FILE_TO_GET_DEVICE_ID, F_OK ) != -1)
+        if (access(SCRIPT_FILE_TO_GET_DEVICE_ID, F_OK ) != -1)
         {
-            if(!netSrvMgrUtiles::getScriptOutput(SCRIPT_FILE_TO_GET_DEVICE_ID,scriptOutput))
+            if (!netSrvMgrUtiles::getCommandOutput(SCRIPT_FILE_TO_GET_DEVICE_ID, scriptOutput, sizeof (scriptOutput)))
             {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in running device id script. \n", MODULE_NAME,__FUNCTION__, __LINE__);
                 return bDeviceActivated;
@@ -3150,15 +3150,15 @@ void logs_Period2_Params()
 }
 
 
-int readValues(FILE *pFile, char *pToken, char *data)
+void readValues(FILE *pFile, char *pToken, char *data)
 {
     char buffer[DATA_LEN];
     char *keyValue;
     if(pFile == NULL)
-      return -1;
+      return;
     /* Search the token in the config txt file and copy the value */
     fseek(pFile, 0, SEEK_SET);
-    while(fgets(buffer, DATA_LEN, pFile)!= NULL )
+    while (fgets(buffer, sizeof (buffer), pFile) != NULL)
     {
         keyValue = strtok( buffer, "=" );
         if(!(strcmp(keyValue, pToken)))
@@ -3263,10 +3263,10 @@ int laf_get_lfat(laf_lfat_t *lfat)
             }
             RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %s\n",version, ttl);
             RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %ld\n",lfat->version, lfat->ttl);
+            fclose(fd);
           }else{
             RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Unable to open lfat_conf file\n");
           }
-          fclose(fd); 
         }
         else //If .lnf_conf file is not present
         { 
