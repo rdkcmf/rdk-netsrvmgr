@@ -230,14 +230,15 @@ bool check_global_v6_ula_address(std::string ipv6Addr);
 
 
 /**
- * @brief This function is used to get the script output from the specified script file.
+ * @brief This function is used to get the output of running the specified command.
  *
- * @param[in] scriptPath          Script file name.
- * @param[out] scriptOutput        Buffer to store script output.
+ * @param[in]  command               command to run.
+ * @param[out] output_buffer         output buffer into which to put command's output
+ * @param[in]  output_buffer_size    output buffer size
  *
- * @return  Returns true if successfully gets the output data from script file, Otherwise false.
+ * @return  Returns true if it gets the command's output successfully, Otherwise false.
  */
-bool getScriptOutput(char *scriptPath,char *scriptOutput);
+bool getCommandOutput(const char *command, char *output_buffer, size_t output_buffer_size);
 }
 
 

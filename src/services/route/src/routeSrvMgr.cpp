@@ -1110,7 +1110,7 @@ guint RouteNetworkMgr::g_list_find_gw(GwyDeviceData* gwData, gconstpointer* ip )
 gboolean RouteNetworkMgr::getCurrentRoute(char * routeIp,gboolean* isIpv4)
 {
     FILE *pf;
-    char data[100]= {0};
+    char data[100] = {0};
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     GString* command=g_string_new(NULL);
     *isIpv4=lastRouteSetV4;
@@ -1129,7 +1129,7 @@ gboolean RouteNetworkMgr::getCurrentRoute(char * routeIp,gboolean* isIpv4)
         return FALSE;
     }
 
-    fgets(data,sizeof(data) , pf);
+    fgets(data, sizeof (data), pf);
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Current Route set is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,data );
     g_stpcpy(routeIp,g_strstrip(data));
     g_string_free(command,TRUE);

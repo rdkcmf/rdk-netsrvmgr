@@ -209,61 +209,66 @@ void netSrvMgrUtiles::triggerDhcpLease(Dhcp_Lease_Operation op)
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
 }
 
+static bool getIPv6RouteInterface (char *devname)
+{
+    bool route_found = false;
+    FILE *fp = fopen ("/proc/net/ipv6_route", "r");
+    if (fp != NULL)
+    {
+        char dst[50], gw[50];
+        int ret;
+        while ((ret = fscanf (fp, "%s %*x %*s %*x %s %*x %*x %*x %*x %s", dst, gw, devname)) != EOF)
+        {
+            /*return value must be parameter's number*/
+            if (ret != 3)
+            {
+                continue;
+            }
+            if ((strcmp (dst, gw) == 0) && (strcmp (devname, "sit0") != 0) && (strcmp (devname, "lo") != 0))
+            {
+//                readDevFile(devname);
+                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__, devname);
+                route_found = true;
+                break;
+            }
+        }
+        fclose (fp);
+    }
+    return route_found;
+}
+
+static bool getIPv4RouteInterface (char *devname)
+{
+    bool route_found = false;
+    FILE *fp = fopen ("/proc/net/route", "r");
+    if (fp != NULL)
+    {
+        char line[100], *ptr, *ctr, *sptr;
+        while (fgets (line, sizeof (line), fp))
+        {
+            ptr = strtok_r (line, " \t", &sptr);
+            ctr = strtok_r (NULL, " \t", &sptr);
+            if (ptr != NULL && ctr != NULL && strcmp (ctr, "00000000") == 0)
+            {
+                strcpy (devname, ptr);
+//                readDevFile(devname);
+                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__, devname);
+                route_found = true;
+                break;
+            }
+        }
+        fclose (fp);
+    }
+    return route_found;
+}
+
 bool netSrvMgrUtiles::getRouteInterface(char* devname)
 {
     LOG_ENTRY_EXIT;
-
-    bool route_found = false;
-    char dst[50],gw[50];
-    char line[100] , *ptr , *ctr, *sptr;
-    int ret;
-    FILE *fp;
-    fp = fopen("/proc/net/ipv6_route","r");
-    if(fp!=NULL) {
-        while((ret=fscanf(fp,"%s %*x %*s %*x %s %*x %*x %*x %*x %s",
-                          dst,gw,
-                          devname))!=EOF) {
-            /*return value must be parameter's number*/
-            if(ret!=3) {
-                continue;
-            }
-            if((strcmp(dst,gw) == 0) && (strcmp(devname,"sit0") != 0) && (strcmp(devname,"lo") != 0) )
-            {
-//                readDevFile(devname);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__,devname);
-                route_found = true;
-                goto close_file;
-            }
-        }
-    }
-    fclose(fp);
-
-    fp = fopen("/proc/net/route" , "r");
-    while(fgets(line , 100 , fp))
-    {
-        ptr = strtok_r(line , " \t", &sptr);
-        ctr = strtok_r(NULL , " \t", &sptr);
-
-        if(ptr!=NULL && ctr!=NULL)
-        {
-            if(strcmp(ctr , "00000000") == 0)
-            {
-                strcpy(devname,ptr);
-//                readDevFile(devname);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__,devname);
-                route_found = true;
-                goto close_file;
-            }
-        }
-    }
-
-close_file:
-    fclose(fp);
-
-    if (!route_found)
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] No Route Found\n", __FUNCTION__, __LINE__);
-
-    return route_found;
+    if (getIPv6RouteInterface (devname) || getIPv4RouteInterface (devname))
+        return true;
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] No Route Found\n", __FUNCTION__, __LINE__);
+    return false;
 }
 
 bool netSrvMgrUtiles::getRouteInterfaceType(char* devname)
@@ -774,22 +779,22 @@ bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
     return false;
 }
 
-bool netSrvMgrUtiles::getScriptOutput(char *scriptPath,char *scriptOutput)
+bool netSrvMgrUtiles::getCommandOutput(const char *command, char *output_buffer, size_t output_buffer_size)
 {
-    FILE *file = NULL;
-    bool ret=false;
-    if(!(file = popen(scriptPath, "r")))
+    bool ret = false;
+    FILE *file = popen(command, "r");
+    if (!file)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] script failed %s \n", __FUNCTION__, __LINE__,scriptPath);
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] command failed %s \n", __FUNCTION__, __LINE__, command);
         return ret;
     }
-    if(fgets(scriptOutput,BUFFER_SIZE_SCRIPT_OUTPUT, file)!=NULL)
+    if (fgets(output_buffer, output_buffer_size, file) != NULL)
     {
-        ret=true;
+        ret = true;
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed in getting output from script %s \n", __FUNCTION__, __LINE__,scriptPath);
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in getting output from command %s \n", __FUNCTION__, __LINE__, command);
     }
     pclose(file);
     return ret;
