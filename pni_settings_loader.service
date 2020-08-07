@@ -1,0 +1,15 @@
+[Unit]
+Description=Preferred Network Interface Settings Loader
+After=wifi.service
+Before=netsrvmgr.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/device.properties
+ExecStart=-/bin/cp /opt/persistent/pni_wifi /tmp
+ExecStart=-/bin/cp /opt/persistent/wifi_disallowed /tmp
+ExecStart=/sbin/ip link set dev $WIFI_INTERFACE down
+
+[Install]
+WantedBy=multi-user.target
