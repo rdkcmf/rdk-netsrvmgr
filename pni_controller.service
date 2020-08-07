@@ -1,0 +1,8 @@
+[Unit]
+Description=Preferred Network Interface Controller
+
+[Service]
+ExecStart=/lib/rdk/pni_controller.sh
+
+[Install]
+WantedBy=multi-user.target
