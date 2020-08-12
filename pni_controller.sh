@@ -9,21 +9,28 @@ log()
 
 . /etc/device.properties
 
-declare "IPV4_CONFIGURATION_SERVICE_$ETHERNET_INTERFACE=virtual-moca-iface.service"
-declare "IPV4_CONFIGURATION_SERVICE_$WIFI_INTERFACE=virtual-wifi-iface.service"
+[ -f /lib/systemd/system/virtual-moca-iface.service ] && [ -f /lib/systemd/system/virtual-wifi-iface.service ] && RUN_LINK_LOCAL_SERVICES=true
+
+if [ "$RUN_LINK_LOCAL_SERVICES" == "true" ]; then
+    declare "DHCPv4_SERVICE_$ETHERNET_INTERFACE=virtual-moca-iface.service"
+    declare "DHCPv4_SERVICE_$WIFI_INTERFACE=virtual-wifi-iface.service"
+else
+    declare "DHCPv4_SERVICE_$ETHERNET_INTERFACE=udhcpc@${ETHERNET_INTERFACE}.service"
+    declare "DHCPv4_SERVICE_$WIFI_INTERFACE=udhcpc@${WIFI_INTERFACE}.service"
+fi
 
 ipv4_deconfigure_interface()
 {
-    IPV4_CONFIGURATION_SERVICE=IPV4_CONFIGURATION_SERVICE_$1
-    log "$1: systemctl stop ${!IPV4_CONFIGURATION_SERVICE}"
-    systemctl stop "${!IPV4_CONFIGURATION_SERVICE}"
+    DHCPv4_SERVICE=DHCPv4_SERVICE_$1
+    log "$1: systemctl stop ${!DHCPv4_SERVICE}"
+    systemctl stop "${!DHCPv4_SERVICE}"
 }
 
 ipv4_configure_dhcpip()
 {
-    IPV4_CONFIGURATION_SERVICE=IPV4_CONFIGURATION_SERVICE_$1
-    log "$1: systemctl start ${!IPV4_CONFIGURATION_SERVICE}"
-    systemctl start "${!IPV4_CONFIGURATION_SERVICE}"
+    DHCPv4_SERVICE=DHCPv4_SERVICE_$1
+    log "$1: systemctl start ${!DHCPv4_SERVICE}"
+    systemctl start "${!DHCPv4_SERVICE}"
 }
 
 configure_port()
@@ -149,7 +156,7 @@ configure_interface()
 {
     ipv6_configure_interface "$1"
     ipv4_configure_interface "$1"
-    [ "$BOX_MODEL" == "RPI" ] && return
+    [ "$RUN_LINK_LOCAL_SERVICES" != "true" ] && return
     # restart link local services in background after killing any previously started instance
     [ -n "$!" ] && kill $!; restart_link_local_services "$1" &
 }
