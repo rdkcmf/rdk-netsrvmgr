@@ -162,6 +162,16 @@ bool checkInterfaceActive(char *interfaceName);
 bool getSTBip(char *stbip,bool *isIpv6);
 
 /**
+ * @brief This function is used to get STB IPv4 IP address
+ *
+ * @param[out] stbip    STB IP.
+ * @param[out] isIpv6    Internet Protocol Version.
+ *
+ * @return  Returns true if successfully gets the IP details, Otherwise returns false.
+ */
+bool getSTBipv4(char *stbip);
+
+/**
  * @brief This function gets the active interface device type(Ethernet/MOCA/WIFI).
  *
  * @param[out] devname Device type buffer to be filled.
@@ -208,6 +218,37 @@ bool check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr);
  * @return  Returns true if successfully gets the output data from script file, Otherwise false.
  */
 bool getScriptOutput(char *scriptPath,char *scriptOutput);
+
+/**
+ * @brief This function checks for and returns a valid routable ipv4 address for the specified interface
+ *
+ * @param[in] interface         Interface name
+ * @param[out] stbip            Storage for discovered IP address
+ *
+ * @return true if we found an ipv4 address, else false
+ */
+bool getIpv4Address(std::string & interface, char *stbip);
+
+/**
+ * @brief This function checks for and returns a valid routable ipv6 address for the specified interface
+ *
+ * @param[in] interface         Interface name
+ * @param[out] stbip            Storage for discovered IP address
+ *
+ * @return true if we found an ipv6 address, else false
+ */
+bool getIpv6Address(std::string & interface, char *stbip);
+
+/**
+ * @brief This function checks for and returns a ipv4 link local address for the specified interface
+ *
+ * @param[in] interface         Interface name
+ * @param[out] stbip            Storage for discovered IP address
+ *
+ * @return true if we found an ipv4 link local address, else false
+ */
+bool getIpv4LinkLocalAddress(std::string & interface, char *stbip);
+
 }
 
 

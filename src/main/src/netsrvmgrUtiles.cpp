@@ -487,99 +487,150 @@ bool netSrvMgrUtiles::getSTBip(char *stbip,bool *isIpv6)
 #ifdef ENABLE_NLMONITOR
     std::vector<std::string> ipAddr;
     char interface[INTERFACE_SIZE]={0};
-    char macAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
+
     if(netSrvMgrUtiles::getRouteInterface(interface))
     {
         std::string ifcStr(interface);
-        NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET6,ipAddr);
-        if(ipAddr.empty())
+        if(!(ret = getIpv6Address(ifcStr, stbip)))
         {
             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ipv6 address not there for interface %s Trying ipv4 \n", __FUNCTION__, __LINE__,ifcStr.c_str());
-            NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET,ipAddr);
-            if(ipAddr.empty())
-                RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] No ipaddress on interface %s \n", __FUNCTION__, __LINE__,ifcStr.c_str());
-            else
-            {
-                for (auto const& s : ipAddr)
-                {
-                    if((ipAddr.size()) > 1)
-                    {
-                        std::string tempStr = s.substr(0, s.find("/", 0));
-                        if(chk_ipaddr_linklocal(&tempStr[0],AF_INET))
-                        {
-                            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
-                        }
-                        else
-                        {
-                            *isIpv6=false;
-                            strcpy(stbip,tempStr.c_str());
-                            ret=true;
-                        }
-                        RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] ipv4 address %s on interface %s \n", __FUNCTION__, __LINE__,s.c_str(),ifcStr.c_str());
-                    }
-                    else
-                    {
-                        *isIpv6=false;
-                        std::string tempStr = s.substr(0, s.find("/", 0));
-                        strcpy(stbip,tempStr.c_str());
-                        ret=true;
-                    }
-                }
-            }
+            if ((ret = getIpv4Address( ifcStr, stbip )))
+                *isIpv6 = false;
         }
         else
-        {
-            netSrvMgrUtiles::getMacAddress_IfName(interface,macAddress);
-            std::string macAddrStr(macAddress);
-            for (auto const& s : ipAddr)
-            {
-                if(((ipAddr.size()) > 1) && (netSrvMgrUtiles::check_global_v6_based_macaddress(s,macAddrStr)))
-                {
-                    RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ip addr %s since it is based on mac %s \n", __FUNCTION__, __LINE__,s.c_str(),macAddrStr.c_str());
-                }
-                else
-                {
-                    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] ipv6 address %s on interface %s \n", __FUNCTION__, __LINE__,s.c_str(),ifcStr.c_str());
-                    *isIpv6=true;
-                    std::string tempStr = s.substr(0, s.find("/", 0)); //remove /64 in ip  2601:a40:300:164:aa11:fcff:fefd:1e8d/64
-                    strcpy(stbip,tempStr.c_str());
-                    ret=true;
-                }
-            }
-        }
+            *isIpv6 = true;
     }
     else
     {
         if(netSrvMgrUtiles::currentActiveInterface(interface))
         {
             std::string ifcStr(interface);
-            NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET,ipAddr);
-            if(ipAddr.empty())
-            {
-                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No ipaddress on interface %s \n", __FUNCTION__, __LINE__,ifcStr.c_str());
-            }
-            else
-            {
-                for (auto const& s : ipAddr)
-                {
-                    std::string tempStr = s.substr(0, s.find("/", 0));
-                    if(chk_ipaddr_linklocal(tempStr.c_str(),AF_INET))
-                    {
-                        *isIpv6=false;
-                        strcpy(stbip,tempStr.c_str());
-                        ret=true;
-                    }
-                }
-            }
-
+            if ((ret = getIpv4LinkLocalAddress( ifcStr, stbip)))
+                *isIpv6 = false;
         }
-
     }
 #else
     RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ENABLE_NLMONITOR not set \n", __FUNCTION__, __LINE__);
 #endif
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return ret;
+}
+
+bool netSrvMgrUtiles::getSTBipv4(char *stbip)
+{
+
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    bool ret=false;
+#ifdef ENABLE_NLMONITOR
+    std::vector<std::string> ipAddr;
+    char interface[INTERFACE_SIZE]={0};
+
+    if(netSrvMgrUtiles::getRouteInterface(interface))
+    {
+        std::string ifcStr(interface);
+        ret = getIpv4Address( ifcStr, stbip );
+    }
+    else
+    {
+        if(netSrvMgrUtiles::currentActiveInterface(interface))
+        {
+            std::string ifcStr(interface);
+            ret = getIpv4LinkLocalAddress( ifcStr, stbip);
+        }
+    }
+#else
+    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ENABLE_NLMONITOR not set \n", __FUNCTION__, __LINE__);
+#endif
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+    return ret;
+}
+
+bool netSrvMgrUtiles::getIpv4LinkLocalAddress(std::string & interface, char *stbip)
+{
+    std::vector<std::string> ipAddr;
+
+    NetLinkIfc::get_instance()->getIpaddr(interface, AF_INET, ipAddr);
+    if(ipAddr.empty())
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No ipaddress on interface %s \n", __FUNCTION__, __LINE__, interface.c_str());
+    }
+    else
+    {
+        for (auto const& s : ipAddr)
+        {
+            std::string tempStr = s.substr(0, s.find("/", 0));
+            if(chk_ipaddr_linklocal(tempStr.c_str(),AF_INET))
+            {
+                strcpy(stbip,tempStr.c_str());
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool netSrvMgrUtiles::getIpv4Address(std::string & interface, char * stbip)
+{
+    std::vector<std::string> ipAddr;
+
+    NetLinkIfc::get_instance()->getIpaddr(interface,AF_INET,ipAddr);
+    if(ipAddr.empty())
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] No ipaddress on interface %s \n", __FUNCTION__, __LINE__, interface.c_str());
+    else
+    {
+        for (auto const& s : ipAddr)
+        {
+            if((ipAddr.size()) > 1)
+            {
+                std::string tempStr = s.substr(0, s.find("/", 0));
+                if(chk_ipaddr_linklocal(&tempStr[0],AF_INET))
+                {
+                    RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
+                }
+                else
+                {
+                    strcpy(stbip,tempStr.c_str());
+                    return true;
+                }
+                RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] ipv4 address %s on interface %s \n", __FUNCTION__, __LINE__, s.c_str(), interface.c_str());
+            }
+            else
+            {
+                std::string tempStr = s.substr(0, s.find("/", 0));
+                strcpy(stbip,tempStr.c_str());
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool netSrvMgrUtiles::getIpv6Address(std::string & interface, char *stbip)
+{
+    char macAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
+    netSrvMgrUtiles::getMacAddress_IfName((char *) interface.c_str(),macAddress);
+    std::string macAddrStr(macAddress);
+    std::vector<std::string> ipAddr;
+
+    NetLinkIfc::get_instance()->getIpaddr(interface,AF_INET6,ipAddr);
+    if(!ipAddr.empty())
+    {
+        for (auto const& s : ipAddr)
+        {
+            if(((ipAddr.size()) > 1) && (netSrvMgrUtiles::check_global_v6_based_macaddress(s,macAddrStr)))
+            {
+                RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ip addr %s since it is based on mac %s \n", __FUNCTION__, __LINE__, s.c_str(), macAddrStr.c_str());
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] ipv6 address %s on interface %s \n", __FUNCTION__, __LINE__,s.c_str(), interface.c_str());
+                std::string tempStr = s.substr(0, s.find("/", 0)); //remove /64 in ip  2601:a40:300:164:aa11:fcff:fefd:1e8d/64
+                strcpy(stbip,tempStr.c_str());
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 //Check  IP string(IPv4 and IPv6) is link local address

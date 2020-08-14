@@ -81,11 +81,15 @@ typedef struct _IARM_BUS_NetSrvMgr_Iface_EventData_t {
         char activeIface[INTERFACE_SIZE];
         char allNetworkInterfaces[INTERFACE_LIST];
         char setInterface[INTERFACE_SIZE];
-	char activeIfaceIpaddr[MAX_IP_ADDRESS_LEN];
+        char activeIfaceIpaddr[MAX_IP_ADDRESS_LEN];
+        bool ipv4Request;
 	};
    char interfaceCount;
-   bool isInterfaceEnabled;
-   bool persist;
+   union {
+       bool isInterfaceEnabled;
+       bool persist;
+       bool isIpv6Address;
+   };
 } IARM_BUS_NetSrvMgr_Iface_EventData_t;
 
 typedef struct {

@@ -959,13 +959,28 @@ IARM_Result_t getSTBip(void *arg)
         bool isIpv6=false;
         IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-        if(netSrvMgrUtiles::getSTBip(stbip,&isIpv6))
+        if(param->ipv4Request)
         {
-           strcpy(param->activeIfaceIpaddr,stbip);
-           RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
+            if(netSrvMgrUtiles::getSTBipv4(stbip))
+            {
+                strcpy(param->activeIfaceIpaddr,stbip);
+                param->isIpv6Address = false;
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipv4 address : [%s].\n", __FUNCTION__, __LINE__,stbip);
+            }
+            else
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipv4 address not found.\n", __FUNCTION__, __LINE__);
         }
         else
-           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+        {
+            if(netSrvMgrUtiles::getSTBip(stbip,&isIpv6))
+            {
+                strcpy(param->activeIfaceIpaddr,stbip);
+                param->isIpv6Address = isIpv6;
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
+            }
+            else
+                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+        }
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
         return ret;
 }
