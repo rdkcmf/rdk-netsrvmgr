@@ -492,6 +492,22 @@ bool netSrvMgrUtiles::getSTBip(char *stbip,bool *isIpv6)
     {
         std::string ifcStr(interface);
         NetLinkIfc::get_instance()->getIpaddr(ifcStr,AF_INET6,ipAddr);
+
+        /* Remove ULA address as it is not routable */
+        std::string tmpIpStr;
+        std::vector<std::string> tmpIpAddr = ipAddr;
+        if(!tmpIpAddr.empty())
+        {
+            for (auto const tmpIpStr : tmpIpAddr)
+            {
+                if(netSrvMgrUtiles::check_global_v6_ula_address(tmpIpStr))
+                {
+                    auto itr = std::find(ipAddr.begin(), ipAddr.end(), tmpIpStr);
+                    if (itr != ipAddr.end()) ipAddr.erase(itr);
+                }
+            }
+        }
+
         if(ipAddr.empty())
         {
             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ipv6 address not there for interface %s Trying ipv4 \n", __FUNCTION__, __LINE__,ifcStr.c_str());
@@ -667,6 +683,26 @@ bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std:
         return true;
     }
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+    return false;
+}
+
+//Check if v6 address is ULA; If the IPv6 address begins with fd it is a ULA
+bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
+{
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    if(ipv6Addr.empty())
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ipv6 addr is empty \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+
+    std::string tmpIpv6Str(ipv6Addr);
+    if (tmpIpv6Str.rfind("fd", 0) != std::string::npos)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ULA v6 address %s \n", __FUNCTION__, __LINE__,ipv6Addr.c_str());
+        return true;
+    }
+
     return false;
 }
 

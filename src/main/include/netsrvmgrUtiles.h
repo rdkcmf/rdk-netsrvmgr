@@ -200,6 +200,16 @@ bool currentActiveInterface(char *currentInterface);
 bool check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr);
 
 /**
+ * @brief This function checks whether the input ipv6 address is Unique Local Address.
+ *
+ * @param[in] ipv6Addr    IP address.
+ *
+ * @return  Returns true if global ipv6 address is ULA, Otherwise false.
+ */
+bool check_global_v6_ula_address(std::string ipv6Addr);
+
+
+/**
  * @brief This function is used to get the script output from the specified script file.
  *
  * @param[in] scriptPath          Script file name.
