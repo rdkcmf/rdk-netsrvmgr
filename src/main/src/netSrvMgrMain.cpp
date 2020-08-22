@@ -434,7 +434,18 @@ int main(int argc, char *argv[])
 
 #ifdef INCLUDE_BREAKPAD
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
-    google_breakpad::MinidumpDescriptor descriptor("/opt/minidumps/");
+    std::string minidump_path;
+    RFC_ParamData_t secValue = {0};
+    WDMP_STATUS status = getRFCParameter("SecureCoreFile", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecDump.Enable", &secValue);
+    if (( WDMP_SUCCESS == status ) && ( 0 == strncmp(secValue.value, "false", 5)))
+    {
+        minidump_path = "/opt/minidumps";
+    }
+    else
+    {
+        minidump_path = "/opt/secure/minidumps";
+    }
+    google_breakpad::MinidumpDescriptor descriptor(minidump_path.c_str());
     google_breakpad::ExceptionHandler eh(descriptor, NULL, breakpadDumpCallback, NULL, true, -1);
 #else
     sleep(1);
