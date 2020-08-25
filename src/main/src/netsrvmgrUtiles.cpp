@@ -686,7 +686,7 @@ bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std:
     return false;
 }
 
-//Check if v6 address is ULA; If the IPv6 address begins with fd it is a ULA
+//Check if v6 address is ULA; If the IPv6 address begins with fd or fc, it is a ULA
 bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
 {
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
@@ -697,7 +697,7 @@ bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
     }
 
     std::string tmpIpv6Str(ipv6Addr);
-    if (tmpIpv6Str.rfind("fd", 0) != std::string::npos)
+    if ((tmpIpv6Str.rfind("fd", 0) != std::string::npos) || (tmpIpv6Str.rfind("fc", 0) != std::string::npos))
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ULA v6 address %s \n", __FUNCTION__, __LINE__,ipv6Addr.c_str());
         return true;
