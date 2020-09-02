@@ -39,8 +39,9 @@ static char wifiHALVer[WIFI_HAL_VERSION_SIZE]={0};
 #ifdef ENABLE_LOST_FOUND
 GList *lstLnfPvtResults=NULL;
 #define WAIT_TIME_FOR_PRIVATE_CONNECTION 2
-pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
+bool startLAF = false;
 pthread_mutex_t mutexLAF = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condLAF = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t mutexTriggerLAF = PTHREAD_MUTEX_INITIALIZER;
 static laf_status_t last_laf_status = {.errcode = 0, .backoff = 0.0f};
 static struct timespec last_lnf_server_contact_time;
@@ -964,6 +965,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
 #endif
+            set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
             /* Event Id & Code */
             if(confProp.wifiProps.bEnableLostFound)
@@ -972,7 +974,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 lnfConnectPrivCredentials();
             }
 #endif // ENABLE_LOST_FOUND
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
         break;
 
@@ -984,7 +985,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_UNKNOWN;
-            set_WiFiStatusCode(WIFI_DISCONNECTED);
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'FAILED\'(%d).\n", \
                      MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
 #endif
@@ -1594,7 +1594,7 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     conSSIDInfo->securityMode = get_wifiSecurityModeFromString(stats.sta_SecMode, stats.sta_SecMode);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
-    		[SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" | Frequency : \"%d\" Security Mode : \"%s\"] \n",
+            [SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | avgSignalStrengtth : \"%f\" | Frequency : \"%d\" Security Mode : \"%d\"] \n",
             MODULE_NAME,__FUNCTION__, __LINE__,
             stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI,conSSIDInfo->avgSignalStrength,conSSIDInfo->frequency,conSSIDInfo->securityMode);
 
@@ -2205,9 +2205,17 @@ void setLNFState(WiFiLNFStatusCode_t status)
     gWifiLNFStatus = status;
 }
 
+static void signalStartLAF()
+{
+    pthread_mutex_lock(&mutexLAF);
+    startLAF = true;
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Signal to start LAF private SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    pthread_cond_signal(&condLAF);
+    pthread_mutex_unlock(&mutexLAF);
+}
+
 void *lafConnPrivThread(void* arg)
 {
-    int ret = 0;
     int counter=0;
     bool retVal;
     int ssidIndex=1;
@@ -2216,16 +2224,22 @@ void *lafConnPrivThread(void* arg)
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n",MODULE_NAME, __FUNCTION__, __LINE__ );
 
-    while (true ) {
+    while (true) {
         pthread_mutex_lock(&mutexLAF);
-        if(ret = pthread_cond_wait(&condLAF, &mutexLAF) == 0) {
+        // if already connected to private wifi, suppress any start LAF signal that was previously issued
+        if (gWifiLNFStatus == CONNECTED_PRIVATE && gWifiAdopterStatus == WIFI_CONNECTED)
+            startLAF = false;
+        while (false == startLAF)
+            pthread_cond_wait(&condLAF, &mutexLAF);
+        startLAF = false;
+        pthread_mutex_unlock(&mutexLAF);
+        {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
             if(gWifiLNFStatus != CONNECTED_LNF)
             {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n [%s:%s:%d] WifiLNFStatus = %d .Setting LNF state as in progress. \n",MODULE_NAME, __FUNCTION__, __LINE__,gWifiLNFStatus );
                 setLNFState(LNF_IN_PROGRESS);
             }
-            pthread_mutex_unlock(&mutexLAF);
             if(bPrivConnectionLost)
             {
                 bPrivConnectionLost=false;
@@ -2333,14 +2347,8 @@ void *lafConnPrivThread(void* arg)
                 sleep(1);
             }while ((gWifiLNFStatus != CONNECTED_PRIVATE) && (bAutoSwitchToPrivateEnabled));
             bIsStopLNFWhileDisconnected=true;
-	    sleep(1);
-     }
-     else
-     {
-         pthread_mutex_unlock(&mutexLAF);
-     }
-     sleep(1);
-   }
+        }
+    }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 void *lafConnThread(void* arg)
@@ -2503,12 +2511,7 @@ void connectToLAF()
             if(IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
 #endif
             {
-                pthread_mutex_lock(&mutexLAF);
-                if(0 == pthread_cond_signal(&condLAF))
-                {
-                    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] Signal to start LAF private SSID \n", __FUNCTION__, __LINE__ );
-                }
-                pthread_mutex_unlock(&mutexLAF);
+                signalStartLAF();
                 bPrivConnectionLost=true;
             }
         }
@@ -2650,12 +2653,7 @@ void lnfConnectPrivCredentials()
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Still in LnF Activation Loop so discarding getting private credentials \n",MODULE_NAME,__FUNCTION__, __LINE__ );
         return;
     }
-    pthread_mutex_lock(&mutexLAF);
-    if(0 == pthread_cond_signal(&condLAF))
-    {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Signal to start LAF private SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    }
-    pthread_mutex_unlock(&mutexLAF);
+    signalStartLAF();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
 #endif // ENABLE_LOST_FOUND
