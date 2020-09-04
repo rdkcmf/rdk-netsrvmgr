@@ -1892,7 +1892,7 @@ int get_token_length(unsigned int &tokenlength)
         fseek(fp_token, 0L, SEEK_END);
         tokensize = ftell(fp_token);
         fseek(fp_token, 0, SEEK_SET);
-        tokenlength = tokensize-1;
+        tokenlength = tokensize;
         RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "get_token_length - token size is - %d\n",tokenlength);
         if(NULL != fp_token){
             fclose(fp_token);
