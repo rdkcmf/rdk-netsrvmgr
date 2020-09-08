@@ -181,6 +181,16 @@ bool getInterfaceConfig(char *ifName, char *interfaceIp, char *netMask);
  */
 bool getDNSip(char *primaryDNS, char *secondaryDNS);
 
+/*
+ * @brief This function is used to get STB IP address for a given address family.
+ *
+ * @param[in] family    IP Address family in string format. Valid values are "ipv6" or "ipv4"
+ * @param[out] stbip    STB IP.
+ *
+ * @return  Returns true if successfully gets the IP details, Otherwise returns false.
+ */
+bool getSTBip_family(char *stbip,char *family);
+
 /**
  * @brief This function gets the active interface device type(Ethernet/MOCA/WIFI).
  *

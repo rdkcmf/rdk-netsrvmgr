@@ -92,6 +92,7 @@ static IARM_Result_t getSTBip(void *arg);
 static IARM_Result_t setIPSettings(void *arg);
 static IARM_Result_t getIPSettings(void *arg);
 static bool getDNSip(char *primaryDNS, char *secondaryDNS);
+static IARM_Result_t getSTBip_family(void *arg);
 #endif // ifdef ENABLE_IARM
 
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
@@ -465,6 +466,7 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getSTBip, getSTBip);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setIPSettings, setIPSettings);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getIPSettings, getIPSettings);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getSTBip_family, getSTBip_family);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE, _eventHandler);
 #endif
 #ifdef ENABLE_SD_NOTIFY
@@ -991,6 +993,23 @@ IARM_Result_t getSTBip(void *arg)
         return ret;
 }
 
+IARM_Result_t getSTBip_family(void *arg)
+{
+        IARM_Result_t ret = IARM_RESULT_SUCCESS;
+        char stbip[MAX_IP_ADDRESS_LEN];
+        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+
+	if (netSrvMgrUtiles::getSTBip_family(stbip,param->ipfamily))
+	{
+           strcpy(param->activeIfaceIpaddr,stbip);
+           RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
+	}
+        else
+           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+        return ret;
+}
 #endif // ENABLE_IARM
 
 
