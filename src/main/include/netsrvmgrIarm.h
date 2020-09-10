@@ -58,6 +58,8 @@
 #define IARM_BUS_NETSRVMGR_API_getSTBip "getSTBip"
 #define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogStatus "getTelemetryLogStatus"
 #define IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration "getTelemetryLogDuration"
+#define IARM_BUS_NETSRVMGR_API_setIPSettings "setIPSettings"
+#define IARM_BUS_NETSRVMGR_API_getIPSettings "getIPSettings"
 
 typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG=20,
@@ -87,6 +89,18 @@ typedef struct _IARM_BUS_NetSrvMgr_Iface_EventData_t {
    bool isInterfaceEnabled;
    bool persist;
 } IARM_BUS_NetSrvMgr_Iface_EventData_t;
+
+typedef struct {
+    char interface[16];
+    char ipversion[16];
+    bool autoconfig;
+    char ipaddress[16];
+    char netmask[16];
+    char gateway[16];
+    char primarydns[16];
+    char secondarydns[16];
+    bool isSupported;
+} IARM_BUS_NetSrvMgr_Iface_Settings_t;
 
 typedef struct {
     char name[16];

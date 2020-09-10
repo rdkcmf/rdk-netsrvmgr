@@ -162,6 +162,26 @@ bool checkInterfaceActive(char *interfaceName);
 bool getSTBip(char *stbip,bool *isIpv6);
 
 /**
+ * @brief This function is used to get Interface IP address and on which interface.
+ *
+ * @param[out] Interface IP IP of the Interface .
+ * @param[out] netmask   Netmask of the interface
+ *
+ * @return  Returns true if successfully gets the IP details, Otherwise returns false.
+ */
+bool getInterfaceConfig(char *ifName, char *interfaceIp, char *netMask);
+
+/**
+ * @brief This function is used to get Interface IP address and on which interface.
+ *
+ * @param[out] Interface IP IP of the Interface .
+ * @param[out] interface    Internet Protocol Version.
+ *
+ * @return  Returns true if successfully gets the IP details, Otherwise returns false.
+ */
+bool getDNSip(char *primaryDNS, char *secondaryDNS);
+
+/**
  * @brief This function gets the active interface device type(Ethernet/MOCA/WIFI).
  *
  * @param[out] devname Device type buffer to be filled.

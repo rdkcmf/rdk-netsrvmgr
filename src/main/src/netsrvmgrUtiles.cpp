@@ -479,6 +479,74 @@ bool writeKeyFile (const char* filename, GKeyFile* keyFile)
     return ret;
 }
 
+bool netSrvMgrUtiles::getInterfaceConfig(char *ifName, char *interfaceIp, char *netMask)
+{
+
+    int sock;
+    struct ifreq ifr;
+    struct sockaddr_in *ipaddr;
+    char address[INET_ADDRSTRLEN]={0};
+    FILE* fptr= NULL;
+    char *interface=NULL;
+
+    /* open socket */
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] unable to open socket  \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    ifr.ifr_addr.sa_family = AF_INET;
+    if (strcasecmp (ifName, "ETHERNET") == 0)
+    {
+        interface = getenv("ETHERNET_INTERFACE");
+    }
+    else
+    {
+        interface = getenv("WIFI_INTERFACE");
+    }
+    if (interface == NULL)
+    {
+      RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Interface is not found [%s:%d]  \n", __FUNCTION__, __LINE__);
+      return false;
+    }
+    else
+    {
+      snprintf(ifr.ifr_name, IFNAMSIZ, "%s:0", interface);
+    }
+
+    /* return if cannot get address */
+    if (ioctl(sock, SIOCGIFADDR, &ifr) == -1)
+    {
+        close(sock);
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Ioctl Failed  \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+
+    /* process ip */
+    ipaddr = (struct sockaddr_in *)&ifr.ifr_addr;
+    if (inet_ntop(AF_INET, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
+    {
+        strcpy(interfaceIp, address);
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] IpAddress %s \n", __FUNCTION__, __LINE__,interfaceIp);
+    }
+
+    /* To get Net Mask */
+    if (ioctl(sock, SIOCGIFNETMASK, &ifr) != -1)
+    {
+        ipaddr = (struct sockaddr_in *)&ifr.ifr_netmask;
+        if (inet_ntop(AF_INET, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
+        {
+            strcpy(netMask, address);
+            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Netmask %s \n", __FUNCTION__, __LINE__,netMask);
+        }
+    }
+
+    close(sock);
+
+    return true;
+}
+
 bool netSrvMgrUtiles::getSTBip(char *stbip,bool *isIpv6)
 {
 
