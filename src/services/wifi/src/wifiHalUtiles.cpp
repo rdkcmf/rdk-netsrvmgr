@@ -263,7 +263,11 @@ void* rtMessage_Receive(void*)
   {
     rtError err = rtConnection_Dispatch(con_recv);
     if (err != RT_OK)
-      RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
+    {
+      RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
+    }
+    //Adding sleep to avoid logs flooding in case of rtrouted bad state
+    usleep(10000);
   }
 }
 #endif
