@@ -424,6 +424,7 @@ int  WiFiNetworkMgr::Start()
 #endif
     /*Register connect and disconnect call back */
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return 0;
 }
 
 int  WiFiNetworkMgr::Stop()
@@ -441,6 +442,7 @@ int  WiFiNetworkMgr::Stop()
        else
          RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully stopped netsrvmgr wifi dm provider!! \n", MODULE_NAME,__FUNCTION__, __LINE__ );*/
     #endif
+    return 0;
  }
 
 #ifdef ENABLE_IARM
@@ -624,12 +626,11 @@ void *getAvailableSSIDsIncrThread(void* arg)
    bool more_data = true;
    struct timespec start, end,timeDiff;
    bStopProgressiveScanning = false;
-   
+   const char* freq_list = "5785 5180 5220 5240 5805 5745 5200 5500 5825";
 
    // Scan for High priority 5GHz channels
    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 5GHz preferred channels...\n");
    getCurrentTime(&start);
-   char freq_list[128] = "5785 5180 5220 5240 5805 5745 5200 5500 5825";
    wifi_setRadioScanningFreqList(radioIndex, freq_list);
    IARM_Result_t ret = scanAndBroadcastResults(more_data);
    if(ret == IARM_RESULT_SUCCESS)
@@ -656,8 +657,7 @@ void *getAvailableSSIDsIncrThread(void* arg)
    {
       RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 2.4GHz channels...\n");
       getCurrentTime(&start);
-      memset(freq_list,0,128);
-      strcpy(freq_list,"2412 2417 2422 2427 2432 2437 2442 2447 2452 2457 2462");
+      freq_list = "2412 2417 2422 2427 2432 2437 2442 2447 2452 2457 2462";
       wifi_setRadioScanningFreqList(radioIndex, freq_list);
       ret = scanAndBroadcastResults(more_data);
       if(ret == IARM_RESULT_SUCCESS)
@@ -684,8 +684,7 @@ void *getAvailableSSIDsIncrThread(void* arg)
    // Scan for Low priority 5GHz channels
    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Starting scan for 5GHz low priority channels...\n");
    getCurrentTime(&start);
-   memset(freq_list,0,128);
-   strcpy(freq_list,"5260 5280 5300 5320 5520 5540 5560 5580 5600 5620 5640 5660 5680 5700 5720 5765");
+   freq_list = "5260 5280 5300 5320 5520 5540 5560 5580 5600 5620 5640 5660 5680 5700 5720 5765";
    wifi_setRadioScanningFreqList(radioIndex, freq_list);
    more_data = false;
    ret = scanAndBroadcastResults(more_data);
@@ -702,7 +701,7 @@ void *getAvailableSSIDsIncrThread(void* arg)
 
 exit_scan:
    // reset all scan frequency selection
-   wifi_setRadioScanningFreqList(radioIndex,"0");
+   wifi_setRadioScanningFreqList(radioIndex, (const char*)"0");
    return NULL;
 }
 

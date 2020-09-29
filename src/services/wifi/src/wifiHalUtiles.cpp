@@ -281,6 +281,7 @@ bool getHALVersion()
         wifi_getHalVersion(wifiHALVer);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] WiFi HAL Version is %s \n",MODULE_NAME,__FUNCTION__, __LINE__,wifiHALVer);
     }
+    return true;
 }
 #endif
 
@@ -379,6 +380,7 @@ static IARM_Result_t WiFi_IARM_Bus_BroadcastEvent(const char *ownerName, IARM_Ev
 {
   //  if( !ethernet_on() )
         IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
+	return IARM_RESULT_SUCCESS;
 }
 #endif
 
@@ -758,6 +760,7 @@ INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connSt
     wifiStatusCode_t connCode = *connStatus;
     wifi_status_action (connCode, AP_SSID, (unsigned short) ACTION_ON_CONNECT);
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return ret;
 }
 
 INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
@@ -1572,7 +1575,6 @@ bool cancelWPSPairingOperation()
 
 void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
 {
-    bool ret = true;
     int radioIndex = 0;
     wifi_sta_stats_t stats;
 
@@ -2814,8 +2816,8 @@ bool storeMfrWifiCredentials(void)
     }
 #endif // ENABLE_IARM
 #endif // USE_RDK_WIFI_HAL
-    return retVal;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return retVal;
 }
 
 
@@ -3428,6 +3430,7 @@ bool clearSwitchToPrivateResults()
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] switch to private results list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return true;
 }
 #endif // ENABLE_LOST_FOUND
 #endif // USE_RDK_WIFI_HAL

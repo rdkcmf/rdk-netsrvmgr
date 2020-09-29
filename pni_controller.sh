@@ -182,7 +182,7 @@ test_interface()
     i=0
     while true; do
         i=$((i+1))
-        if timeout -t"$2" bash -c "echo > /dev/tcp/${endpoint_host}/${endpoint_port}" &> /dev/null; then
+        if timeout "$2" bash -c "echo > /dev/tcp/${endpoint_host}/${endpoint_port}" &> /dev/null; then
             log "$1: PASS (endpoint=$endpoint, timeout=${2}s, tries=$i)"
             return 0
         elif [ "$i" -ge "$3" ]; then

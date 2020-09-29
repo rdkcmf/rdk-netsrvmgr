@@ -17,6 +17,14 @@
  * limitations under the License.
 */
 
+#ifdef INCLUDE_BREAKPAD
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#include <client/linux/handler/exception_handler.h>
+#else
+#include "breakpadwrap.h"
+#endif
+#endif
+
 #include "NetworkMgrMain.h"
 #include "wifiSrvMgr.h"
 #include "netsrvmgrUtiles.h"
@@ -39,14 +47,6 @@
 
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 #include "rfcapi.h"     // for RFC queries
-#endif
-
-#ifdef INCLUDE_BREAKPAD
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
-#include <client/linux/handler/exception_handler.h>
-#else
-#include "breakpadwrap.h"
-#endif
 #endif
 
 char configProp_FilePath[100] = {'\0'};;
@@ -139,6 +139,7 @@ static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& desc
                         bool succeeded)
 {
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]breakpadDumpCallback: Netsrvmgr crashed ---- Dump path: %s\n", __FUNCTION__, __LINE__,descriptor.path());
+    return true;
 }
 #endif
 #endif
