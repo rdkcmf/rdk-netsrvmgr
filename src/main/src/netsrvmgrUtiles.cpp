@@ -169,10 +169,10 @@ char* netSrvMgrUtiles::get_IfName_devicePropsFile(void)
 
 void netSrvMgrUtiles::triggerDhcpLease(Dhcp_Lease_Operation op)
 {
-    static char* RENEW = "renew";
-    static char* RELEASE_AND_RENEW = "release_and_renew";
+    static const char* RENEW = "renew";
+    static const char* RELEASE_AND_RENEW = "release_and_renew";
 
-    char* operation = NULL;
+    const char* operation = NULL;
     if (netSrvMgrUtiles::DHCP_LEASE_RENEW == op)
         operation = RENEW;
     else if (netSrvMgrUtiles::DHCP_LEASE_RELEASE_AND_RENEW == op)
