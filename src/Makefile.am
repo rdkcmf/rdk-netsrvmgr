@@ -111,3 +111,8 @@ netsrvmgr_LDADD +=  $(top_builddir)/src/services/moca/libmocaservices.la
 AM_LDFLAGS +=  -lrdkmocahal
 AM_CXXFLAGS += -DUSE_RDK_MOCA_HAL
 endif
+
+if DEBUG
+AM_CFLAGS += -g
+AM_CXXFLAGS += -g
+endif

@@ -157,6 +157,19 @@ AC_ARG_ENABLE([xhb1],
          [echo " Doorbell camera is enabled"])
 AM_CONDITIONAL([XHB1], [test x$XHB1 = xtrue])
 
+DEBUG=" "
+AC_ARG_ENABLE([debug],
+        AS_HELP_STRING([--enable-debug],[This will be to enable/disable debug symbols]),
+        [
+          case "${enableval}" in
+           yes) DEBUG=true ;;
+           no) DEBUG=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+           esac
+           ],
+         [echo " Debug symbols are enabled"])
+AM_CONDITIONAL([DEBUG], [test x$DEBUG = xtrue])
+
 AC_ARG_ENABLE([nlmonitor],
         AS_HELP_STRING([--enable-nlmonitor],[This will enable/disable netlink monitor support.]),
         [
