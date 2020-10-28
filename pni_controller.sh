@@ -319,5 +319,6 @@ else # run pni loop
 fi
 
 wait # for any restarted link local services to finish start up before exiting
+systemctl restart dibbler.service
 
 exit 0
