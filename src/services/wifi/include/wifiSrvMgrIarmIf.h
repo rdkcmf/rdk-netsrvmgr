@@ -45,7 +45,7 @@
 #define SSID_SIZE 	BUFF_LENGTH_32
 #define BSSID_BUFF 	20
 #define BUFF_LENGTH_24  24
-#define PASSPHRASE_BUFF BUFF_LENGTH_64
+#define PASSPHRASE_BUFF 385
 #define MAX_SSIDLIST_BUF 20000
 
 #define LNF_NON_SECURE_SSID "A16746DF2466410CA2ED9FB2E32FE7D9"
@@ -147,6 +147,8 @@ typedef enum _SsidSecurity
     NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,
     NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,
     NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,
+    NET_WIFI_SECURITY_WPA3_PSK_AES = 13,
+    NET_WIFI_SECURITY_WPA3_SAE,
     NET_WIFI_SECURITY_NOT_SUPPORTED = 15,
 } SsidSecurity;
 
@@ -222,6 +224,7 @@ typedef struct _WiFiPairedSSIDInfo
     char ssid[SSID_SIZE];      /**< The name of connected SSID. */
     char bssid[BSSID_BUFF];    /**< The the Basic Service Set ID (mac address). */
     char security[BUFF_LENGTH_64];    /**< security of AP */
+    SsidSecurity secMode;
 } WiFiPairedSSIDInfo_t;
 
 typedef struct _WiFiLnfSwitchPrivateResults
