@@ -192,6 +192,7 @@ int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_s
                 {"Wpa2PskTkip", "WPA-PSK"},
                 {"WpaEnterprise", "WPA-EAP"},
                 {"Wpa2Enterprise", "WPA-EAP"},
+                {"SAE", "SAE"},
             };
 
             const char *wpa_security_mode = ""; // default to empty string
@@ -832,6 +833,12 @@ bool convertSecurityModeToString(char* securityModeStr,SsidSecurity sec_mode)
             break;
          case NET_WIFI_SECURITY_WEP_128:
             strncpy(securityModeStr,"WEP-128",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA3_PSK_AES:
+            strncpy(securityModeStr,"WPA2-WPA3",BUFF_LENGTH_32-1);
+            break;
+         case NET_WIFI_SECURITY_WPA3_SAE:
+            strncpy(securityModeStr,"WPA3",BUFF_LENGTH_32-1);
             break;
          case NET_WIFI_SECURITY_NONE:
             strncpy(securityModeStr,"None",BUFF_LENGTH_32-1);
