@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <algorithm>
 
 #ifdef ENABLE_ROUTE_SUPPORT
 #include "routeSrvMgr.h"
@@ -93,6 +94,8 @@ static IARM_Result_t setIPSettings(void *arg);
 static IARM_Result_t getIPSettings(void *arg);
 static bool getDNSip(char *primaryDNS, char *secondaryDNS);
 static IARM_Result_t getSTBip_family(void *arg);
+static IARM_Result_t isConnectedToInternet(void *arg);
+static IARM_Result_t setConnectivityTestEndpoints(void *arg);
 #endif // ifdef ENABLE_IARM
 
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
@@ -107,6 +110,8 @@ static bool setInterfaceEnabled(const char* interface, bool enabled, bool persis
 static bool setInterfaceState(std::string interface_name, bool enabled);
 static bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
+static bool isConnectedToInternet(bool& connectivity);
+static bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints);
 #endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
 
 #ifdef USE_RDK_WIFI_HAL
@@ -479,6 +484,8 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setIPSettings, setIPSettings);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getIPSettings, getIPSettings);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getSTBip_family, getSTBip_family);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isConnectedToInternet, isConnectedToInternet);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setConnectivityTestEndpoints, setConnectivityTestEndpoints);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE, _eventHandler);
 #endif
 #ifdef ENABLE_SD_NOTIFY
@@ -1021,6 +1028,21 @@ IARM_Result_t getSTBip_family(void *arg)
            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
         return ret;
+}
+
+IARM_Result_t isConnectedToInternet(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    bool* connectivity = (bool*) arg;
+    return isConnectedToInternet(*connectivity) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
+}
+
+IARM_Result_t setConnectivityTestEndpoints(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    IARM_BUS_NetSrvMgr_Iface_TestEndpoints_t *param = (IARM_BUS_NetSrvMgr_Iface_TestEndpoints_t *)arg;
+    std::vector<std::string> endpoints(param->endpoints, param->endpoints + param->size);
+    return setConnectivityTestEndpoints(endpoints) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
 }
 #endif // ENABLE_IARM
 
@@ -1650,6 +1672,50 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     else
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR," No DNS ip is confiured [%s:%d]  \n", __FUNCTION__, __LINE__);
+    }
+    return true;
+}
+
+bool isConnectedToInternet(bool& connectivity)
+{
+    LOG_ENTRY_EXIT;
+    const char* command = "/lib/rdk/pni_controller.sh test_connectivity";
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
+    FILE *fp = popen (command, "r");
+    if (fp == NULL)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] popen error %d (%s)\n", __FUNCTION__, errno, strerror(errno));
+        return false;
+    }
+    int pclose_status = pclose (fp);
+    int status = WEXITSTATUS (pclose_status);
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
+    connectivity = (status == 0);
+    return true;
+}
+
+bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints)
+{
+    LOG_ENTRY_EXIT;
+    std::string endpoints_string;
+    for (auto endpoint : endpoints)
+    {
+        endpoints_string.append(endpoint.c_str());
+        endpoints_string.push_back(' ');
+    }
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__, endpoints_string.c_str());
+    std::replace(endpoints_string.begin(), endpoints_string.end(), ' ', '\n');
+    FILE *f = fopen("/opt/persistent/connectivity_test_endpoints", "w");
+    if (f == NULL)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] fopen error %d (%s)\n", __FUNCTION__, errno, strerror(errno));
+        return false;
+    }
+    fprintf(f, "%s", endpoints_string.c_str());
+    if (0 != fclose(f))
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] fclose error %d (%s)\n", __FUNCTION__, errno, strerror(errno));
+        return false;
     }
     return true;
 }
