@@ -1189,13 +1189,20 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
     {
         if (enabled)
         {
+            bool retVal;
             unmark("wifi_disallowed", persist); // remove marker file (if present) that says "WIFI is disallowed"
-            return setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), true);
+            retVal = setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), true);
+            if (retVal)
+            {
+                setWifiEnabled(true);
+            }
+            return retVal;
         }
         else if (validate_interface_can_be_disabled(interface))
         {
             mark("wifi_disallowed", persist); // touch marker file that says "WIFI is disallowed"
             setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), false);
+            setWifiEnabled(false);
             setDefaultInterface("ETHERNET", persist);
             return true;
         }
