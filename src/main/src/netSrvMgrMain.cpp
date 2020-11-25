@@ -1567,6 +1567,9 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         //configure manual ip
         memset(cmd, 0, sizeof(cmd));
         snprintf(cmd, sizeof(cmd), "/sbin/ifconfig %s:0 %s netmask %s up", interface, param->ipaddress, param->netmask);
+#ifdef NO_VIRTUAL_INTERFACES
+        snprintf(cmd, sizeof(cmd), "/sbin/ifconfig %s %s netmask %s up", interface, param->ipaddress, param->netmask);
+#endif
         system(cmd);
 
         //configure gateway ip

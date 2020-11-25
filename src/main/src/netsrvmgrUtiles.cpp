@@ -518,6 +518,9 @@ bool netSrvMgrUtiles::getInterfaceConfig(char *ifName, char *interfaceIp, char *
     else
     {
       snprintf(ifr.ifr_name, IFNAMSIZ, "%s:0", interface);
+#ifdef NO_VIRTUAL_INTERFACES
+      snprintf(ifr.ifr_name, IFNAMSIZ, "%s", interface);
+#endif
     }
 
     /* return if cannot get address */
