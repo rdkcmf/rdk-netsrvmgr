@@ -62,6 +62,8 @@
 #define IARM_BUS_NETSRVMGR_API_setIPSettings "setIPSettings"
 #define IARM_BUS_NETSRVMGR_API_getIPSettings "getIPSettings"
 #define IARM_BUS_NETSRVMGR_API_getSTBip_family "getSTBip_family"
+#define IARM_BUS_NETSRVMGR_API_isConnectedToInternet "isConnectedToInternet"
+#define IARM_BUS_NETSRVMGR_API_setConnectivityTestEndpoints "setConnectivityTestEndpoints"
 
 typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG=20,
@@ -140,6 +142,12 @@ typedef struct {
     char oldInterface[16];
     char newInterface[16];
 } IARM_BUS_NetSrvMgr_Iface_EventDefaultInterface_t;
+
+typedef struct
+{
+    unsigned char size;
+    char          endpoints[5][260]; // domain name max length + ':' + port number max chars + '\0' = 253+1+5+1 = 260
+} IARM_BUS_NetSrvMgr_Iface_TestEndpoints_t;
 
 /** @} */  //END OF GROUP NETSRVMGR_TYPES
 
