@@ -565,9 +565,8 @@ void netSrvMgr_start()
 #ifdef USE_RDK_WIFI_HAL
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
     launch_pni_controller();
-#else
-    setWifiEnabled (true); // enable WiFi by default for XCAMs
 #endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
+    setWifiEnabled (true); // enable WiFi by default for XCAMs
 #endif // USE_RDK_WIFI_HAL
 
 #ifdef USE_RDK_MOCA_HAL

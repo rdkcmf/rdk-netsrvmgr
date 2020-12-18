@@ -77,15 +77,6 @@ enum Dhcp_Lease_Operation {
  */
 
 /**
- * @brief This function gets the interface name based on the device/properties file.
- *
- * @param[in] void.
- *
- * @return  Returns interface name.
- */
-char* get_IfName_devicePropsFile(void);
-
-/**
  * @brief This function is used to get the MAC address for the provided interface.
  *
  * @param[in] ifName_in Indicates the interface name which the mac address is required.

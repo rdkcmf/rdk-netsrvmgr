@@ -130,33 +130,6 @@ bool netSrvMgrUtiles::getMacAddress_IfName(char *ifName_in, char macAddress_out[
     return ret;
 }
 
-/**
- * @fn netSrvMgrUtiles::get_IfName_devicePropsFile(void)
- * @brief This function gets the interface name based on the device/properties file.
- * the id passed is valid.
- *
- * @param[in] void
- *
- * @return Returns interface .
- */
-char* netSrvMgrUtiles::get_IfName_devicePropsFile(void)
-{
-    static char *ifName = NULL;
-
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
-
-    const char *Wifi_Enable_file = "/tmp/wifi-on";
-    bool isWifiEnabled = (!access (Wifi_Enable_file, F_OK))?true:false;
-
-    ifName = isWifiEnabled ? getenv("WIFI_INTERFACE") : getenv("MOCA_INTERFACE");
-
-    RDK_LOG(RDK_LOG_DEBUG,LOG_NMGR,"[%s:%d]get_Eth_If_Name(): ethIf=%s\n", __FUNCTION__, __LINE__, ifName);
-
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
-    return ifName;
-}
-
-
 /* End of doxygen group */
 /**
  * @}

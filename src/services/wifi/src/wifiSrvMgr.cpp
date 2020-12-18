@@ -318,7 +318,7 @@ int  WiFiNetworkMgr::Start()
     /*Get WiFi interface Mac*/
     {
         // get wifi mac address
-        char *ifName = netSrvMgrUtiles::get_IfName_devicePropsFile();
+        char *ifName = getenv("WIFI_INTERFACE");
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The interface  use is '%s'\n", __FUNCTION__, __LINE__, ifName);
         if (netSrvMgrUtiles::getMacAddress_IfName(ifName, gWifiMacAddress)) {
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] The '%s' Mac Addr :%s \n", __FUNCTION__, __LINE__, ifName, gWifiMacAddress);
