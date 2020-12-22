@@ -551,10 +551,10 @@ void netSrvMgr_start()
 
 #ifdef ENABLE_NLMONITOR
     NetLinkIfc* netifc = NetLinkIfc::get_instance();
-    netifc->initialize();
     netifc->addSubscriber(new FunctionSubscriber(NlType::link, linkCallback));
     netifc->addSubscriber(new FunctionSubscriber(NlType::address, addressCallback));
     netifc->addSubscriber(new FunctionSubscriber(NlType::dfltroute, defaultRouteCallback));
+    netifc->initialize();
     netifc->run(false);
 #endif
 
@@ -563,10 +563,12 @@ void netSrvMgr_start()
 #endif
 
 #ifdef USE_RDK_WIFI_HAL
+    WiFiNetworkMgr::getInstance()->Init();
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
     launch_pni_controller();
-#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
+#else
     setWifiEnabled (true); // enable WiFi by default for XCAMs
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
 #endif // USE_RDK_WIFI_HAL
 
 #ifdef USE_RDK_MOCA_HAL
@@ -1118,11 +1120,11 @@ bool setDefaultInterface (const char* interface, bool persist)
     }
     else if (strcmp (interface, "WIFI") == 0)
     {
+#ifndef DISABLE_PNI
         const char* RFC_PNI_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable";
         if (isFeatureEnabled(RFC_PNI_ENABLE) == false)
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] can be set as default interface only if RFC %s = true.\n",
-                    __FUNCTION__, interface, RFC_PNI_ENABLE);
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. RFC %s is not set.\n", __FUNCTION__, RFC_PNI_ENABLE);
             return false;
         }
         bool enabled;
@@ -1134,6 +1136,10 @@ bool setDefaultInterface (const char* interface, bool persist)
         mark("pni_wifi", persist); // touch marker file that says "WIFI is the preferred network interface"
         launch_pni_controller();
         return true;
+#else
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. Build configuration DISABLE_PNI is set.\n", __FUNCTION__);
+        return false;
+#endif // DISABLE_PNI
     }
 #else
     if (strcmp (interface, "ETHERNET") == 0)

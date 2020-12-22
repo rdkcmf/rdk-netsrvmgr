@@ -29,8 +29,9 @@ ipv4_deconfigure_interface()
 ipv4_configure_dhcpip()
 {
     DHCPv4_SERVICE=DHCPv4_SERVICE_$1
-    log "$1: systemctl start ${!DHCPv4_SERVICE}"
-    systemctl start "${!DHCPv4_SERVICE}"
+    [ -f "/tmp/$1.deconfigured" ] && cmd="restart" || cmd="start"
+    log "$1: systemctl $cmd ${!DHCPv4_SERVICE}"
+    systemctl "$cmd" "${!DHCPv4_SERVICE}"
 }
 
 configure_port()
@@ -147,7 +148,8 @@ flush_routes_and_addresses()
 
 deconfigure_interface()
 {
-    ipv4_deconfigure_interface "$1"
+    touch "/tmp/$1.deconfigured"
+    # ipv4_deconfigure_interface "$1"
     ipv6_deconfigure_interface "$1"
     flush_routes_and_addresses "$1"
 }
@@ -156,10 +158,12 @@ configure_interface()
 {
     ipv6_configure_interface "$1"
     ipv4_configure_interface "$1"
-    [ "$RUN_LINK_LOCAL_SERVICES" != "true" ] && return
-    # restart link local services in background after killing any previously started instance
-    [ -n "$pid_ll_services" ] && kill "$pid_ll_services"
-    restart_link_local_services "$1" & pid_ll_services="$!"
+    if [ "$RUN_LINK_LOCAL_SERVICES" == "true" ]; then
+        [ -n "$pid_ll_services" ] && kill "$pid_ll_services"    # kill any previously started instance
+        restart_link_local_services "$1" & pid_ll_services="$!" # restart link local services in background
+    fi
+    [ -f "/tmp/$1.deconfigured" ] && rm "/tmp/$1.deconfigured"
+    [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_DISABLE_CONNECTIVITY_TEST" == "true" ] || test_connectivity "$1" 2 15
 }
 
 restart_link_local_services()
@@ -234,20 +238,6 @@ test_connectivity()
     done
 }
 
-# usage: configure_interfaces_and_test <interface to configure> <interface to deconfigure>
-configure_interfaces_and_test()
-{
-    log "$1: BEGIN (deconfigure $2, configure $1, test $1)"
-    begin="$(cut -d ' ' -f1 /proc/uptime)"
-    deconfigure_interface "$2"
-    configure_interface "$1"
-    test_connectivity "$1" 2 15
-    test_result=$?
-    end="$(cut -d ' ' -f1 /proc/uptime)"
-    log "$1: END (deconfigure $2, configure $1, test $1), took $(dc "$end" "$begin" - p)s"
-    return $test_result
-}
-
 set_interface_state()
 {
     log "ip link set dev $1 $2"
@@ -260,36 +250,44 @@ wpa_supplicant_enable()
     IARM_event_sender WiFiInterfaceStateEvent "$1"
 }
 
+set_wifi_state()
+{
+    case "$1" in
+        "up")   set_interface_state "$WIFI_INTERFACE" up;   wpa_supplicant_enable 1 ;;
+        "down") set_interface_state "$WIFI_INTERFACE" down; wpa_supplicant_enable 0 ;;
+    esac
+}
+
 try_ethernet()
 {
     rm /tmp/ani_wifi
     rm /tmp/wifi-on # for checkWiFiModule (called by /lib/rdk/zcip.sh (moca.service)) to return 0. otherwise, it returns 1 => zc gets tried on $WIFI_INTERFACE (instead of $ETHERNET_INTERFACE)
     set_interface_state "$ETHERNET_INTERFACE" up
-    configure_interfaces_and_test "$ETHERNET_INTERFACE" "$WIFI_INTERFACE" || return 1
-    set_interface_state "$WIFI_INTERFACE" down
-    wpa_supplicant_enable 0
-    return 0
+    deconfigure_interface "$WIFI_INTERFACE"
+    configure_interface "$ETHERNET_INTERFACE" || return 1
+    [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_ALLOW_PNI_TO_DISABLE_WIFI" == "false" ] || set_wifi_state down || return 0
 }
 
 try_wifi()
 {
     touch /tmp/ani_wifi
     touch /tmp/wifi-on # for checkWiFiModule (called by /lib/rdk/zcip.sh (moca.service)) to return 1. otherwise, if eth is in, it returns 0 => zc gets tried on $ETHERNET_INTERFACE (instead of $WIFI_INTERFACE)
-    set_interface_state "$WIFI_INTERFACE" up
-    wpa_supplicant_enable 1
-    configure_interfaces_and_test "$WIFI_INTERFACE" "$ETHERNET_INTERFACE" || return 1
-    return 0
+    set_wifi_state up
+    deconfigure_interface "$ETHERNET_INTERFACE"
+    configure_interface "$WIFI_INTERFACE" || return 1
 }
 
 # usage: try_interface <interface> <reason>
 try_interface()
 {
     log "$1 ($2)"
+    begin="$(cut -d ' ' -f1 /proc/uptime)"
     case "$1" in
         "$ETHERNET_INTERFACE") try_ethernet; result=$? ;;
         "$WIFI_INTERFACE")     try_wifi;     result=$? ;;
     esac
-    log "$1 end"
+    end="$(cut -d ' ' -f1 /proc/uptime)"
+    log "$1 end, took $(dc "$end" "$begin" - p)s"
     return $result
 }
 
@@ -302,21 +300,24 @@ fi
 # sleep 5 # delay to filter out ethernet glitches / fast link state transitions
 
 if [ -f /tmp/wifi_disallowed ]; then
-    set_interface_state "$WIFI_INTERFACE" down
-    wpa_supplicant_enable 0
+    set_wifi_state down
     try_interface "$ETHERNET_INTERFACE" "$WIFI_INTERFACE is disallowed" # pni setting is irrelevant
-elif [ "$(cat /sys/class/net/"$ETHERNET_INTERFACE"/carrier)" != "1" ]; then # no carrier on ethernet
+elif [ "$(cat /sys/class/net/"$ETHERNET_INTERFACE"/carrier)" != "1" ]; then
     try_interface "$WIFI_INTERFACE" "no carrier on $ETHERNET_INTERFACE" # pni setting is irrelevant
-else
-    RFC_ENABLED="$(tr181 Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable 2>&1 > /dev/null)"
-    if [ "$RFC_ENABLED" == "true" ] && [ -f /tmp/pni_wifi ]; then
+elif [ "$CONFIG_DISABLE_PNI" == "true" ] || [ "$(tr181 Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable 2>&1 > /dev/null)" != "true" ]; then
+    [ -f /opt/persistent/pni_wifi ] && rm /opt/persistent/pni_wifi
+    [ -f /tmp/pni_wifi ] && rm /tmp/pni_wifi
+    set_wifi_state up
+    try_interface "$ETHERNET_INTERFACE" "pni feature is not enabled"    # pni setting is irrelevant
+else # run pni loop
+    PNI_ENABLED=true
+    if [ -f /tmp/pni_wifi ]; then
         pni="$WIFI_INTERFACE"
         nonpni="$ETHERNET_INTERFACE"
     else
         pni="$ETHERNET_INTERFACE"
         nonpni="$WIFI_INTERFACE"
     fi
-    log "pni=$pni nonpni=$nonpni (RFC enabled = $RFC_ENABLED)"
     while true; do
         try_interface "$pni" "pni" && break
         try_interface "$nonpni" "nonpni" && break

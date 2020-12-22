@@ -2,6 +2,9 @@
 Description=Preferred Network Interface Controller
 
 [Service]
+Environment=CONFIG_DISABLE_PNI=false
+Environment=CONFIG_DISABLE_CONNECTIVITY_TEST=false
+Environment=CONFIG_ALLOW_PNI_TO_DISABLE_WIFI=true
 ExecStart=/lib/rdk/pni_controller.sh
 
 [Install]
