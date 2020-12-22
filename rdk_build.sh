@@ -50,8 +50,12 @@ export RDK_TOOLCHAIN_PATH=${RDK_TOOLCHAIN_PATH-`readlink -m $RDK_PROJECT_ROOT_PA
 # default component name
 export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
 export RDK_DIR=$RDK_PROJECT_ROOT_PATH
+if [ "$XCAM_MODEL" != "XHB1" ];then
 export RDK_DUMP_SYMS=${RDK_PROJECT_ROOT_PATH}/utility/prebuilts/breakpad-prebuilts/x86/dump_syms
 export STRIP=${RDK_TOOLCHAIN_PATH}/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip
+else
+export RDK_DUMP_SYMS=${RDK_PROJECT_ROOT_PATH}/utility/prebuilts/breakpad-prebuilts/x64/dump_syms
+fi
 
 if [ "$XCAM_MODEL" == "SCHC2" ]; then
 . ${RDK_PROJECT_ROOT_PATH}/build/components/amba/sdk/setenv2
@@ -130,7 +134,7 @@ function configure()
         configure_options="--host $DEFAULT_HOST"
         fi
 	if  [ "$XCAM_MODEL" == "XHB1" ]; then
-		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=yes"
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=yes --enable-debug=yes"
 	else
 		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes --enable-xhb1=no --enable-debug=yes"
 	fi
@@ -169,11 +173,10 @@ function build()
 
     cp src/netsrvmgr src/netsrvmgr_debug
 
-    if [ "$XCAM_MODEL" != "XHB1" ];then
-        $RDK_DUMP_SYMS src/netsrvmgr > src/netsrvmgr.sym
-        mv src/*.sym $PLATFORM_SYMBOL_PATH
-        echo "Debug symbol created for netsrvmgr"
-    fi
+    $RDK_DUMP_SYMS src/netsrvmgr > src/netsrvmgr.sym
+    mv src/*.sym $PLATFORM_SYMBOL_PATH
+    echo "Debug symbol created for netsrvmgr"
+
     $STRIP src/netsrvmgr
 }
 
