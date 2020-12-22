@@ -33,6 +33,7 @@ public:
     static WiFiNetworkMgr* getInstance();
     static bool isReady();
 
+    int Init();
     int Start();
     int Stop();
 #ifdef ENABLE_IARM

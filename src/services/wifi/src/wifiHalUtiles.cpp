@@ -2453,11 +2453,36 @@ void *lafConnThread(void* arg)
     pthread_exit(NULL);
 }
 
+static void* startLAFIfNecessary(void* arg)
+{
+    lastConnectedSSID(&savedWiFiConnList);
+    if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
+    {
+        sleep(confProp.wifiProps.lnfStartInSecs);
+        lastConnectedSSID(&savedWiFiConnList);
+    }
+    /* If Device is activated and already connected to Private or any network,
+        but defineltly not LF SSID. - No need to trigger LNF*/
+    /* Here, 'getDeviceActivationState == true'*/
+    if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus())) {
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID %s\n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
+    }
+    else {
+#ifdef ENABLE_IARM
+        if(IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
+#endif
+        {
+            signalStartLAF();
+            bPrivConnectionLost=true;
+        }
+    }
+    pthread_exit(NULL);
+}
+
 void connectToLAF()
 {
     RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     pthread_attr_t attr;
-    bool retVal=false;
     if((getDeviceActivationState() == false)
 #ifdef ENABLE_IARM
         && (IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
@@ -2494,32 +2519,12 @@ void connectToLAF()
         }
         pthread_mutex_unlock(&mutexGo);
 #endif
-        retVal=lastConnectedSSID(&savedWiFiConnList);
-        if (savedWiFiConnList.ssidSession.ssid[0] != '\0')
-        {
-            sleep(confProp.wifiProps.lnfStartInSecs);
-        }
-
-        /* If Device is activated and already connected to Private or any network,
-            but defineltly not LF SSID. - No need to trigger LNF*/
-        /* Here, 'getDeviceActivationState == true'*/
-        lastConnectedSSID(&savedWiFiConnList);
-
-        if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus())) {
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID %s\n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
-        }
-        else {
-#ifdef ENABLE_IARM
-            if(IARM_BUS_SYS_MODE_WAREHOUSE != sysModeParam)
-#endif
-            {
-                signalStartLAF();
-                bPrivConnectionLost=true;
-            }
-        }
+        pthread_t t;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        pthread_create(&t, &attr, startLAFIfNecessary, NULL);
     }
 }
-
 
 void lafConnectToPrivate()
 {

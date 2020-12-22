@@ -253,9 +253,8 @@ int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_s
 }
 #endif // #ifndef ENABLE_XCAM_SUPPORT
 
-int  WiFiNetworkMgr::Start()
+int  WiFiNetworkMgr::Init()
 {
-    bool retVal=false;
     #ifdef ENABLE_IARM
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
@@ -331,6 +330,13 @@ int  WiFiNetworkMgr::Start()
 #ifndef ENABLE_XCAM_SUPPORT
     create_wpa_supplicant_conf_from_netapp_db ("/opt/wifi/wpa_supplicant.conf", "/opt/wifi/NetApp.db");
 #endif // ENABLE_XCAM_SUPPORT
+
+    return 0;
+}
+
+int  WiFiNetworkMgr::Start()
+{
+    bool retVal=false;
 
 #ifdef ENABLE_RTMESSAGE
     rtConnection_init();
