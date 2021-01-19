@@ -1048,18 +1048,20 @@ IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
      * If an SSID was previously saved, the new SSID and passphrase will overwrite the existing one.
      * Returns false if the passphrase was not able to be saved, and true if the save was successful.*/
 
-    if(ssid_len & psk_len)
+    if(ssid_len && psk_len)
     {
         memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
         strncpy(savedWiFiConnList.ssidSession.ssid, ssid, ssid_len+1);
         strncpy(savedWiFiConnList.ssidSession.passphrase, psk, psk_len+1);
         savedWiFiConnList.conn_type = SSID_SECLECTION_CONNECT;
+        retval = true;
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] %s to file, SSID (%s) & Passphrase (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, retval? "Successfully Saved": "Failed to Save", ssid, psk);
-        param->status = true;
+        param->status = retval;
     }
     else
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Empty data for SaveSSID\n", MODULE_NAME,__FUNCTION__, __LINE__);
+        ret = IARM_RESULT_INVALID_PARAM;
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
