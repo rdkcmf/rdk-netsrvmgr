@@ -21,6 +21,7 @@
 #include "netsrvmgrUtiles.h"
 
 #include <fstream>
+#include <string>
 
 #ifdef ENABLE_LOST_FOUND
 #include <time.h>
@@ -972,6 +973,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 }
             }
         } else if (ACTION_ON_DISCONNECT == action) {
+	    WiFiStatusCode_t prevStatus = get_WiFiStatusCode();
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, sizeof(wifiConnData.ssid));
@@ -984,6 +986,15 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_DISCONNECTED);
 #endif
 	        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
+		if (prevStatus != WIFI_CONNECTING) {
+		   //flush network connections, when connection is not in progress.
+		   std::string command, script_name;
+		   script_name = "/lib/rdk/wifi_addr_reset.sh";
+		   command = "/bin/sh ";
+		   command += script_name;
+		   system(command.c_str());
+		}
+
         }
         break;
     case WIFI_HAL_CONNECTING:
