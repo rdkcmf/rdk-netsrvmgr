@@ -1632,7 +1632,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     const char* RFC_MANUALIP_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable";
     if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
     {
-        return false;
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "ManualIPSettings RFC is disabled\n");
     }
 
     if (0 == strcasecmp(param->interface, "WIFI"))
