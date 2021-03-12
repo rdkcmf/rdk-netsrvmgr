@@ -34,51 +34,23 @@ ipv4_configure_dhcpip()
     systemctl "$cmd" "${!DHCPv4_SERVICE}"
 }
 
-configure_port()
+ipv4_configure_manualip()
 {
+    # identify ip settings file
     if [ "$1" == "$WIFI_INTERFACE" ]; then
-        port=$(grep "WIFI_INTERFACE=" /etc/device.properties  | cut -d "=" -f 2)
+        ip_settings_file="/opt/persistent/ip.wifi.0"
     else
-        port=$(grep "ETHERNET_INTERFACE=" /etc/device.properties  | cut -d "=" -f 2)
+        ip_settings_file="/opt/persistent/ip.eth0.0"
     fi
+    [ ! -f $ip_settings_file ] && return 1
 
-    if [ -n "$port" ]; then
-        port="$port:0"
-    else
-        return 1
-    fi
-
-    ifconfig $port $2 netmask $3
-    route add default gw $4
-    return 0
-}
-
-configure_dns()
-{
-    if [ -n "$1" ]; then
-        echo "nameserver $1" >> /tmp/resolv.dnsmasq.udhcpc
-        log "writing nameserver $1  to resolv.dnsmasq.udhcpc"
-    fi
-
-    if [ -n "$2" ]; then
-        echo "nameserver $2" >> /tmp/resolv.dnsmasq.udhcpc
-        log "writing nameserver $2  to resolv.dnsmasq.udhcpc"
-    fi
-}
-
-configure_settings_from_file()
-{
-    if [ ! -f $file ]
-    then
-        return 1
-    fi
-
+    # read ip settings file
     declare -a keys=()
     declare -a vals=()
     while IFS='=' read -r key val; do
         [[ $key = '#'* ]] && continue
         keys+=("$key"); vals+=("$val")
-    done < $file
+    done < $ip_settings_file
 
     for ((i = 0; i < ${#keys[@]}; i++)); do
         case "${keys[i]}" in
@@ -90,39 +62,42 @@ configure_settings_from_file()
         esac
     done
 
-    configure_port $1 $ip $mask $gw
-    if [ $? -eq 1 ]; then
-        return 1
-    fi
-    configure_dns $dns1 $dns2
+    # apply ip settings
+    [ "$RUN_LINK_LOCAL_SERVICES" == "true" ] && interface="$1:0" || interface="$1"
+    log "ifconfig $interface $ip netmask $mask up"
+    ifconfig "$interface" "$ip" netmask "$mask" up
+    log "route add default gw $gw dev $interface"
+    route add default gw "$gw" dev "$interface"
+    log "writing nameservers $dns1, $dns2 to /tmp/resolv.dnsmasq.udhcpc"
+    cat /dev/null > /tmp/ipsettings.nameservers
+    [ -n "$dns1" ] && echo "nameserver $dns1" >> /tmp/ipsettings.nameservers
+    [ -n "$dns2" ] && echo "nameserver $dns2" >> /tmp/ipsettings.nameservers
+    cp /tmp/ipsettings.nameservers /tmp/resolv.dnsmasq.udhcpc
     return 0
-}
-
-ipv4_configure_manualip()
-{
-    if [ "$1" == "$WIFI_INTERFACE" ]; then
-        file="/opt/persistent/ip.wifi.0"
-    else
-        file="/opt/persistent/ip.eth0.0"
-    fi
-    configure_settings_from_file $1 $file
-    if [ $? -eq 1 ]; then
-        return 1
-    else
-        return 0
-    fi
 }
 
 ipv4_configure_interface()
 {
     MIP_ENABLED="$(tr181 Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable 2>&1 > /dev/null)"
-    if [ "$MIP_ENABLED" == "true" ]; then
-        ipv4_configure_manualip $1
-        if [ $? -eq 1 ]; then
-            ipv4_configure_dhcpip $1
-        fi
-    else
-        ipv4_configure_dhcpip $1
+    [ "$MIP_ENABLED" == "true" ] && ipv4_configure_manualip "$1" && return 0
+    ipv4_configure_dhcpip "$1"
+}
+
+ipv4_reconfigure_interface()
+{
+    log "$1"
+    touch "/tmp/$1.deconfigured"
+    ip -4 route flush dev "$1" # remove all ipv4 routes configured on passed interface
+    ip -4 route flush cache    # no point, as per https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux ("While IPv4 lost its route cache in Linux 3.6 (commit 5e9965c15ba8) ...")
+    ip -4 addr flush dev "$1"  # addr flush also removes aliases/virtual interfaces
+    # cat /dev/null > /tmp/resolv.dnsmasq.udhcpc
+    if [ "x${INIT_SYSTEM}" = "xsystemd" ] ; then
+        log "$1: systemctl restart pni_controller.service"
+        systemctl restart pni_controller.service
+    fi
+    if [ "x${INIT_SYSTEM}" = "xs6" ] ; then
+        log "$1: s6-srvctl restart pni_controller-srv"
+        s6-srvctl restart pni_controller-srv
     fi
 }
 
@@ -294,6 +269,11 @@ try_interface()
 if [ "$1" == "test_connectivity" ]; then
     [ -n "$2" ] && timeout_seconds="$2" || timeout_seconds=2 # default timeout to 2s if not specified
     test_connectivity "" "$timeout_seconds" 1
+    exit $?
+fi
+
+if [ "$1" == "ipv4_reconfigure_interface" ]; then
+    ipv4_reconfigure_interface "$2"
     exit $?
 fi
 
