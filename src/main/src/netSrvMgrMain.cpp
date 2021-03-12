@@ -1291,174 +1291,91 @@ bool getDNSip (char *primaryDNS, char *secondaryDNS)
     return true;
 }
 
-bool clearIpConfig(char *interface)
+// returns true if IP settings are the same, false otherwise
+bool ip_settings_compare(const IARM_BUS_NetSrvMgr_Iface_Settings_t& ip_settings1, const IARM_BUS_NetSrvMgr_Iface_Settings_t& ip_settings2)
 {
-    char file[512];
-    char cmd[512];
-    char line[512];
-    char dns[16];
-    char gw[16];
-    FILE *fp = NULL;
-    int  ipLen = 0;
-    bool ret = false;
-
-    memset(gw, 0, sizeof(gw));
-    memset(file, 0, sizeof(file));
-    snprintf(file, sizeof(file), "/opt/persistent/ip.%s.0",interface);
-    fp = fopen(file, "r");
-    if(fp != NULL)
-    {
-        while(NULL != fgets(line, sizeof(line), fp))
-        {
-            memset(dns, 0, sizeof(dns));
-            if(strstr(line,"primarydns="))
-            {
-                //exclude trailing newline
-                ipLen = strlen(line)-(strlen("primarydns="))-1;
-                strncpy(dns, line+strlen("primarydns="), ipLen);
-            }
-            if(strstr(line,"secondarydns="))
-            {
-                ipLen = strlen(line)-(strlen("secondarydns="))-1;
-                strncpy(dns, line+strlen("secondarydns="), ipLen);
-            }
-            if(strstr(line,"gateway="))
-            {
-                ipLen = strlen(line)-(strlen("gateway="))-1;
-                strncpy(gw, line+strlen("gateway="), ipLen);
-            }
-
-            //delete dns entries from resolv.dnsmasq
-            if(strlen(dns))
-            {
-                memset(cmd, 0, sizeof(cmd));
-                snprintf(cmd, sizeof(cmd), "sed -i '/%s/d' /tmp/resolv.dnsmasq.udhcpc", dns);
-                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-                system(cmd);
-            }
-        }
-        fclose(fp);
-
-        //delete gw entry
-        if(strlen(gw))
-        {
-            memset(cmd, 0, sizeof(cmd));
-            snprintf(cmd, sizeof(cmd), "/sbin/route del default gw %s", gw);
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-            system(cmd);
-        }
-
-        memset(cmd, 0, sizeof(cmd));
-        snprintf(cmd, sizeof(cmd), "rm -f %s", file);
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-        system(cmd);
-        ret = true;
-    }
-    return ret;
+    LOG_ENTRY_EXIT;
+    return  0 == strcmp(ip_settings1.ipaddress, ip_settings2.ipaddress) &&
+            0 == strcmp(ip_settings1.netmask, ip_settings2.netmask) &&
+            0 == strcmp(ip_settings1.gateway, ip_settings2.gateway) &&
+            0 == strcmp(ip_settings1.primarydns, ip_settings2.primarydns) &&
+            0 == strcmp(ip_settings1.secondarydns, ip_settings2.secondarydns);
 }
 
-bool saveIpConfig(bool isWifi, IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
+bool ip_settings_file_read(const char* ip_settings_filename, IARM_BUS_NetSrvMgr_Iface_Settings_t& ip_settings)
 {
-    char file[512];
-    char line[512];
-    FILE *fp = NULL;
-    bool ret = false;
-
-    memset(file, 0, sizeof(file));
-    snprintf(file, sizeof(file), "/opt/persistent/ip.%s.0",(isWifi) ? "wifi" : "eth0");
-    fp = fopen(file, "w");
-    if(fp != NULL)
+    LOG_ENTRY_EXIT;
+    FILE *fp = fopen(ip_settings_filename, "r");
+    if (fp == NULL)
+        return false;
+    char name_value_entry[512];
+    while (NULL != fgets(name_value_entry, sizeof(name_value_entry), fp))
     {
-        snprintf(line, 512, "ipaddress=%s\n",param->ipaddress);
-        fwrite(line, 1, strlen(line), fp);
-        snprintf(line, 512, "netmask=%s\n",param->netmask);
-        fwrite(line, 1, strlen(line), fp);
-        snprintf(line, 512, "gateway=%s\n",param->gateway);
-        fwrite(line, 1, strlen(line), fp);
-        snprintf(line, 512, "primarydns=%s\n",param->primarydns);
-        fwrite(line, 1, strlen(line), fp);
-        snprintf(line, 512, "secondarydns=%s\n",param->secondarydns);
-        fwrite(line, 1, strlen(line), fp);
-        fclose(fp);
-        ret = true;
+        char* key = strtok (name_value_entry, "=\n");
+        char* value = strtok (NULL, "=\n");
+        if (0 == strcmp (key, "ipaddress"))
+            snprintf(ip_settings.ipaddress, sizeof(ip_settings.ipaddress), "%s", value);
+        else if (0 == strcmp (key, "netmask"))
+            snprintf(ip_settings.netmask, sizeof(ip_settings.netmask), "%s", value);
+        else if (0 == strcmp (key, "gateway"))
+            snprintf(ip_settings.gateway, sizeof(ip_settings.gateway), "%s", value);
+        else if (0 == strcmp (key, "primarydns"))
+            snprintf(ip_settings.primarydns, sizeof(ip_settings.primarydns), "%s", value);
+        else if (0 == strcmp (key, "secondarydns"))
+            snprintf(ip_settings.secondarydns, sizeof(ip_settings.secondarydns), "%s", value);
     }
-    return ret;
+    fclose(fp);
+    return true;
 }
 
-//vaidates if the new config is different from the current one
-bool configSameasCurrentConfig(const char* file, IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
+bool ip_settings_file_write(const char* ip_settings_filename, const IARM_BUS_NetSrvMgr_Iface_Settings_t& ip_settings)
 {
-    FILE *fp = NULL;
-    char line[512];
-    bool ret = false;
-    int params = 0;
+    LOG_ENTRY_EXIT;
+    FILE *fp = fopen(ip_settings_filename, "w");
+    if (fp == NULL)
+        return false;
+    fprintf(fp, "ipaddress=%s\nnetmask=%s\ngateway=%s\nprimarydns=%s\nsecondarydns=%s\n",
+            ip_settings.ipaddress, ip_settings.netmask, ip_settings.gateway, ip_settings.primarydns, ip_settings.secondarydns);
+    fclose(fp);
+    return true;
+}
 
-    fp = fopen(file,"r");
-    if(NULL != fp)
-    {
-        while(NULL != fgets(line, sizeof(line), fp))
-        {
-            if(strstr(line,"ipaddress="))
-            {
-                if(strncmp(param->ipaddress, line+strlen("ipaddress="), strlen(param->ipaddress)) == 0)
-                {
-                    params++;
-                }
-                continue;
-            }
-            if(strstr(line,"netmask="))
-            {
-                if(strncmp(param->netmask, line+strlen("netmask="), strlen(param->netmask)) == 0)
-                {
-                    params++;
-                }
-                continue;
-            }
-            if(strstr(line,"gateway="))
-            {
-                if(strncmp(param->gateway, line+strlen("gateway="), strlen(param->gateway)) == 0)
-                {
-                    params++;
-                }
-                continue;
-            }
-            if(strstr(line,"primarydns="))
-            {
-                if(strncmp(param->primarydns, line+strlen("primarydns="), strlen(param->primarydns)) == 0)
-                {
-                    params++;
-                }
-                continue;
-            }
-            if(strstr(line,"secondarydns="))
-            {
-                if(strncmp(param->secondarydns, line+strlen("secondarydns="), strlen(param->secondarydns)) == 0)
-                {
-                    params++;
-                }
-                continue;
-            }
-        }
-        fclose(fp);
-    }
-    if(params == 5)
-    {
-        ret = true;
-    }
-    return ret;
+// triggers reconfigure of given interface if it is the active interface, otherwise does nothing.
+void ipv4_reconfigure_interface (const char* interface)
+{
+    LOG_ENTRY_EXIT;
+    std::string default_interface;
+    std::string default_gateway;
+    if ( getDefaultInterface(default_interface, default_gateway) && (0 != strcmp(interface, default_interface.c_str())) )
+        return;
+    char command[128];
+    snprintf (command, sizeof(command), "/lib/rdk/pni_controller.sh ipv4_reconfigure_interface %s", interface);
+    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
+    int status = system(command);
+    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
+}
+
+bool valid_ipv4_netmask (uint32_t mask)
+{
+    LOG_ENTRY_EXIT;
+    if (mask == 0)        // = 00000000 00000000 00000000 00000000 (invalid)
+        return false;
+    // example mask          = 11111111 11111111 11111111 00000000 (255.255.255.0  valid IPv4 netmask = 1-bit string followed by 0-bit string, totaling 32 bits)
+    uint32_t x = ~mask;   // = 00000000 00000000 00000000 11111111 (bitwise NOT of valid IPv4 netmask = 0-bit string followed by 1-bit string, totaling 32 bits)
+    uint32_t y = x + 1;   // = 00000000 00000000 00000001 00000000 (add 1)
+    return (x & y) == 0;  // = 00000000 00000000 00000000 00000000 (bitwise AND of last 2 sequences = 0 for a valid IPv4 netmask)
 }
 
 bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
 {
-    bool wifi = false;
-    bool ethernet = false;
-    bool isWifiAuto = false;
-    bool isEthernetAuto = false;
-    char cmd[1024];
+    LOG_ENTRY_EXIT;
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface [%s], ipversion [%s], autoconfig [%d], ipaddress [%s], netmask [%s], gateway [%s], primarydns [%s], secondarydns [%s]\n",
+            __FUNCTION__, param->interface, param->ipversion, param->autoconfig, param->ipaddress, param->netmask, param->gateway, param->primarydns, param->secondarydns);
 
     const char* RFC_MANUALIP_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable";
     if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
     {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] RFC for manual IP settings is not enabled\n", __FUNCTION__);
         param->isSupported = false;
         return false;
     }
@@ -1470,161 +1387,88 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         return false;
     }
 
+    bool ethernet = true;
     if (0 == strcasecmp(param->interface, "WIFI"))
     {
-        wifi = true;
+        ethernet = false;
     }
-    else if (0 == strcasecmp(param->interface, "ETHERNET"))
-    {
-        ethernet = true;
-    }
-    else
+    else if (0 != strcasecmp(param->interface, "ETHERNET"))
     {
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] unsupported interface [%s].\n", __FUNCTION__, param->interface);
         return false;
     }
 
-    //get the current autoconfig
-    isWifiAuto = (access( "/opt/persistent/ip.wifi.0", F_OK ) != -1 ) ? false : true;
-    isEthernetAuto = (access( "/opt/persistent/ip.eth0.0", F_OK ) != -1 ) ? false : true;
-
-    if(param->autoconfig)
+    const char *interface = ethernet ? getenv("ETHERNET_INTERFACE") : getenv("WIFI_INTERFACE");
+    if (interface == NULL)
     {
-        //Alreaady in autoconfig
-        if((wifi && isWifiAuto) || (ethernet && isEthernetAuto))
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to identify interface\n", __FUNCTION__);
+        return false;
+    }
+
+    const char* ip_settings_file = ethernet ? "/opt/persistent/ip.eth0.0" : "/opt/persistent/ip.wifi.0";
+    bool autoconfig = ( access(ip_settings_file, F_OK) != 0 );
+
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface: [%s], autoconfig: current [%d] requested [%d]\n", __FUNCTION__, interface, autoconfig, param->autoconfig);
+
+    if (param->autoconfig)
+    {
+        if (autoconfig)
         {
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Already in autoconfig mode. \n", __FUNCTION__);
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] already in autoconfig mode. \n", __FUNCTION__);
             return true;
         }
-
-        //clear the existing config
-        if(wifi && !isWifiAuto)
+        else if (0 != remove(ip_settings_file))
         {
-            if(!clearIpConfig("wifi"))
-            {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to clear the existing config\n", __FUNCTION__);
-                return false;
-            }
-        } else if(ethernet && !isEthernetAuto)
-        {
-            if(!clearIpConfig("eth0"))
-            {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to clear the existing config\n", __FUNCTION__);
-                return false;
-            }
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] remove(%s) returned errno %d (%s)\n", __FUNCTION__, ip_settings_file, errno, strerror(errno));
+            return false;
         }
-
-        //enable dhcp
-        memset(cmd, 0, sizeof(cmd));
-        snprintf(cmd, sizeof(cmd), "systemctl restart virtual-%s-iface.service", (wifi) ? "wifi" : "moca");
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-        system(cmd);
+        ipv4_reconfigure_interface (interface);
+        return true;
     }
     else
     {
-        //get the interface details
-        char *interface = ((wifi) ? getenv("WIFI_INTERFACE") : getenv("ETHERNET_INTERFACE"));
-        if(interface == NULL)
+        struct in_addr ipv4address;
+        if (!inet_pton(AF_INET, param->ipaddress, &ipv4address))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Failed to get the interface\n", __FUNCTION__);
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid ipaddress [%s]\n", __FUNCTION__, param->ipaddress);
             return false;
         }
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface:[%s]\n", __FUNCTION__,interface);
-
-        //validate the parameters
-        if(!((checkvalidip((char *)param->ipaddress)) && (checkvalidip((char *)param->netmask)) &&
-             (checkvalidip((char *)param->gateway)) && (checkvalidip((char *)param->primarydns))))
+        if (!inet_pton(AF_INET, param->netmask, &ipv4address) || !valid_ipv4_netmask(ntohl(ipv4address.s_addr)))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Invalid parameters.\n", __FUNCTION__);
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid netmask [%s]\n", __FUNCTION__, param->netmask);
             return false;
         }
-        if(strlen(param->secondarydns))
+        if (!inet_pton(AF_INET, param->gateway, &ipv4address))
         {
-            if(!checkvalidip((char *)param->secondarydns))
-            {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Invalid parameters.\n", __FUNCTION__);
-                return false;
-            }
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid gateway [%s]\n", __FUNCTION__, param->gateway);
+            return false;
         }
-
-        //check if the new config is different from the existing config
-        if(wifi && !isWifiAuto)
+        if (!inet_pton(AF_INET, param->primarydns, &ipv4address))
         {
-            if(configSameasCurrentConfig("/opt/persistent/ip.wifi.0", param))
-            {
-                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] provided config is same as the current config\n", __FUNCTION__);
-                return true;
-            }
-
-            if(!clearIpConfig("wifi"))
-            {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to clear the existing config\n", __FUNCTION__);
-                return false;
-            }
-        } else if(ethernet && !isEthernetAuto)
-        {
-            if(configSameasCurrentConfig("/opt/persistent/ip.eth0.0", param))
-            {
-                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] provided config is same as the current config\n", __FUNCTION__);
-                return true;
-            }
-
-            if(!clearIpConfig("eth0"))
-            {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to clear the existing config\n", __FUNCTION__);
-                return false;
-            }
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid primarydns [%s]\n", __FUNCTION__, param->primarydns);
+            return false;
         }
-
-        //save the new config and update dns configs
-        if(!saveIpConfig(wifi, param))
+        if (strlen(param->secondarydns) && !inet_pton(AF_INET, param->secondarydns, &ipv4address))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid secondarydns [%s]\n", __FUNCTION__, param->secondarydns);
+            return false;
+        }
+        IARM_BUS_NetSrvMgr_Iface_Settings_t current_ip_settings = {};
+        if (!autoconfig && ip_settings_file_read(ip_settings_file, current_ip_settings) && ip_settings_compare(current_ip_settings, *param))
+        {
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] provided config is same as the current config\n", __FUNCTION__);
+            return true;
+        }
+        if (!ip_settings_file_write(ip_settings_file, *param))
         {
             RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to save the new config. enabling dhcp\n", __FUNCTION__);
-
-            //enable dhcp
-            memset(cmd, 0, sizeof(cmd));
-            snprintf(cmd, sizeof(cmd), "systemctl restart virtual-%s-iface.service", (wifi) ? "wifi" : "moca");
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-            system(cmd);
+            remove(ip_settings_file);
+            ipv4_reconfigure_interface (interface);
             return false;
         }
-
-        if(isWifiAuto || isEthernetAuto)
-        {
-            //stop dhcp
-            memset(cmd, 0, sizeof(cmd));
-            snprintf(cmd, sizeof(cmd), "systemctl stop virtual-%s-iface.service", (wifi) ? "wifi" : "moca");
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-            system(cmd);
-        }
-
-        //configure manual ip
-        memset(cmd, 0, sizeof(cmd));
-        snprintf(cmd, sizeof(cmd), "/sbin/ifconfig %s:0 %s netmask %s up", interface, param->ipaddress, param->netmask);
-#ifdef NO_VIRTUAL_INTERFACES
-        snprintf(cmd, sizeof(cmd), "/sbin/ifconfig %s %s netmask %s up", interface, param->ipaddress, param->netmask);
-#endif
-        system(cmd);
-
-        //configure gateway ip
-        memset(cmd, 0, sizeof(cmd));
-        snprintf(cmd, sizeof(cmd), "/sbin/route add default gw %s", param->gateway);
-        system(cmd);
-
-        memset(cmd, 0, sizeof(cmd));
-        snprintf(cmd, sizeof(cmd), "echo \"nameserver %s\" >> /tmp/resolv.dnsmasq.udhcpc", param->primarydns);
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-        system(cmd);
-
-        if(strlen(param->secondarydns))
-        {
-            memset(cmd, 0, sizeof(cmd));
-            snprintf(cmd, sizeof(cmd), "echo \"nameserver %s\" >> /tmp/resolv.dnsmasq.udhcpc", param->secondarydns);
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__,cmd);
-            system(cmd);
-        }
+        ipv4_reconfigure_interface (interface);
+        return true;
     }
-    return true;
 }
 
 bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
@@ -1643,11 +1487,11 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
 
     if (0 == strcasecmp(param->interface, "WIFI"))
     {
-        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != -1 ) ? false : true;
+        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 );
     }
     else if (0 == strcasecmp(param->interface, "ETHERNET"))
     {
-        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != -1 ) ? false : true;
+        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 );
     }
     else
     {
