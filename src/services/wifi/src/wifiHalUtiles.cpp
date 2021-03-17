@@ -1024,6 +1024,13 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif //ENABLE_LOST_FOUND
 #ifdef ENABLE_IARM
             notify = true;
+	    eventId = IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged;
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Notification on 'onSSIDsChanged (%d)'.\n", MODULE_NAME, __FUNCTION__, __LINE__, eventId);
+
+            //Two events need to be generated in this switch case, hence calling WiFi_IARM_Bus_BroadcastEvent() for IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged here itself
+            WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,(IARM_EventId_t) eventId,(void *)&eventData,sizeof(eventData));
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast Event id \'%d\'. \n", MODULE_NAME, __FUNCTION__, __LINE__, eventId);
+
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_SSID_CHANGED;
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
