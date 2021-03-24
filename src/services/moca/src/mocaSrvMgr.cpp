@@ -65,6 +65,7 @@ int  MocaNetworkMgr::Start()
     IARM_Bus_RegisterCall(IARM_BUS_NETWORK_MANAGER_MOCA_getTelemetryLogDuration, mocaTelemetryLogDuration);
     RMH_SetEventCallbacks(rmh, RMH_EVENT_LINK_STATUS_CHANGED | RMH_EVENT_MOCA_VERSION_CHANGED);
     startMocaTelemetry();
+    return 0;
 }
 
 void *mocaTelemetryThrd(void* arg)
