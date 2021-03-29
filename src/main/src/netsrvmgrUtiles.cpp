@@ -82,7 +82,7 @@ static bool writeKeyFile (const char* filename, GKeyFile* keyFile);
 using namespace netSrvMgrUtiles;
 
 /**
- * @fn netSrvMgrUtiles::getMacAddress_IfName(char *ifName_in, char *macAddress_out)
+ * @fn netSrvMgrUtiles::getMacAddress_IfName(const char *ifName_in, char *macAddress_out)
  * @brief This function gets the MAC address of the AspectRatio against the id specified, only if
  * the id passed is valid.
  *
@@ -91,7 +91,7 @@ using namespace netSrvMgrUtiles;
  *
  * @return Returns true if successfully gets the mac address of interface provided or else false.
  */
-bool netSrvMgrUtiles::getMacAddress_IfName(char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN])
+bool netSrvMgrUtiles::getMacAddress_IfName(const char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN])
 {
     struct ifreq ifr;
     int sd;
@@ -393,10 +393,10 @@ bool netSrvMgrUtiles::getCurrentTime(char* currTime, const char *timeFormat)
 
 bool netSrvMgrUtiles::checkInterfaceActive(char *interfaceName)
 {
+    LOG_ENTRY_EXIT;
     FILE * file;
     char buffer[INTERFACE_STATUS_FILE_PATH_BUFFER]={0};
     bool ret=false;
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     if(!interfaceName)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Device doesnt support Ethernet !!!! \n", __FUNCTION__, __LINE__);
@@ -418,7 +418,6 @@ bool netSrvMgrUtiles::checkInterfaceActive(char *interfaceName)
         }
         fclose(file);
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return ret;
 }
 
@@ -464,74 +463,52 @@ bool writeKeyFile (const char* filename, GKeyFile* keyFile)
     return ret;
 }
 
-bool netSrvMgrUtiles::getInterfaceConfig(char *ifName, char *interfaceIp, char *netMask)
+bool netSrvMgrUtiles::getInterfaceConfig(const char *ifName, const unsigned int family, char *interfaceIp, char *netMask)
 {
+    LOG_ENTRY_EXIT;
+#ifdef ENABLE_NLMONITOR
+    char macAddress[MAC_ADDR_BUFF_LEN] = {'\0'};
+    std::vector<std::string> ipAddr;
 
-    int sock;
-    struct ifreq ifr;
-    struct sockaddr_in *ipaddr;
-    char address[INET_ADDRSTRLEN]={0};
-    FILE* fptr= NULL;
-    char *interface=NULL;
-
-    /* open socket */
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock < 0)
+    /*to get IP address based on interface and family input parameter */
+    NetLinkIfc::get_instance()->getIpaddr(ifName,family,ipAddr);
+    if(ipAddr.empty())
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] unable to open socket  \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No ipaddress on interface %s\n", __FUNCTION__, __LINE__,ifName);
         return false;
-    }
-    ifr.ifr_addr.sa_family = AF_INET;
-    if (strcasecmp (ifName, "ETHERNET") == 0)
-    {
-        interface = getenv("ETHERNET_INTERFACE");
     }
     else
     {
-        interface = getenv("WIFI_INTERFACE");
-    }
-    if (interface == NULL)
-    {
-      RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Interface is not found [%s:%d]  \n", __FUNCTION__, __LINE__);
-      return false;
-    }
-    else
-    {
-      snprintf(ifr.ifr_name, IFNAMSIZ, "%s:0", interface);
-#ifdef NO_VIRTUAL_INTERFACES
-      snprintf(ifr.ifr_name, IFNAMSIZ, "%s", interface);
-#endif
-    }
+       /*to get MAC address based on interface*/
+       netSrvMgrUtiles::getMacAddress_IfName(ifName,macAddress);
+       std::string macAddrStr(macAddress);
 
-    /* return if cannot get address */
-    if (ioctl(sock, SIOCGIFADDR, &ifr) == -1)
-    {
-        close(sock);
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Ioctl Failed  \n", __FUNCTION__, __LINE__);
-        return false;
+       for (auto const& s : ipAddr)
+       {
+          if(netSrvMgrUtiles::check_global_v6_ula_address(s))
+          {
+             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ULA V6 IP. \n", __FUNCTION__, __LINE__);
+             continue;
+          }
+          if(((ipAddr.size()) > 1) && (netSrvMgrUtiles::check_global_v6_based_macaddress(s,macAddrStr)))
+          {
+             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ip addr %s since it is based on mac %s \n", __FUNCTION__, __LINE__,s.c_str(),macAddrStr.c_str());
+             continue;
+          }
+          std::string tempStr = s.substr(0, s.find("/", 0)); //remove /64 in ip  2601:a40:300:164:aa11:fcff:fefd:1e8d/64
+          if (chk_ipaddr_linklocal(tempStr.c_str(),family))
+          {
+             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
+             continue;
+          }
+          strcpy(interfaceIp,tempStr.c_str());
+       }
     }
-
-    /* process ip */
-    ipaddr = (struct sockaddr_in *)&ifr.ifr_addr;
-    if (inet_ntop(AF_INET, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
-    {
-        strcpy(interfaceIp, address);
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] IpAddress %s \n", __FUNCTION__, __LINE__,interfaceIp);
-    }
-
     /* To get Net Mask */
-    if (ioctl(sock, SIOCGIFNETMASK, &ifr) != -1)
-    {
-        ipaddr = (struct sockaddr_in *)&ifr.ifr_netmask;
-        if (inet_ntop(AF_INET, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
-        {
-            strcpy(netMask, address);
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Netmask %s \n", __FUNCTION__, __LINE__,netMask);
-        }
-    }
-
-    close(sock);
-
+    netSrvMgrUtiles::getNetMask_IfName(ifName,family,netMask);
+#else
+    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ENABLE_NLMONITOR not set \n", __FUNCTION__, __LINE__);
+#endif
     return true;
 }
 
@@ -637,9 +614,9 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
 
 bool netSrvMgrUtiles::chk_ipaddr_linklocal(const char *stbip,unsigned int family)
 {
+    LOG_ENTRY_EXIT;
     struct sockaddr_in6 sa6;
     struct sockaddr_in sa;
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     switch(family)
     {
         case AF_INET:
@@ -653,13 +630,12 @@ bool netSrvMgrUtiles::chk_ipaddr_linklocal(const char *stbip,unsigned int family
             RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] interface family not supported %d \n", __FUNCTION__, __LINE__,family);
             return false;
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
 }
 
 bool netSrvMgrUtiles::currentActiveInterface(char *currentInterface)
 {
+    LOG_ENTRY_EXIT;
     std::string ifcStr;
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
     if (getenv("WIFI_INTERFACE") != NULL)
     {
         if (getenv("MOCA_INTERFACE") != NULL)
@@ -681,7 +657,6 @@ bool netSrvMgrUtiles::currentActiveInterface(char *currentInterface)
         return false;
     }
     strcpy(currentInterface,ifcStr.c_str());
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return true;
 }
 
@@ -691,7 +666,7 @@ bool netSrvMgrUtiles::currentActiveInterface(char *currentInterface)
 
 bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std::string macAddr)
 {
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    LOG_ENTRY_EXIT;
     if((ipv6Addr.empty()) && (macAddr.empty()))
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ipv6 addr or mac addr is empty \n", __FUNCTION__, __LINE__);
@@ -716,14 +691,13 @@ bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std:
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] mac %s based global v6 address %s \n", __FUNCTION__, __LINE__,macAddr.c_str(),ipv6Addr.c_str());
         return true;
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return false;
 }
 
 //Check if v6 address is ULA; If the IPv6 address begins with fd or fc, it is a ULA
 bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
 {
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    LOG_ENTRY_EXIT;
     if(ipv6Addr.empty())
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ipv6 addr is empty \n", __FUNCTION__, __LINE__);
@@ -736,7 +710,6 @@ bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ULA v6 address %s \n", __FUNCTION__, __LINE__,ipv6Addr.c_str());
         return true;
     }
-
     return false;
 }
 
@@ -758,5 +731,41 @@ bool netSrvMgrUtiles::getCommandOutput(const char *command, char *output_buffer,
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in getting output from command %s \n", __FUNCTION__, __LINE__, command);
     }
     pclose(file);
+    return ret;
+}
+bool netSrvMgrUtiles::getNetMask_IfName(const char *ifName_in,const unsigned int family, char *netMask_out)
+{
+    LOG_ENTRY_EXIT;
+    struct ifreq ifr;
+    struct sockaddr_in *ipaddr;
+    bool ret = false;
+    int sock;
+    char address[INET6_ADDRSTRLEN]={0};
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock > 0)
+    {
+        ifr.ifr_addr.sa_family = family;
+        strncpy(ifr.ifr_name, ifName_in, IFNAMSIZ-1);
+        /* To get Net Mask */
+        if (ioctl(sock, SIOCGIFNETMASK, &ifr) != -1)
+        {
+            ipaddr = (struct sockaddr_in *)&ifr.ifr_netmask;
+            if (inet_ntop(family, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
+            {
+                strcpy(netMask_out, address);
+                RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Netmask %s \n", __FUNCTION__, __LINE__,netMask_out);
+                ret = true;
+            }
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed in ioctl() with  \'%s\'..\n", __FUNCTION__, __LINE__, strerror (errno) );
+        }
+        close(sock);
+     }
+     else
+     {
+         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed to create socket() with \'%s\' return as \'%d\'.\n", __FUNCTION__, __LINE__, sock, strerror (errno) );
+     }
     return ret;
 }

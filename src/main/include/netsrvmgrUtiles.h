@@ -79,7 +79,7 @@ namespace netSrvMgrUtiles
  *
  * @return  Returns true if successfully gets the mac address of interface provided or else false.
  */
-bool getMacAddress_IfName(char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN]);
+bool getMacAddress_IfName(const char *ifName_in, char macAddress_out[MAC_ADDR_BUFF_LEN]);
 
 /**
  * @brief This function trigger the process by which the DHCP client renews or updates its IP address configuration data with the
@@ -153,12 +153,14 @@ bool getSTBip(char *stbip,bool *isIpv6);
 /**
  * @brief This function is used to get Interface IP address and on which interface.
  *
- * @param[out] Interface IP IP of the Interface .
+ * @param[in] ifName   ` Interface in string format. Valid values are "ETHERNET" or "WIFI"
+ * @param[in] family    IP Address family in string format. Valid values are "ipv6" or "ipv4"
+ * @param[out] InterfaceIP IP of the Interface .
  * @param[out] netmask   Netmask of the interface
  *
  * @return  Returns true if successfully gets the IP details, Otherwise returns false.
  */
-bool getInterfaceConfig(char *ifName, char *interfaceIp, char *netMask);
+bool getInterfaceConfig(const char *ifName, const unsigned int family, char *interfaceIp, char *netMask);
 
 /**
  * @brief This function is used to get Interface IP address and on which interface.
@@ -238,6 +240,16 @@ bool check_global_v6_ula_address(std::string ipv6Addr);
  * @return  Returns true if it gets the command's output successfully, Otherwise false.
  */
 bool getCommandOutput(const char *command, char *output_buffer, size_t output_buffer_size);
+
+/**
+ * @brief This function is used to get the NetMask address for the provided interface.
+ *
+ * @param[in] ifName_in    Indicates the interface name which the netMask is required.
+ * @param[out] netMask_out Indicates the netMask address of ifname_in interface name.
+ *
+ * @return  Returns true if successfully gets the NetMask address of interface provided or else false.
+ */
+bool getNetMask_IfName(const char *ifName_in, const unsigned int, char *netMask_out);
 }
 
 

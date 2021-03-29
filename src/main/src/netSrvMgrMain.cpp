@@ -1473,8 +1473,10 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
 
 bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
 {
-
-    std::string interface;
+    LOG_ENTRY_EXIT;
+    bool is_ipv6=true;
+    char interface[16] = {0};
+    std::string inter;
     std::string gateway;
     char primaryDNSaddr[INET_ADDRSTRLEN]={0};
     char secondaryDNSaddr[INET_ADDRSTRLEN]={0};
@@ -1484,30 +1486,71 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "ManualIPSettings RFC is disabled\n");
     }
-
-    if (0 == strcasecmp(param->interface, "WIFI"))
+    if (0 == strcasecmp (param->interface, "WIFI") )
     {
+        char* c = getenv("WIFI_INTERFACE");
+        snprintf (interface, sizeof(interface), "%s", c ? c : "");
         param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 );
     }
     else if (0 == strcasecmp(param->interface, "ETHERNET"))
     {
+        char* c = getenv("ETHERNET_INTERFACE");
+        snprintf (interface, sizeof(interface), "%s", c ? c : "");
         param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 );
+    }
+    //If interface param is not provided, use currently active interface
+    else if (!netSrvMgrUtiles::currentActiveInterface(interface))
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No routable  interface found.\n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    else if (0 == strcasecmp(interface, getenv("ETHERNET_INTERFACE")))
+    {
+        strcpy(param->interface,"ETHERNET");
+        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 );
+    }
+    else if (0 == strcasecmp(interface, getenv("WIFI_INTERFACE")))
+    {
+        strcpy(param->interface,"WIFI");
+        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 );
+    }
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "interface [%s] \n", interface);
+
+    /*To get ipaddress based on interface and family input paramter*/
+    if (strcasecmp (param->ipversion, "IPV6") == 0)
+    {
+        if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+            return false;
+        }
+    }
+    else if (strcasecmp (param->ipversion, "IPV4") == 0)
+    {
+        is_ipv6=false;
+        if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET, param->ipaddress, param->netmask))
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+            return false;
+        }
+    }
+    else if (netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
+    {
+        strcpy(param->ipversion,"IPV6");
+    }
+    else if (netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET, param->ipaddress, param->netmask))
+    {
+        strcpy(param->ipversion,"IPV4");
+        is_ipv6=false;
     }
     else
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] unsupported interface [%s].\n", __FUNCTION__, param->interface);
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
         return false;
     }
 
-    if(!netSrvMgrUtiles::getInterfaceConfig(param->interface, param->ipaddress, param->netmask))
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to fetch the details of [%s].\n", __FUNCTION__, param->interface);
-        return false;
-    }
-    strcpy(param->ipversion, "IPv4");
-
-    /* To get Default Gateway */
-    if (NetLinkIfc::get_instance()->getDefaultRoute(false, interface, gateway))
+    /* ipv4/ ipv6 default route depends  on is_ipv6 flag */
+    if(NetLinkIfc::get_instance()->getDefaultRoute(is_ipv6, inter, gateway))
     {
         snprintf(param->gateway, sizeof(param->gateway), "%s", gateway.c_str());
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway [%s] \n", param->gateway);
@@ -1516,7 +1559,6 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway not present [%s:%d] \n", __FUNCTION__, __LINE__);
     }
-
     /* To get Primary and Secondary DNS */
     if (getDNSip(primaryDNSaddr, secondaryDNSaddr))
     {

@@ -99,9 +99,9 @@ typedef struct {
     char interface[16];
     char ipversion[16];
     bool autoconfig;
-    char ipaddress[16];
-    char netmask[16];
-    char gateway[16];
+    char ipaddress[MAX_IP_ADDRESS_LEN];
+    char netmask[MAX_IP_ADDRESS_LEN];
+    char gateway[MAX_IP_ADDRESS_LEN];
     char primarydns[16];
     char secondarydns[16];
     bool isSupported;
