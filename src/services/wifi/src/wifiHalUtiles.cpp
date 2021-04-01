@@ -59,6 +59,7 @@ bool bSwitch2Private=false;
 bool bPrivConnectionLost=false;
 #define TOTAL_NO_OF_RETRY 5
 #endif
+bool bShutdownWifi=false;
 pthread_t wifiStatusMonitorThread;
 #ifdef USE_HOSTIF_WIFI_HAL
 static WiFiStatusCode_t getWpaStatus();
@@ -921,11 +922,19 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             eventData.data.wifiStateChange.state = WIFI_CONNECTED;
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTED);
 #endif
-            pthread_mutex_lock(&mutexGo);
-            if(0 == pthread_cond_signal(&condGo)) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            while(bShutdownWifi!=true){
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] attempting Mutex try Lock \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                if(0== pthread_mutex_trylock(&mutexGo)){
+                    if(0 == pthread_cond_signal(&condGo)) {
+                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    }
+                    pthread_mutex_unlock(&mutexGo);
+                    break;
+                }
+                else{
+                    sleep(1);/*wait for another thread to release lock also check bShutdownWifi*/
+                }
             }
-            pthread_mutex_unlock(&mutexGo);
         } else if (ACTION_ON_DISCONNECT == action) {
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
@@ -1464,15 +1473,14 @@ void *wifiConnStatusThread(void* arg)
     char wifiStatusAsString[32];
     int radioIndex = 0;
 
-    while (true ) {
+    while (bShutdownWifi!=true ) {
         pthread_mutex_lock(&mutexGo);
 
         if(ret = pthread_cond_wait(&condGo, &mutexGo) == 0) {
+            pthread_mutex_unlock(&mutexGo);
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Monitor activated by signal ***** \n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
-            pthread_mutex_unlock(&mutexGo);
-
-            while (true) {
+            while (bShutdownWifi!=true) {
                 wifiStatusCode = get_WiFiStatusCode();
 
                 if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
@@ -3459,11 +3467,18 @@ bool clearSwitchToPrivateResults()
 bool shutdownWifi()
 {
     bool result=true;
+    bShutdownWifi= true;
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    if ((wifiStatusMonitorThread) && ( pthread_cancel(wifiStatusMonitorThread) == -1 )) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] wifiStatusMonitorThread cancel failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
-        result=false;
+
+    pthread_mutex_lock(&mutexGo);
+    if(0 == pthread_cond_signal(&condGo)) {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signalling wifiStatusMonitorThread to exit cond wait \n", MODULE_NAME,__FUNCTION__, __LINE__ );
     }
+    pthread_mutex_unlock(&mutexGo);
+
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] calling pthread_join wifiStatusMonitorThread\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    pthread_join (wifiStatusMonitorThread, NULL);
+
 #ifdef ENABLE_LOST_FOUND
     if ((lafConnectThread) && (pthread_cancel(lafConnectThread) == -1 )) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lafConnectThread cancel failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
