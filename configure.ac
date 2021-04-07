@@ -157,6 +157,19 @@ AC_ARG_ENABLE([xhb1],
          [echo " Doorbell camera is enabled"])
 AM_CONDITIONAL([XHB1], [test x$XHB1 = xtrue])
 
+XHC3=" "
+AC_ARG_ENABLE([xhc3],
+        AS_HELP_STRING([--enable-xhc3],[This will be to enable/disable xhc3]),
+        [
+          case "${enableval}" in
+           yes) XHC3=true ;;
+           no) XHC3=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-xhc3]) ;;
+           esac
+           ],
+         [echo " XHC3 is enabled"])
+AM_CONDITIONAL([XHC3], [test x$XHC3 = xtrue])
+
 DEBUG=" "
 AC_ARG_ENABLE([debug],
         AS_HELP_STRING([--enable-debug],[This will be to enable/disable debug symbols]),

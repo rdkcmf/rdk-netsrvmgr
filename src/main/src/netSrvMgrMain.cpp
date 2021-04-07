@@ -18,7 +18,7 @@
 */
 
 #ifdef INCLUDE_BREAKPAD
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 #include <client/linux/handler/exception_handler.h>
 #else
 #include "breakpadwrap.h"
@@ -47,7 +47,7 @@
 #include "netlinkifc.h"
 #endif
 
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 #include "rfcapi.h"     // for RFC queries
 #endif
 
@@ -99,7 +99,7 @@ static IARM_Result_t isConnectedToInternet(void *arg);
 static IARM_Result_t setConnectivityTestEndpoints(void *arg);
 #endif // ifdef ENABLE_IARM
 
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 static bool isFeatureEnabled(const char* feature);
 static bool validate_interface_can_be_disabled (const char* interface);
 #ifdef ENABLE_NLMONITOR
@@ -112,7 +112,7 @@ static bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool isConnectedToInternet(bool& connectivity);
 static bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints);
-#endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 
 #ifdef USE_RDK_WIFI_HAL
 static bool setWifiEnabled (bool newState);
@@ -138,7 +138,7 @@ void NetworkMgr_SignalHandler (int sigNum)
 }
 
 #ifdef INCLUDE_BREAKPAD
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
                         void* context,
                         bool succeeded)
@@ -438,7 +438,7 @@ int main(int argc, char *argv[])
 
 
 #ifdef INCLUDE_BREAKPAD
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
     std::string minidump_path;
     RFC_ParamData_t secValue = {0};
     WDMP_STATUS status = getRFCParameter("SecureCoreFile", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecDump.Enable", &secValue);
@@ -499,7 +499,7 @@ int main(int argc, char *argv[])
 
 }
 
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 
 bool isFeatureEnabled(const char* feature)
 {
@@ -543,7 +543,7 @@ static void launch_pni_controller ()
 
 #endif // USE_RDK_WIFI_HAL
 
-#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1 and XHC3
 
 void netSrvMgr_start()
 {
@@ -564,11 +564,11 @@ void netSrvMgr_start()
 
 #ifdef USE_RDK_WIFI_HAL
     WiFiNetworkMgr::getInstance()->Init();
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
     launch_pni_controller();
 #else
     setWifiEnabled (true); // enable WiFi by default for XCAMs
-#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1 and XHC3
 #endif // USE_RDK_WIFI_HAL
 
 #ifdef USE_RDK_MOCA_HAL
@@ -582,7 +582,7 @@ void netSrvMgr_Loop()
     while(1)
     {
         time(&curr);
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
         printf("I-ARM NET-SRV-MGR: HeartBeat at %s\r\n", ctime(&curr));
 #endif
         sleep(60);
@@ -1048,7 +1048,7 @@ IARM_Result_t setConnectivityTestEndpoints(void *arg)
 #endif // ENABLE_IARM
 
 
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 
 /*
  * touches /tmp/<filename>
@@ -1615,7 +1615,7 @@ bool setInterfaceState (std::string interface_name, bool enabled)
     return true;
 }
 
-#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
+#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1 and XHC3
 
 #ifdef USE_RDK_WIFI_HAL
 // TODO: move this into WifiSrvMgr.cpp as WiFiNetworkMgr::setWifiEnabled(bool newState) ?

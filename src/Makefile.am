@@ -73,6 +73,11 @@ AM_CXXFLAGS += -DXHB1
 AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound
 endif
 
+if XHC3
+AM_CXXFLAGS += -DXHC3
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound
+endif
+
 if RTMESSAGE
 AM_LDFLAGS += -L$(RDK_SOURCE_PATH)/../opensource/lib/ -lrtMessage -ldataProvider
 endif

@@ -343,7 +343,7 @@ int  WiFiNetworkMgr::Start()
 
 #ifdef ENABLE_RTMESSAGE
     rtConnection_init();
-#ifdef XHB1
+#if defined(XHB1) || defined(XHC3)
     if( 0 != pthread_create(&wifiMsgThread, NULL, &rtMessage_Receive, NULL))
     {
       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Can't create thread.\n", __FUNCTION__, __LINE__);
@@ -378,7 +378,7 @@ int  WiFiNetworkMgr::Start()
     wifi_disconnectEndpoint_callback_register(wifi_disconnect_callback);
 #endif
 
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
     WiFiConnectionStatus tmpWiFiConnList;
     memset(&tmpWiFiConnList, '\0', sizeof(tmpWiFiConnList));
 #ifdef  USE_RDK_WIFI_HAL
@@ -441,7 +441,7 @@ int  WiFiNetworkMgr::Stop()
     shutdownWifi();
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     #ifdef ENABLE_RTMESSAGE
-    #ifdef XHB1
+    #if defined(XHB1) || defined(XHC3)
       pthread_kill(wifiMsgThread, 0);
     #endif
       rtConnection_destroy();

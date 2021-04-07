@@ -63,12 +63,12 @@ else
 . ${RDK_PROJECT_ROOT_PATH}/build/components/sdk/setenv2
 fi
 
-if  [ "$XCAM_MODEL" != "XHB1" ]; then
+if  [ "$XCAM_MODEL" != "XHB1" ] && [ "$XCAM_MODEL" != "XHC3" ]; then
 source $RDK_SCRIPTS_PATH/soc/build/soc_env.sh
 fi
 
-if  [ "$XCAM_MODEL" == "XHB1" ]; then
-  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson"
+if  [ "$XCAM_MODEL" == "XHB1" ] || [ "$XCAM_MODEL" == "XHC3" ]; then
+  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson -I${RDK_SOURCE_PATH}/../opensource/include"
   export CXXFLAGS=$CFLAGS
   export LDFLAGS="-L$RDK_FSROOT_PATH/usr/lib -L$PROJ_INSTALL/usr/lib"
 fi
@@ -134,9 +134,11 @@ function configure()
         configure_options="--host $DEFAULT_HOST"
         fi
 	if  [ "$XCAM_MODEL" == "XHB1" ]; then
-		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=yes --enable-debug=yes"
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=yes --enable-xhc3=no --enable-debug=yes"
+	elif [ "$XCAM_MODEL" == "XHC3" ]; then
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=no --enable-xhc3=yes --enable-debug=yes"
 	else
-		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes --enable-xhb1=no --enable-debug=yes"
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes --enable-xhb1=no --enable-xhc3=no --enable-debug=yes"
 	fi
         generic_options="$configure_options"
 

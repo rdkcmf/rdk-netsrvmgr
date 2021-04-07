@@ -130,8 +130,8 @@ typedef struct  _netMgrConfigProps
 
 /** @} */  //END OF GROUP NETSRVMGR_TYPES
 
-#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 bool isInterfaceEnabled(const char* interface, bool& enabled);
-#endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
+#endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 
 #endif /* _NETWORKMGRMAIN_H_ */

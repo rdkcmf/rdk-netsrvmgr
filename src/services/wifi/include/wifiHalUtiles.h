@@ -34,7 +34,7 @@ extern "C" {
 }
 #endif
 
-#ifdef XHB1
+#if defined(XHB1) || defined(XHC3)
 extern "C" {
 #include "mfrApi.h"
 }
@@ -344,7 +344,7 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType);
  */
 bool getmacaddress(gchar* ifname,GString *data);
 
-#ifdef XHB1
+#if defined(XHB1) || defined(XHC3)
 /**
  * @brief This function is used to get basic device info from camera.
  *
