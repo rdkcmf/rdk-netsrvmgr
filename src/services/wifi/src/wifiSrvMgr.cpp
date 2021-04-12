@@ -60,6 +60,7 @@ extern bool bIsStopLNFWhileDisconnected;
 extern bool bAutoSwitchToPrivateEnabled;
 extern bool bSwitch2Private;
 #endif
+extern WiFiStatusCode_t getWpaStatus();
 bool bStopProgressiveScanning;
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
@@ -1619,8 +1620,17 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
         }
         else
         {
-            param->data.ssid.params.enable = false;
-            snprintf(param->data.ssid.params.status,BUFF_MIN,"DOWN");
+            status = getWpaStatus();
+            if(WIFI_CONNECTED == status )
+            {
+                param->data.ssid.params.enable = true;
+                snprintf(param->data.ssid.params.status,BUFF_MIN,"UP");
+            }
+            else
+            {
+                param->data.ssid.params.enable = false;
+                snprintf(param->data.ssid.params.status,BUFF_MIN,"DOWN");
+            }
         }
     }
 

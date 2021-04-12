@@ -61,9 +61,7 @@ bool bPrivConnectionLost=false;
 #endif
 bool bShutdownWifi=false;
 pthread_t wifiStatusMonitorThread;
-#ifdef USE_HOSTIF_WIFI_HAL
-static WiFiStatusCode_t getWpaStatus();
-#endif
+WiFiStatusCode_t getWpaStatus();
 static WiFiConnection wifiConnData;
 
 static eConnMethodType wifi_conn_type;
@@ -578,7 +576,9 @@ bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
     return true;
 }
 #endif
-static WiFiStatusCode_t getWpaStatus()
+#endif /* #ifdef USE_HOSTIF_WIFI_HAL */
+
+WiFiStatusCode_t getWpaStatus()
 {
     WiFiStatusCode_t ret = WIFI_UNINSTALLED;
     FILE *in = NULL;
@@ -633,7 +633,6 @@ static WiFiStatusCode_t getWpaStatus()
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
-#endif /* #ifdef USE_HOSTIF_WIFI_HAL */
 
 #ifdef  USE_RDK_WIFI_HAL
 
