@@ -156,12 +156,13 @@ FILE_CONNECTIVITY_TEST_ENDPOINTS=/opt/persistent/connectivity_test_endpoints
 
 get_connectivity_test_endpoints()
 {
+    endpoints=""
     if [ -f "$FILE_CONNECTIVITY_TEST_ENDPOINTS" ]; then
-        endpoints=""
         while read -r line || [ -n "$line" ]; do
             endpoints="$endpoints $line"
         done < $FILE_CONNECTIVITY_TEST_ENDPOINTS
-    else
+    fi
+    if [ -z "${endpoints// }" ]; then
         if [ -f /lib/systemd/system/xre-receiver.service ]; then
             endpoints="xre.ccp.xcal.tv:10601"
         else
