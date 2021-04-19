@@ -331,7 +331,7 @@ int  WiFiNetworkMgr::Init()
     }
 
 #ifndef ENABLE_XCAM_SUPPORT
-    create_wpa_supplicant_conf_from_netapp_db ("/opt/wifi/wpa_supplicant.conf", "/opt/wifi/NetApp.db");
+    create_wpa_supplicant_conf_from_netapp_db ("/opt/secure/wifi/wpa_supplicant.conf", "/opt/secure/wifi/NetApp.db");
 #endif // ENABLE_XCAM_SUPPORT
 
     return 0;
