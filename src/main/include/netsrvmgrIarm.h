@@ -40,6 +40,8 @@
 #ifndef _NETSRVMGRIARM_H_
 #define _NETSRVMGRIARM_H_
 
+#include <arpa/inet.h>
+
 /**
  * @addtogroup NETSRVMGR_TYPES
  * @{
@@ -99,11 +101,11 @@ typedef struct {
     char interface[16];
     char ipversion[16];
     bool autoconfig;
-    char ipaddress[MAX_IP_ADDRESS_LEN];
-    char netmask[MAX_IP_ADDRESS_LEN];
-    char gateway[MAX_IP_ADDRESS_LEN];
-    char primarydns[16];
-    char secondarydns[16];
+    char ipaddress[INET6_ADDRSTRLEN];
+    char netmask[INET6_ADDRSTRLEN];
+    char gateway[INET6_ADDRSTRLEN];
+    char primarydns[INET6_ADDRSTRLEN];
+    char secondarydns[INET6_ADDRSTRLEN];
     bool isSupported;
 } IARM_BUS_NetSrvMgr_Iface_Settings_t;
 

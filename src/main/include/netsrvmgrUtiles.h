@@ -170,7 +170,7 @@ bool getInterfaceConfig(const char *ifName, const unsigned int family, char *int
  *
  * @return  Returns true if successfully gets the IP details, Otherwise returns false.
  */
-bool getDNSip(char *primaryDNS, char *secondaryDNS);
+bool getDNSip(const unsigned int family, char *primaryDNS, char *secondaryDNS);
 
 /*
  * @brief This function is used to get STB IP address for a given address family.

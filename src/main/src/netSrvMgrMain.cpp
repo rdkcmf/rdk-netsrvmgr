@@ -31,6 +31,7 @@
 #include "netsrvmgrIarm.h"
 #include <string>
 #include <vector>
+#include <fstream>
 #include <sstream>
 #include <algorithm>
 
@@ -92,7 +93,7 @@ static IARM_Result_t setInterfaceEnabled(void *arg);
 static IARM_Result_t getSTBip(void *arg);
 static IARM_Result_t setIPSettings(void *arg);
 static IARM_Result_t getIPSettings(void *arg);
-static bool getDNSip(char *primaryDNS, char *secondaryDNS);
+static bool getDNSip(const unsigned int family, char *primaryDNS, char *secondaryDNS);
 static IARM_Result_t getSTBip_family(void *arg);
 static IARM_Result_t isConnectedToInternet(void *arg);
 static IARM_Result_t setConnectivityTestEndpoints(void *arg);
@@ -1247,47 +1248,30 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
     }
 }
 
-bool getDNSip (char *primaryDNS, char *secondaryDNS)
+bool getDNSip (const unsigned int family, char *primaryDNS, char *secondaryDNS)
 {
-    char nameserver[31]={0};
-    int ip[4]={0};
-    int fvalue = 0;
-    int foundDNS = 0;
-    FILE *fptr= NULL;
-    const int dnsParamvalue = 5;
-
-    if ((fptr = fopen("/etc/resolv.dnsmasq", "r")) != NULL)
-    {
-        while (!feof(fptr))
-        {
-            fvalue = fscanf(fptr, "%s %d.%d.%d.%d", nameserver,&ip[0],&ip[1],&ip[2],&ip[3]);
-
-            if (dnsParamvalue == fvalue)
-            {
-                if (foundDNS == 0)
-                {
-                    sprintf(primaryDNS,"%d.%d.%d.%d",ip[0],ip[1],ip[2],ip[3]);
-                    foundDNS = 1;
-                }
-                else
-                {
-                    sprintf(secondaryDNS,"%d.%d.%d.%d",ip[0],ip[1],ip[2],ip[3]);
-                    break;
-                }
-            }
-        }
-        if (foundDNS == 0)
-        {
-            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "DNS ip is not configured [%s:%d]  \n", __FUNCTION__, __LINE__);
-        }
-        fclose(fptr);
-    }
-    else
+    LOG_ENTRY_EXIT;
+    char* dns[2] = {primaryDNS, secondaryDNS};
+    std::string line, keyword, value;
+    unsigned char s[sizeof(struct in6_addr)];
+    std::ifstream f("/etc/resolv.dnsmasq");
+    if (!f.is_open())
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "DNS file is not present [%s:%d]  \n", __FUNCTION__, __LINE__);
         return false;
     }
-
+    for (int i = 0; i < 2 && std::getline (f, line); )
+    {
+        std::istringstream ss(line);
+        ss >> keyword;
+        if (keyword == "nameserver")
+        {
+            ss >> std::ws >> value;
+            if (1 == inet_pton(family, value.c_str(), s))
+                strcpy(dns[i++], value.c_str());
+        }
+    }
+    f.close();
     return true;
 }
 
@@ -1478,8 +1462,8 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     char interface[16] = {0};
     std::string inter;
     std::string gateway;
-    char primaryDNSaddr[INET_ADDRSTRLEN]={0};
-    char secondaryDNSaddr[INET_ADDRSTRLEN]={0};
+    char primaryDNSaddr[INET6_ADDRSTRLEN]={0};
+    char secondaryDNSaddr[INET6_ADDRSTRLEN]={0};
 
     const char* RFC_MANUALIP_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable";
     if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
@@ -1560,7 +1544,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway not present [%s:%d] \n", __FUNCTION__, __LINE__);
     }
     /* To get Primary and Secondary DNS */
-    if (getDNSip(primaryDNSaddr, secondaryDNSaddr))
+    if (getDNSip(is_ipv6 ? AF_INET6 : AF_INET,primaryDNSaddr, secondaryDNSaddr))
     {
         strcpy(param->primarydns, primaryDNSaddr);
         strcpy(param->secondarydns, secondaryDNSaddr);
