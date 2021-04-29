@@ -103,14 +103,8 @@ ipv4_reconfigure_interface()
     ip -4 route flush cache    # no point, as per https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux ("While IPv4 lost its route cache in Linux 3.6 (commit 5e9965c15ba8) ...")
     ip -4 addr flush dev "$1"  # addr flush also removes aliases/virtual interfaces
     # cat /dev/null > /tmp/resolv.dnsmasq.udhcpc
-    if [ "x${INIT_SYSTEM}" = "xsystemd" ] ; then
-        log "$1: systemctl restart pni_controller.service"
-        systemctl restart pni_controller.service
-    fi
-    if [ "x${INIT_SYSTEM}" = "xs6" ] ; then
-        log "$1: s6-srvctl restart pni_controller-srv"
-        s6-srvctl restart pni_controller-srv
-    fi
+    log "$1: systemctl restart pni_controller.service"
+    systemctl restart pni_controller.service
 }
 
 ipv6_deconfigure_interface()
