@@ -1472,56 +1472,58 @@ void *wifiConnStatusThread(void* arg)
     WiFiStatusCode_t wifiStatusCode;
     char wifiStatusAsString[32];
     int radioIndex = 0;
+    struct timespec condGoTimeout;
 
-    while (bShutdownWifi!=true ) {
-        pthread_mutex_lock(&mutexGo);
+    pthread_mutex_lock(&mutexGo);
+    pthread_cond_wait(&condGo, &mutexGo);
+    pthread_mutex_unlock(&mutexGo);
 
-        if(ret = pthread_cond_wait(&condGo, &mutexGo) == 0) {
-            pthread_mutex_unlock(&mutexGo);
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Monitor activated by signal ***** \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Monitor activated by signal ***** \n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
-            while (bShutdownWifi!=true) {
-                wifiStatusCode = get_WiFiStatusCode();
+    while (!bShutdownWifi) {
+        wifiStatusCode = get_WiFiStatusCode();
 
-                if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
-                }
-                else {
-                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
-                }
+        if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
+        }
+        else {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
+        }
 
-                if (WIFI_CONNECTED == wifiStatusCode) {
-                    //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
+        if (WIFI_CONNECTED == wifiStatusCode) {
+            //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
 #if !defined (XHB1)
-                    memset(&stats, 0, sizeof(wifi_sta_stats_t));
-                    wifi_getStats(radioIndex, &stats);
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d,%d,%d,%s,%d\n",
-                            stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI,(int)stats.sta_LastDataDownlinkRate,(int)stats.sta_LastDataUplinkRate,stats.sta_BAND,(int)stats.sta_AvgRSSI);
+            memset(&stats, 0, sizeof(wifi_sta_stats_t));
+            wifi_getStats(radioIndex, &stats);
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d,%d,%d,%s,%d\n",
+                    stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI,(int)stats.sta_LastDataDownlinkRate,(int)stats.sta_LastDataUplinkRate,stats.sta_BAND,(int)stats.sta_AvgRSSI);
 #endif
-                    //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+            //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
 
-                    /*Telemetry Parameter logging*/
-                    logs_Period1_Params();
-                    logs_Period2_Params();
-                }
+            /*Telemetry Parameter logging*/
+            logs_Period1_Params();
+            logs_Period2_Params();
+        }
 
-                sleep(confProp.wifiProps.statsParam_PollInterval);
-            }
+        pthread_mutex_lock(&mutexGo);
+        clock_gettime(CLOCK_REALTIME, &condGoTimeout);
+        condGoTimeout.tv_sec += confProp.wifiProps.statsParam_PollInterval;
+        ret = 0;
+        while (!bShutdownWifi && ret != ETIMEDOUT) {
+            ret = pthread_cond_timedwait(&condGo, &mutexGo, &condGoTimeout);
         }
-        else
-        {
-            pthread_mutex_unlock(&mutexGo);
-        }
+        pthread_mutex_unlock(&mutexGo);
     }
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return NULL;
 }
 
 void monitor_WiFiStatus()
 {
+    bShutdownWifi = false;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_create(&wifiStatusMonitorThread, &attr, wifiConnStatusThread, NULL);
 }
 
