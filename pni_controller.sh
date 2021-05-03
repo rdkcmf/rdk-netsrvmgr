@@ -21,9 +21,19 @@ fi
 
 ipv4_deconfigure_interface()
 {
-    DHCPv4_SERVICE=DHCPv4_SERVICE_$1
-    log "$1: systemctl stop ${!DHCPv4_SERVICE}"
-    systemctl stop "${!DHCPv4_SERVICE}"
+    touch "/tmp/$1.deconfigured"
+    ipv4_deconfigure_dhcpip "$1"
+}
+
+ipv4_deconfigure_dhcpip()
+{
+    [ "$RUN_LINK_LOCAL_SERVICES" == "true" ] && interface="$1:0" || interface="$1"
+    UDHCPC_PID_FILE="/tmp/udhcpc.${interface}.pid"
+    if [ -f "$UDHCPC_PID_FILE" ]; then
+        UDHCPC_PID="$(cat "$UDHCPC_PID_FILE")"
+        log "$1: kill -USR2 $UDHCPC_PID ($UDHCPC_PID_FILE)"
+        kill -USR2 "$UDHCPC_PID"
+    fi
 }
 
 ipv4_configure_dhcpip()
@@ -61,6 +71,8 @@ ipv4_configure_manualip()
             "secondarydns") dns2=${vals[i]} ;;
         esac
     done
+
+    ipv4_deconfigure_dhcpip "$1"
 
     # apply ip settings
     [ "$RUN_LINK_LOCAL_SERVICES" == "true" ] && interface="$1:0" || interface="$1"
@@ -123,8 +135,7 @@ flush_routes_and_addresses()
 
 deconfigure_interface()
 {
-    touch "/tmp/$1.deconfigured"
-    # ipv4_deconfigure_interface "$1"
+    ipv4_deconfigure_interface "$1"
     ipv6_deconfigure_interface "$1"
     flush_routes_and_addresses "$1"
 }
