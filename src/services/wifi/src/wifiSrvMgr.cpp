@@ -61,6 +61,7 @@ extern bool bAutoSwitchToPrivateEnabled;
 extern bool bSwitch2Private;
 #endif
 extern WiFiStatusCode_t getWpaStatus();
+extern void getWpaSsid(WiFiConnectionStatus *curSSIDConnInfo);
 bool bStopProgressiveScanning;
 ssidList gSsidList;
 extern netMgrConfigProps confProp;
@@ -1607,7 +1608,19 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
         }
         else
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Empty SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
+	    memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
+            getWpaSsid(&currSsidInfo);
+            memcpy(param->data.ssid.params.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
+
+           if(currSsidInfo.ssidSession.ssid[0] != '\0')
+	   {
+               RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] get current SSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__,
+                     currSsidInfo.ssidSession.ssid);
+	   }
+	   else
+	   {
+               RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Empty SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
+	   }
         }
 
         status = get_WifiRadioStatus();
