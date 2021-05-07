@@ -215,7 +215,6 @@ typedef struct _WiFiConnectedSSIDInfo
     float rate;               /**< The Physical data rate in Mbps */
     float noise;              /**< The average noise strength in dBm. */
     float signalStrength;     /**< The RSSI value in dBm. */
-    float avgSignalStrength;  /**< The Average RSSI value in dBm. */
   
 } WiFiConnectedSSIDInfo_t;
 

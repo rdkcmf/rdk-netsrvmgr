@@ -435,7 +435,6 @@ static void WIFI_MGR_API_getConnectedSSID() {
 			\tNoise : \"%f\" \n \
                         \tBand : \"%s\"\n \
 			\tSignalStrength(rssi) : \"%f\" \n \
-                        \tAvgSignalStrength(avgRssi): \"%f\" \n \
                         \tFrequency : \"%d\"\n \
                         \tSecurityMode : \"%d\"\n  ",
            param.data.getConnectedSSID.ssid, \
@@ -444,7 +443,6 @@ static void WIFI_MGR_API_getConnectedSSID() {
            param.data.getConnectedSSID.noise, \
            param.data.getConnectedSSID.band, \
            param.data.getConnectedSSID.signalStrength, \
-           param.data.getConnectedSSID.avgSignalStrength, \
            param.data.getConnectedSSID.frequency, \
            param.data.getConnectedSSID.securityMode);
 
