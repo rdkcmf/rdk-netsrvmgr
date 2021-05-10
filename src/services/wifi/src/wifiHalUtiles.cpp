@@ -586,25 +586,27 @@ void getWpaSsid(WiFiConnectionStatus *curSSIDConnInfo) {
 
     if ( WIFI_CONNECTED == getWpaStatus())
     {
-	    if(!(in = popen("wpa_cli status | grep -i '^ssid' | cut -d = -f 2", "r")))
-	    {
-		RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d] Failed to read wpa_cli status.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-		return;
-	    }
+        if(!(in = popen("wpa_cli status | grep -i '^ssid' | cut -d = -f 2", "r")))
+        {
+	    RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d] Failed to read wpa_cli status.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+	    return;
+        }
 
-	    if(fgets(buff, sizeof(buff), in)!=NULL)
-	    {
-		RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d]  SSID: %s\n", MODULE_NAME,__FUNCTION__, __LINE__, buff);
-	//		printf("%s", buff);
+        if(fgets(buff, sizeof(buff), in)!=NULL)
+        {
+	    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d]  SSID: %s\n", MODULE_NAME,__FUNCTION__, __LINE__, buff);
+	    size_t len = strlen(buff);
+	    if (len > 0 && buff[len-1] == '\n') {
+	        buff[len-1] = '\0';
 	    }
-	    else {
-		RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d]  Failed to get SSID.\n", MODULE_NAME,__FUNCTION__, __LINE__);
-		pclose(in);
-		return;
-	    }
+	    strncpy(curSSIDConnInfo->ssidSession.ssid, buff, SSID_SIZE);
+	    curSSIDConnInfo->isConnected = true;
+        }
+        else {
+	    RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d]  Failed to get SSID.\n", MODULE_NAME,__FUNCTION__, __LINE__);
+        }
+        pclose(in);
 
-        strncpy(curSSIDConnInfo->ssidSession.ssid, buff, SSID_SIZE);
-        curSSIDConnInfo->isConnected = true;
     }
     else {
         curSSIDConnInfo->isConnected = false;
