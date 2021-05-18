@@ -309,9 +309,10 @@ SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryption
         }
     }
     else
-    {   // If both secModeString and encryptionType are Empty then Security Mode is OPEN/NONE
-        if(strlen(secModeString) == 0 && strlen(encryptionType) == 0)
+    {   // If both secModeString and encryptionType are Empty or if secModeString is [ESS] or if secModeString is [WPS][ESS] then Security Mode is OPEN/NONE
+        if((strlen(secModeString) == 0 && strlen(encryptionType) == 0) || (strcmp(secModeString,"[ESS]") == 0) || (strcmp(secModeString,"[WPS][ESS]") == 0))
         {
+	   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Security Mode is OPEN/NONE\n", MODULE_NAME,__FUNCTION__, __LINE__);
            mode  = NET_WIFI_SECURITY_NONE;
         }
         else
