@@ -734,20 +734,20 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDsAsyncIncr(void *arg)
 
 IARM_Result_t WiFiNetworkMgr::getCurrentState(void *arg)
 {
-    IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_ENTRY_EXIT;
 
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     param->status = true;
 
-    //if the ethernet is plugged in then report disabled
-    if( !ethernet_on() )
-        param->data.wifiStatus = get_WifiRadioStatus();
-    else
+    bool enabled;
+    if (false == isInterfaceEnabled("WIFI", enabled)) // WIFI interface does not exist
+        param->data.wifiStatus = WIFI_UNINSTALLED;
+    else if (!enabled)
         param->data.wifiStatus = WIFI_DISABLED;
+    else
+        param->data.wifiStatus = getWpaStatus();
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    return ret;
+    return IARM_RESULT_SUCCESS;
 }
 
 IARM_Result_t WiFiNetworkMgr::getCurrentConnectionType(void *arg)

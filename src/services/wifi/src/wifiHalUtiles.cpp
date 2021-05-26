@@ -616,7 +616,7 @@ void getWpaSsid(WiFiConnectionStatus *curSSIDConnInfo) {
 
 WiFiStatusCode_t getWpaStatus()
 {
-    WiFiStatusCode_t ret = WIFI_UNINSTALLED;
+    WiFiStatusCode_t wpa_state = WIFI_DISCONNECTED; // default to this state
     FILE *in = NULL;
     char buff[512] = {'\0'};
 
@@ -624,50 +624,49 @@ WiFiStatusCode_t getWpaStatus()
 
     if(!(in = popen("wpa_cli status | grep -i wpa_state | cut -d = -f 2", "r")))
     {
-        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d] Failed to read wpa_cli status.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-        return ret;
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to read wpa_cli status.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        return wpa_state;
     }
 
-    if(fgets(buff, sizeof(buff), in)!=NULL)
-    {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d]  State: %s\n", MODULE_NAME,__FUNCTION__, __LINE__, buff);
-//		printf("%s", buff);
-    }
-    else {
-        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d]  Failed to get State.\n", MODULE_NAME,__FUNCTION__, __LINE__);
-        pclose(in);
-        return ret;
-    }
-
-    if(0 == strncasecmp(buff, "DISCONNECTED", strlen("DISCONNECTED")))
-    {
-        ret = WIFI_DISCONNECTED;
-    }
-    else if (0 == strncasecmp(buff, "SCANNING", strlen("SCANNING")))
-    {
-        ret = WIFI_PAIRING;
-    }
-    else if (0 == strncasecmp(buff, "ASSOCIATED", strlen("ASSOCIATED")))
-    {
-        ret = WIFI_CONNECTING;
-    }
-    else if (0 == strncasecmp(buff, "COMPLETED", strlen("COMPLETED")))
-    {
-        ret = WIFI_CONNECTED;
-    }
-    else if (0 == strncasecmp(buff, "INTERFACE_DISABLED", strlen("INTERFACE_DISABLED")))
-    {
-        ret = WIFI_UNINSTALLED;
-    }
-    else
-    {
-        ret = WIFI_FAILED;
-    }
+    char* c = fgets(buff, sizeof(buff), in);
 
     pclose(in);
 
+    if (c == NULL)
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d]  Failed to get State.\n", MODULE_NAME,__FUNCTION__, __LINE__);
+        return wpa_state;
+    }
+
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  State: %s\n", MODULE_NAME,__FUNCTION__, __LINE__, buff);
+
+    // possible wpa_state values (as seen in wpa_supplicant_state_txt() function of wpa_supplicant) are:
+    // DISCONNECTED, INACTIVE, INTERFACE_DISABLED, SCANNING,
+    // AUTHENTICATING, ASSOCIATING, ASSOCIATED, 4WAY_HANDSHAKE, GROUP_HANDSHAKE,
+    // COMPLETED, UNKNOWN
+    if (0 == strncasecmp(buff, "SCANNING", strlen("SCANNING")))
+    {
+        wpa_state = WIFI_PAIRING;
+    }
+    else if (0 == strncasecmp(buff, "AUTHENTICATING", strlen("AUTHENTICATING")) ||
+            0 == strncasecmp(buff, "ASSOCIATING", strlen("ASSOCIATING")) ||
+            0 == strncasecmp(buff, "ASSOCIATED", strlen("ASSOCIATED")) ||
+            0 == strncasecmp(buff, "4WAY_HANDSHAKE", strlen("4WAY_HANDSHAKE")) ||
+            0 == strncasecmp(buff, "GROUP_HANDSHAKE", strlen("GROUP_HANDSHAKE")))
+    {
+        wpa_state = WIFI_CONNECTING;
+    }
+    else if (0 == strncasecmp(buff, "COMPLETED", strlen("COMPLETED")))
+    {
+        wpa_state = WIFI_CONNECTED;
+    }
+    else if (0 == strncasecmp(buff, "INTERFACE_DISABLED", strlen("INTERFACE_DISABLED")))
+    {
+        wpa_state = WIFI_DISABLED;
+    }
+
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    return ret;
+    return wpa_state;
 }
 
 #ifdef  USE_RDK_WIFI_HAL

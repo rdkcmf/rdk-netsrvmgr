@@ -106,14 +106,13 @@ static bool validate_interface_can_be_disabled (const char* interface);
 static bool getDefaultInterface(std::string &interface, std::string &gateway);
 #endif // ifdef ENABLE_NLMONITOR
 static bool setDefaultInterface(const char* interface, bool persist);
-static bool isInterfaceEnabled(const char* interface, bool& enabled);
 static bool setInterfaceEnabled(const char* interface, bool enabled, bool persist);
 static bool setInterfaceState(std::string interface_name, bool enabled);
 static bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool isConnectedToInternet(bool& connectivity);
 static bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints);
-#endif // ifndef ENABLE_XCAM_SUPPORT and XHB1
+#endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1)
 
 #ifdef USE_RDK_WIFI_HAL
 static bool setWifiEnabled (bool newState);
