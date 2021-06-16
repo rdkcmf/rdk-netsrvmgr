@@ -501,6 +501,11 @@ bool netSrvMgrUtiles::getInterfaceConfig(const char *ifName, const unsigned int 
              RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
              continue;
           }
+          if (family == AF_INET && isIPv4AddressScopeDocumentation(tempStr))
+          {
+             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping reserved ip %s\n", __FUNCTION__, __LINE__, tempStr.c_str());
+             continue;
+          }
           strcpy(interfaceIp,tempStr.c_str());
        }
     }
@@ -597,6 +602,11 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
       {
          RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
 	 continue;
+      }
+      if (i_family == AF_INET && isIPv4AddressScopeDocumentation(tempStr))
+      {
+         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping reserved ip %s\n", __FUNCTION__, __LINE__, tempStr.c_str());
+         continue;
       }
       strcpy(stbip,tempStr.c_str());
       ret=true;
@@ -768,4 +778,18 @@ bool netSrvMgrUtiles::getNetMask_IfName(const char *ifName_in,const unsigned int
          RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed to create socket() with \'%s\' return as \'%d\'.\n", __FUNCTION__, __LINE__, sock, strerror (errno) );
      }
     return ret;
+}
+
+bool netSrvMgrUtiles::isIPv4AddressScopeDocumentation(const std::string& ipv4_address)
+{
+    struct sockaddr_in sa;
+    inet_pton(AF_INET, ipv4_address.c_str(), &(sa.sin_addr));
+
+    // IPv4 unicast address blocks reserved for documentation are all /24 networks (RFC 5737)
+    // so extract the network part of the address by bitwise-ANDing with 255.255.255.0
+    in_addr_t network_address = sa.sin_addr.s_addr & htonl(0xffffff00);
+
+    return (network_address == htonl (0xc0000200) || // 192.0.2.0
+            network_address == htonl (0xc6336400) || // 198.51.100.0
+            network_address == htonl (0xcb007100));  // 203.0.113.0
 }

@@ -178,7 +178,7 @@ static bool split (const std::string &str, char delimiter, std::vector<std::stri
 
 #ifdef ENABLE_IARM
 
-static void eventInterfaceEnabledStatusChanged(std::string& interface, bool enabled)
+static void eventInterfaceEnabledStatusChanged(const std::string& interface, bool enabled)
 {
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, enabled=%d\n", __FUNCTION__, __LINE__, interface.c_str(), enabled);
 
@@ -192,7 +192,7 @@ static void eventInterfaceEnabledStatusChanged(std::string& interface, bool enab
     }
 }
 
-static void eventInterfaceConnectionStatusChanged(std::string& interface, bool connected)
+static void eventInterfaceConnectionStatusChanged(const std::string& interface, bool connected)
 {
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, connected=%d\n", __FUNCTION__, __LINE__, interface.c_str(), connected);
 
@@ -206,7 +206,7 @@ static void eventInterfaceConnectionStatusChanged(std::string& interface, bool c
     }
 }
 
-static void eventInterfaceIPAddressStatusChanged (std::string& interface, std::string ip_address, bool is_ipv6, bool acquired)
+static void eventInterfaceIPAddressStatusChanged (const std::string& interface, const std::string& ip_address, bool is_ipv6, bool acquired)
 {
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, ip_address=%s, is_ipv6=%d, acquired=%d\n",
             __FUNCTION__, __LINE__, interface.c_str(), ip_address.c_str(), is_ipv6, acquired);
@@ -223,7 +223,7 @@ static void eventInterfaceIPAddressStatusChanged (std::string& interface, std::s
     }
 }
 
-static void eventDefaultInterfaceChanged(std::string& oldInterface, std::string& newInterface)
+static void eventDefaultInterfaceChanged(const std::string& oldInterface, const std::string& newInterface)
 {
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: oldInterface=%s, newInterface=%s\n", __FUNCTION__, __LINE__, oldInterface.c_str(), newInterface.c_str());
 
@@ -283,7 +283,9 @@ static void addressCallback(std::string args)
     if (tokens[4] != "global")
         return; // we are only interested in global addresses
 
-    eventInterfaceIPAddressStatusChanged(tokens[2], tokens[3], tokens[1] == "ipv6", tokens[0] == "add");
+    // do not event any IPv4 addresses reserved for documentation
+    if (!(tokens[1] == "ipv4" && netSrvMgrUtiles::isIPv4AddressScopeDocumentation(tokens[3])))
+        eventInterfaceIPAddressStatusChanged(tokens[2], tokens[3], tokens[1] == "ipv6", tokens[0] == "add");
 
     if ((tokens[2].find(':') != std::string::npos) && (tokens[0] == "delete")) // virtual interface deleted
         detectDefaultInterfaceChange(); // needed as netlink events are not sent for ipv4 route deletes that occur implicitly when a virtual interface goes down

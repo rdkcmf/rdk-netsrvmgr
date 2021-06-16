@@ -250,6 +250,16 @@ bool getCommandOutput(const char *command, char *output_buffer, size_t output_bu
  * @return  Returns true if successfully gets the NetMask address of interface provided or else false.
  */
 bool getNetMask_IfName(const char *ifName_in, const unsigned int, char *netMask_out);
+
+/**
+ * @brief This function checks if the input ipv4 address is a unicast address reserved for documentation.
+ *
+ * @param[in] ipv4_address    IPv4 address.
+ *
+ * @return  Returns true if input ipv4 address is a unicast address reserved for documentation.
+ */
+bool isIPv4AddressScopeDocumentation(const std::string& ipv4_address);
+
 }
 
 
