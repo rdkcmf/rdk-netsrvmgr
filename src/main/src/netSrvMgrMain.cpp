@@ -97,6 +97,7 @@ static bool getDNSip(const unsigned int family, char *primaryDNS, char *secondar
 static IARM_Result_t getSTBip_family(void *arg);
 static IARM_Result_t isConnectedToInternet(void *arg);
 static IARM_Result_t setConnectivityTestEndpoints(void *arg);
+static IARM_Result_t isAvailable(void *arg);
 #endif // ifdef ENABLE_IARM
 
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
@@ -488,6 +489,7 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getSTBip_family, getSTBip_family);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isConnectedToInternet, isConnectedToInternet);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setConnectivityTestEndpoints, setConnectivityTestEndpoints);
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isAvailable, isAvailable);
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE, _eventHandler);
 #endif
 #ifdef ENABLE_SD_NOTIFY
@@ -1046,6 +1048,13 @@ IARM_Result_t setConnectivityTestEndpoints(void *arg)
     IARM_BUS_NetSrvMgr_Iface_TestEndpoints_t *param = (IARM_BUS_NetSrvMgr_Iface_TestEndpoints_t *)arg;
     std::vector<std::string> endpoints(param->endpoints, param->endpoints + param->size);
     return setConnectivityTestEndpoints(endpoints) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
+}
+
+IARM_Result_t isAvailable(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM_BUS_NETSRVMGR_API_isAvailable is called \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+    return IARM_RESULT_SUCCESS;
 }
 #endif // ENABLE_IARM
 

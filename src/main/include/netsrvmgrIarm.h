@@ -66,6 +66,7 @@
 #define IARM_BUS_NETSRVMGR_API_getSTBip_family "getSTBip_family"
 #define IARM_BUS_NETSRVMGR_API_isConnectedToInternet "isConnectedToInternet"
 #define IARM_BUS_NETSRVMGR_API_setConnectivityTestEndpoints "setConnectivityTestEndpoints"
+#define IARM_BUS_NETSRVMGR_API_isAvailable "isAvailable"
 
 typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG=20,
