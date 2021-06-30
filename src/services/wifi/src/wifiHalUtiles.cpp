@@ -108,17 +108,17 @@ static void logs_Period2_Params();
 
 typedef struct _wifi_securityModes
 {
-    SsidSecurity 	securityMode;
+    SsidSecurity        securityMode;
     const char          *modeString;
-}wifi_securityModes; 
+}wifi_securityModes;
 
 wifi_securityModes wifi_securityModesMap_Netapp[] =
 {
-    { NET_WIFI_SECURITY_NONE,          		  	"No Security"                   },
-    { NET_WIFI_SECURITY_WEP_64, 	          	"WEP (Open & Shared)"        	},
-    { NET_WIFI_SECURITY_WPA_PSK_AES, 		  	"WPA-Personal, AES encryp."    	},
-    { NET_WIFI_SECURITY_WPA_PSK_TKIP, 		 	"WPA-Personal, TKIP encryp."   	},
-    { NET_WIFI_SECURITY_WPA2_PSK_AES,  			"WPA2-Personal, AES encryp."   	},
+    { NET_WIFI_SECURITY_NONE,                   "No Security"                   },
+    { NET_WIFI_SECURITY_WEP_64,                 "WEP (Open & Shared)"           },
+    { NET_WIFI_SECURITY_WPA_PSK_AES,            "WPA-Personal, AES encryp."     },
+    { NET_WIFI_SECURITY_WPA_PSK_TKIP,           "WPA-Personal, TKIP encryp."    },
+    { NET_WIFI_SECURITY_WPA2_PSK_AES,           "WPA2-Personal, AES encryp."    },
     { NET_WIFI_SECURITY_WPA2_PSK_TKIP,          "WPA2-Personal, TKIP encryp."   },
     { NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,    "WPA-ENTERPRISE, TKIP"          },
     { NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,     "WPA-ENTERPRISE, AES"           },
@@ -127,27 +127,27 @@ wifi_securityModes wifi_securityModesMap_Netapp[] =
     { NET_WIFI_SECURITY_WPA_WPA2_PSK,           "WPA-WPA2-Personal"             },
     { NET_WIFI_SECURITY_WPA_WPA2_ENTERPRISE,    "WPA-WPA2-ENTERPRISE"           },
     { NET_WIFI_SECURITY_WPA3_SAE,               "WPA3"                          },
-    { NET_WIFI_SECURITY_WPA3_PSK_AES,           "WPA2-WPA3"                          },
-    { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
+    { NET_WIFI_SECURITY_WPA3_PSK_AES,           "WPA2-WPA3"                     },
+    { NET_WIFI_SECURITY_NOT_SUPPORTED,          "Security format not supported" },
 };
 
 wifi_securityModes wifi_securityModesMap[] =
 {
-    { NET_WIFI_SECURITY_NONE,          		  	"None"                   },
-    { NET_WIFI_SECURITY_WEP_64, 	          	"WEP"        	},
-    { NET_WIFI_SECURITY_WPA_PSK_TKIP, 		 	"WPA"   	},
-    { NET_WIFI_SECURITY_WPA_PSK_AES, 		  	"WPA"    	},
-    { NET_WIFI_SECURITY_WPA2_PSK_TKIP, 			"WPA2"  	},
-    { NET_WIFI_SECURITY_WPA2_PSK_AES,  			"WPA2"   	},
-    { NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,		"WPA-ENTERPRISE"		},
-    { NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,		"WPA-ENTERPRISE"		},
-    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,		"WPA2-ENTERPRISE"		},
-    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,		"WPA2-ENTERPRISE"		},
-    { NET_WIFI_SECURITY_WPA_WPA2_PSK,		        "WPA-WPA2"		        },
-    { NET_WIFI_SECURITY_WPA_WPA2_ENTERPRISE,		"WPA-WPA2-ENTERPRISE"		},
-    { NET_WIFI_SECURITY_WPA3_SAE,               "SAE"                          },
-    { NET_WIFI_SECURITY_WPA3_PSK_AES,           "PSK+SAE"                          },
-    { NET_WIFI_SECURITY_NOT_SUPPORTED, 		  	"Security format not supported" },
+    { NET_WIFI_SECURITY_NONE,                   "None"                          },
+    { NET_WIFI_SECURITY_WEP_64,                 "WEP"                           },
+    { NET_WIFI_SECURITY_WPA_PSK_TKIP,           "WPA"                           },
+    { NET_WIFI_SECURITY_WPA_PSK_AES,            "WPA"                           },
+    { NET_WIFI_SECURITY_WPA2_PSK_TKIP,          "WPA2"                          },
+    { NET_WIFI_SECURITY_WPA2_PSK_AES,           "WPA2"                          },
+    { NET_WIFI_SECURITY_WPA_ENTERPRISE_TKIP,    "WPA-ENTERPRISE"                },
+    { NET_WIFI_SECURITY_WPA_ENTERPRISE_AES,     "WPA-ENTERPRISE"                },
+    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_TKIP,   "WPA2-ENTERPRISE"               },
+    { NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES,    "WPA2-ENTERPRISE"               },
+    { NET_WIFI_SECURITY_WPA_WPA2_PSK,           "WPA-WPA2"                      },
+    { NET_WIFI_SECURITY_WPA_WPA2_ENTERPRISE,    "WPA-WPA2-ENTERPRISE"           },
+    { NET_WIFI_SECURITY_WPA3_SAE,               "WPA3"                          },
+    { NET_WIFI_SECURITY_WPA3_PSK_AES,           "WPA2-WPA3"                     },
+    { NET_WIFI_SECURITY_NOT_SUPPORTED,          "Security format not supported" },
 };
 
 #ifdef ENABLE_RTMESSAGE
@@ -295,50 +295,41 @@ bool getHALVersion()
 }
 #endif
 
-SsidSecurity get_wifiSecurityModeFromString(char *secModeString,char *encryptionType)
+SsidSecurity get_wifiSecurityModeFromString(char *secModeString, char *encryptionType)
 {
-    SsidSecurity mode = NET_WIFI_SECURITY_NOT_SUPPORTED;
-    if(!secModeString || !encryptionType) {
+    if (!secModeString || !encryptionType)
+    {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to NULL. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
         return NET_WIFI_SECURITY_NONE;
     }
-    if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] securitymode = %s encryption = %s\n",
+            MODULE_NAME, __FUNCTION__, __LINE__, secModeString, encryptionType);
+    if (strlen(secModeString) == 0 && strlen(encryptionType) == 0)
+        return NET_WIFI_SECURITY_NONE;
+    if (0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
     {
-        
         int len = sizeof(wifi_securityModesMap_Netapp)/sizeof(wifi_securityModes);
-        for(int i = 0; i < len; i++) {
-	    if(NULL != strcasestr(secModeString,wifi_securityModesMap_Netapp[i].modeString)) {
-                mode = wifi_securityModesMap_Netapp[i].securityMode;
-                break;
-            }
+        for (int i = 0; i < len; i++)
+        {
+            if (strcasestr(secModeString, wifi_securityModesMap_Netapp[i].modeString))
+                return wifi_securityModesMap_Netapp[i].securityMode;
         }
     }
     else
-    {   // If both secModeString and encryptionType are Empty or if secModeString is [ESS] or if secModeString is [WPS][ESS] then Security Mode is OPEN/NONE
-        if((strlen(secModeString) == 0 && strlen(encryptionType) == 0) || (strcmp(secModeString,"[ESS]") == 0) || (strcmp(secModeString,"[WPS][ESS]") == 0))
+    {
+        int len = sizeof(wifi_securityModesMap)/sizeof(wifi_securityModes);
+        for (int i = len-1; i >= 0; i--)
         {
-	   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Security Mode is OPEN/NONE\n", MODULE_NAME,__FUNCTION__, __LINE__);
-           mode  = NET_WIFI_SECURITY_NONE;
-        }
-        else
-        {
-            int len = sizeof(wifi_securityModesMap)/sizeof(wifi_securityModes);
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] securitymode = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,secModeString);
-            for(int i = len-1 ; i >= 0; i--) {
-                if(NULL != strcasestr(secModeString,wifi_securityModesMap[i].modeString)) {
-                    if(((encryptionType != NULL) && (NULL != strcasestr(encryptionType,"AES"))) ||  (NULL != strcasestr(secModeString,"WEP")) || (NULL != strcasestr(secModeString,"SAE")) || (NULL != strcasestr(secModeString,"CCMP"))) {
-                        mode = wifi_securityModesMap[i].securityMode;
-                    }
-                    else
-                    {
-                        mode = wifi_securityModesMap[i-1].securityMode;
-                    }
-                    break;
-                }
+            if (strcasestr(secModeString, wifi_securityModesMap[i].modeString))
+            {
+                if (strcasestr(encryptionType, "AES") || strcasestr(secModeString, "WEP"))
+                    return wifi_securityModesMap[i].securityMode;
+                else
+                    return wifi_securityModesMap[i-1].securityMode;
             }
         }
     }
-    return mode;
+    return NET_WIFI_SECURITY_NOT_SUPPORTED;
 }
 
 int get_int(const char* ptr)
@@ -1670,7 +1661,7 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     conSSIDInfo->signalStrength = stats.sta_RSSI;
     conSSIDInfo->frequency = stats.sta_Frequency;
     strncpy((char *)conSSIDInfo->band,(const char *)stats.sta_BAND,(size_t)BUFF_MIN);
-    conSSIDInfo->securityMode = get_wifiSecurityModeFromString(stats.sta_SecMode, stats.sta_SecMode);
+    conSSIDInfo->securityMode = get_wifiSecurityModeFromString(stats.sta_SecMode, stats.sta_Encryption);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
             [SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | Frequency : \"%d\" Security Mode : \"%d\"] \n",
