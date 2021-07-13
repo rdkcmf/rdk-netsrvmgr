@@ -1,10 +1,17 @@
 #!/bin/bash
 
+. /etc/include.properties
+
+if [ "x$LOG_PATH" = "x" ]; then
+	LOG_PATH="/opt/logs"
+fi
+
+
 THIS_SCRIPT=$(basename "$0")
 
 log()
 {
-    echo "$(date '+%Y %b %d %H:%M:%S.%6N') [$THIS_SCRIPT#$$]: $*" >> /opt/logs/netsrvmgr.log
+    echo "$(date '+%Y %b %d %H:%M:%S.%6N') [$THIS_SCRIPT#$$]: $*" >> $LOG_PATH/netsrvmgr.log
 }
 
 . /etc/device.properties
@@ -16,7 +23,7 @@ LOCAL_SERVICE=virtual-wifi-iface.service
 fi
 
 log "Flushing Address and routes"
-ip addr flush dev $WIFI_INTERFACE
+ip addr flush dev $WIFI_INTERFACE scope global
 ip route flush dev  $WIFI_INTERFACE
 ip route flush cache
 
