@@ -286,15 +286,11 @@ void* getGatewayRouteDataThrd(void* arg)
             if (gwSelected)
             {
                list<std::string> ifcList;
-               if (getenv("WIFI_INTERFACE") != NULL)
-               {
-                  ifcList.push_back(getenv("WIFI_INTERFACE"));
-               }
-
-               if (getenv("MOCA_INTERFACE") != NULL)
-               {
-                  ifcList.push_back(getenv("MOCA_INTERFACE"));
-               }
+               char* interface;
+               if ((interface = getenv("WIFI_INTERFACE")) != NULL && *interface != NULL)
+                  ifcList.push_back(interface);
+               if ((interface = getenv("MOCA_INTERFACE")) != NULL && *interface != NULL)
+                  ifcList.push_back(interface);
                gwSelected = false;
                for (auto const& i : ifcList)
                {
@@ -719,15 +715,11 @@ gboolean RouteNetworkMgr::setRoute() {
             if ((!gwSelected) && (!xb3Selected))
             {
                list<std::string> ifcList;
-               if (getenv("WIFI_INTERFACE") != NULL)
-               {
-                  ifcList.push_back(getenv("WIFI_INTERFACE"));
-               }
-
-               if (getenv("MOCA_INTERFACE") != NULL)
-               {
-                  ifcList.push_back(getenv("MOCA_INTERFACE"));
-               }
+               char* interface;
+               if ((interface = getenv("WIFI_INTERFACE")) != NULL && *interface != NULL)
+                  ifcList.push_back(interface);
+               if ((interface = getenv("MOCA_INTERFACE")) != NULL && *interface != NULL)
+                  ifcList.push_back(interface);
                gwSelected = true;
 
                 for (auto const& i : ifcList)
