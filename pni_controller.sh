@@ -52,7 +52,7 @@ ipv4_configure_manualip()
     else
         ip_settings_file="/opt/persistent/ip.eth0.0"
     fi
-    [ ! -f $ip_settings_file ] && return 1
+    [ ! -s $ip_settings_file ] && return 1
 
     # read ip settings file
     declare -a keys=()

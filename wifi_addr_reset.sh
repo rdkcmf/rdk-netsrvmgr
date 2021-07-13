@@ -23,7 +23,6 @@ ip route flush cache
 
 log "Restarting Local Services"
 
-touch /opt/persistent/ip.wifi.0
 systemctl restart ${LOCAL_SERVICE}
 /lib/rdk/zcip.sh
 ip route add 224.0.0.0/4 dev $MOCA_INTERFACE

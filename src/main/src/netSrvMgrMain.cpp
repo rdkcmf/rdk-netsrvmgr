@@ -34,6 +34,8 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #ifdef ENABLE_ROUTE_SUPPORT
 #include "routeSrvMgr.h"
@@ -1484,13 +1486,15 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         char* c = getenv("WIFI_INTERFACE");
         snprintf (interface, sizeof(interface), "%s", c ? c : "");
-        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 );
+        struct stat stat_buf;
+        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.wifi.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
     }
     else if (0 == strcasecmp(param->interface, "ETHERNET"))
     {
         char* c = getenv("ETHERNET_INTERFACE");
         snprintf (interface, sizeof(interface), "%s", c ? c : "");
-        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 );
+        struct stat stat_buf;
+        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.eth0.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
     }
     //If interface param is not provided, use currently active interface
     else if (!netSrvMgrUtiles::currentActiveInterface(interface))
@@ -1501,12 +1505,15 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     else if (0 == strcasecmp(interface, getenv("ETHERNET_INTERFACE")))
     {
         strcpy(param->interface,"ETHERNET");
-        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 );
+        struct stat stat_buf;
+        param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.eth0.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
+
     }
     else if (0 == strcasecmp(interface, getenv("WIFI_INTERFACE")))
     {
         strcpy(param->interface,"WIFI");
-        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 );
+        struct stat stat_buf;
+        param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.wifi.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
     }
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "interface [%s] \n", interface);
 
