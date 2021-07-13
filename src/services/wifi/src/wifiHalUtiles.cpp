@@ -2323,6 +2323,14 @@ void *lafConnPrivThread(void* arg)
             }
             do
             {
+#ifdef ENABLE_XCAM_SUPPORT
+                if(rdkc_get_wifi_interface_status() == 3)
+                {
+                  RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Camera is connected to Y-CABLE. Aborting LNF \n",__FUNCTION__, __LINE__ );
+                  setLNFState(LNF_UNITIALIZED);
+                  break;
+                }
+#endif
                 if((bAutoSwitchToPrivateEnabled) || (bSwitch2Private))
                 {
                     if(bSwitch2Private == true)
