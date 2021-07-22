@@ -295,15 +295,15 @@ void* getGatewayRouteDataThrd(void* arg)
                for (auto const& i : ifcList)
                {
                   std::string ifcStr = i;
-                  std::string cmd = "/lib/rdk/enableIpv6Autoconf.sh ";
-                  cmd += ifcStr;
                   //Invoke API to cleanup Global IPs assigned.
                   NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                   NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
                   //Call script to enable SLAAC ra support.
 #ifdef YOCTO_BUILD
-                  v_secure_system(cmd.c_str());
+                  v_secure_system("/lib/rdk/enableIpv6Autoconf.sh %s", ifcStr.c_str());
 #else
+                  std::string cmd = "/lib/rdk/enableIpv6Autoconf.sh ";
+                  cmd += ifcStr;
                   system(cmd.c_str());
 #endif
                }
@@ -726,11 +726,11 @@ gboolean RouteNetworkMgr::setRoute() {
                 {
                   //Call script to disable SLAAC ra support.
                   std::string ifcStr = i;
+#ifdef YOCTO_BUILD
+                  v_secure_system("/lib/rdk/disableIpv6Autoconf.sh %s", ifcStr.c_str());
+#else
                   std::string cmd = "/lib/rdk/disableIpv6Autoconf.sh ";
                   cmd += ifcStr;
-#ifdef YOCTO_BUILD
-                  v_secure_system(cmd.c_str());
-#else
                   system(cmd.c_str());
 #endif
 
@@ -742,6 +742,15 @@ gboolean RouteNetworkMgr::setRoute() {
             }
 #endif //ENABLE_NLMONITOR
 
+#ifdef YOCTO_BUILD
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Calling gateway script with arguments %s %s %s %s %d %s %s %s \n", MODULE_NAME,__FUNCTION__, __LINE__,
+                                    GW_SETUP_FILE, gwdata->gwyip->str, gwdata->dnsconfig->str, routeIf, ROUTE_PRIORITY,
+                                    gwdata->ipv6prefix->str, gwdata->gwyipv6->str, gwdata->devicetype->str);
+            retType=v_secure_system(GW_SETUP_FILE " %s %s %s %d %s %s %s ",
+                                    gwdata->gwyip->str, gwdata->dnsconfig->str, routeIf, ROUTE_PRIORITY,
+                                    gwdata->ipv6prefix->str, gwdata->gwyipv6->str, gwdata->devicetype->str);
+            //Ignoring WEXITSTATUS(retType) in v_secure_system() as it is already taken care in secure_wrapper.c
+#else
             GString *GwRouteParam=g_string_new(NULL);
             g_string_printf(GwRouteParam,"%s" ,GW_SETUP_FILE);
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->gwyip->str);
@@ -752,24 +761,25 @@ gboolean RouteNetworkMgr::setRoute() {
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->gwyipv6->str);
             g_string_append_printf(GwRouteParam," \"%s\"" ,gwdata->devicetype->str);
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Calling gateway script %s  \n", MODULE_NAME,__FUNCTION__, __LINE__,GwRouteParam->str);
-#ifdef YOCTO_BUILD
-            retType=v_secure_system(GwRouteParam->str);
-#else
             retType=system(GwRouteParam->str);
-#endif
             g_string_free(GwRouteParam,TRUE);
+            if(retType != SYSTEM_COMMAND_ERROR)
+            {
+                retType = WEXITSTATUS(retType);
+            }
+#endif
         }
         if(retType == SYSTEM_COMMAND_ERROR)
         {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error has occured in shell command  \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
-        else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
+        else if (retType == SYSTEM_COMMAND_SHELL_NOT_FOUND)
         {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] That shell command is not found  \n", MODULE_NAME,__FUNCTION__, __LINE__);
         }
-        else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_SUCESS)
+        else if (retType == SYSTEM_COMMAND_SHELL_SUCESS)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] system call route set successfully %d  \n", MODULE_NAME,__FUNCTION__, __LINE__,WEXITSTATUS(retType));
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] system call route set successfully %d  \n", MODULE_NAME,__FUNCTION__, __LINE__, retType);
             gwdata->isRouteSet=TRUE;
             if(checkIpMode(gwdata->ipv6prefix->str))
             {
@@ -783,7 +793,7 @@ gboolean RouteNetworkMgr::setRoute() {
         }
         else
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] no change in routing information %d  \n", MODULE_NAME,__FUNCTION__, __LINE__,WEXITSTATUS(retType));
+            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] no change in routing information %d  \n", MODULE_NAME,__FUNCTION__, __LINE__, retType);
         }
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
@@ -902,39 +912,58 @@ gboolean RouteNetworkMgr::checkRemoveRouteInfo(char *ipAddr,bool isIPv4)
         gwRouteInfo=g_list_find_custom(gwRouteInfo,ipAddr,(GCompareFunc)g_list_find_ip);
         if( gwRouteInfo != NULL)
         {
+#ifndef YOCTO_BUILD
             GString* command=g_string_new(NULL);
+#endif
 	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Route to be removed  ******* %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,ipAddr);
             if (isIPv4)
             {
+#ifdef YOCTO_BUILD
+                retType=v_secure_system("route del default gw %s", ipAddr);
+                //Ignoring WEXITSTATUS(retType) in v_secure_system() as it is already taken care in secure_wrapper.c
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Remove Route ******* route del default gw %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,ipAddr);
+#else
                 g_string_printf(command, "route del default gw %s", ipAddr);
+#endif
             }
             else
             {
+#ifdef YOCTO_BUILD
+                retType=v_secure_system("ip -6 route del default via %s", ipAddr);
+                //Ignoring WEXITSTATUS(retType) in v_secure_system() as it is already taken care in secure_wrapper.c
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Remove Route ******* ip -6 route del default via %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,ipAddr);
+#else
                 g_string_printf(command, "ip -6 route del default via %s", ipAddr);
+#endif
+            }
+
+#ifndef YOCTO_BUILD
+            retType=system(command->str);
+            if(retType != SYSTEM_COMMAND_ERROR)
+            {
+                retType = WEXITSTATUS(retType);
             }
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Remove Route ******* %s ******* \n", MODULE_NAME,__FUNCTION__, __LINE__,command->str);
-#ifdef YOCTO_BUILD
-            retType=v_secure_system(command->str);
-#else
-            retType=system(command->str);
 #endif
             if(retType == SYSTEM_COMMAND_ERROR)
             {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error has occured in shell command  \n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
-            else if (WEXITSTATUS(retType) == SYSTEM_COMMAND_SHELL_NOT_FOUND)
+            else if (retType == SYSTEM_COMMAND_SHELL_NOT_FOUND)
             {
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] That shell command is not found  \n", MODULE_NAME,__FUNCTION__, __LINE__);
             }
             else
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] system call route set successfully %d  \n", MODULE_NAME,__FUNCTION__, __LINE__,WEXITSTATUS(retType));
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] system call route set successfully %d  \n", MODULE_NAME,__FUNCTION__, __LINE__, retType);
                 retVal=TRUE;
             }
             sendCurrentRouteData();
             routeInfoData=(routeInfo *)gwRouteInfo->data;
             removeRouteFromList(routeInfoData);
+#ifndef YOCTO_BUILD
             g_string_free(command,TRUE);
+#endif
         }
         else
         {

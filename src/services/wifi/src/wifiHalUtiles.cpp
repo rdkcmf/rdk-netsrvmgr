@@ -31,6 +31,12 @@
 rtConnection con_recv = NULL;
 #endif
 
+#ifdef YOCTO_BUILD
+extern "C" {
+#include "secure_wrapper.h"
+}
+#endif
+
 #define WIFI_HAL_VERSION_SIZE   6
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
@@ -863,12 +869,12 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                        NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                        NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Clearing ipv6 ip and routes .\n",__FUNCTION__, __LINE__);
+#ifdef YOCTO_BUILD
+                       v_secure_system("/lib/rdk/enableIpv6Autoconf.sh %s &", ifcStr.c_str());
+#else
                        std::string enableV6 = "/lib/rdk/enableIpv6Autoconf.sh ";
                        enableV6 += ifcStr;  //adding interface
                        enableV6 += " &";
-#ifdef YOCTO_BUILD
-                       v_secure_system(enableV6.c_str());
-#else
                        system(enableV6.c_str());
 #endif
                    }
