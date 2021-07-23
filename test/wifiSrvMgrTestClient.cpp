@@ -23,13 +23,23 @@
 #include <string.h>
 #include <iostream>
 #ifdef ENABLE_IARM
+#include <signal.h>
 #include "libIBus.h"
 #include "libIBusDaemon.h"
 #include "wifiSrvMgrIarmIf.h"
+#include "netsrvmgrIarm.h"
 #endif
 #include "NetworkMgrMain.h"
 
 #define NM_MGR_WIFI_CLIENT "NetworkMgrWiFiClientApps"
+
+int Net_Srv_Reg_Events = false;
+int Wifi_Mgr_Reg_Events = false;
+
+typedef enum _NetworkManager_Route_EventId_t {
+        IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA=10,
+        IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_MAX,
+} IARM_Bus_NetworkManager_Route_EventId_t;
 
 enum {
     Test_getAvailableSSIDs =1,
@@ -54,6 +64,10 @@ enum {
     Test_stopProgressiveScanning = 18,
     Test_disconnectSSID = 19,
     Test_cancelWPSPairing = 20,
+    Test_nm_registerForEvents = 21,
+    Test_nm_unregisterForEvents = 22,
+    Test_wifi_registerForEvents = 23,
+    Test_wifi_unregisterForEvents = 24,
     Test_Max_Api,
 };
 
@@ -305,7 +319,7 @@ static void WIFI_MGR_API_connect()
 
     if(!strcasecmp(ans.c_str(),"Y"))
     {
-        std::cout<< "	Enter ssid 	: 	";
+        std::cout<< "	Enter ssid	:	";
         std::cin >> ssid;
         std::cout <<"	Enter passphrase	:	" ;
         std::cin >> passphrase;
@@ -429,7 +443,7 @@ static void WIFI_MGR_API_getConnectedSSID() {
     printf("\n***********************************\n");
 
     printf("Connected SSID info: \n \
-	    	\tSSID: \"%s\"\n \
+		\tSSID: \"%s\"\n \
 			\tBSSID : \"%s\"\n \
 			\tPhyRate : \"%f\"\n \
 			\tNoise : \"%f\" \n \
@@ -467,11 +481,11 @@ static void WIFI_MGR_API_getEndPointProps()
     printf("\n***********************************\n");
 
     printf("\n Profile : \"EndPoint.1.\": \n \
-     		[Enable : \"%d\"| Status : \"%s\" | SSIDReference : \"%s\" ] \n",
+		[Enable : \"%d\"| Status : \"%s\" | SSIDReference : \"%s\" ] \n",
            param.data.endPointInfo.enable, param.data.endPointInfo.status, param.data.endPointInfo.SSIDReference);
 
     printf(" \n Profile : \"EndPoint.1.Stats.\": \n \
-     		[SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ] \n",
+		[SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ] \n",
            param.data.endPointInfo.stats.signalStrength, param.data.endPointInfo.stats.retransmissions,
            param.data.endPointInfo.stats.lastDataDownlinkRate, param.data.endPointInfo.stats.lastDataUplinkRate);
 
@@ -576,7 +590,304 @@ static void WIFI_MGR_API_getRadioStatsProps()
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 #endif
 }
+#ifdef ENABLE_IARM
+#define IARM_CHECK(FUNC) { \
+    if ((res = FUNC) != IARM_RESULT_SUCCESS) { \
+        printf("IARM %s: %s\n", #FUNC, \
+            res == IARM_RESULT_INVALID_PARAM ? "invalid param" : ( \
+            res == IARM_RESULT_INVALID_STATE ? "invalid state" : ( \
+            res == IARM_RESULT_IPCCORE_FAIL ? "ipcore fail" : ( \
+            res == IARM_RESULT_OOM ? "oom" : "unknown")))); \
+    } \
+    else \
+    { \
+        printf("IARM %s: success\n", #FUNC); \
+    } \
+}
+#endif //#ifdef ENABLE_IARM
 
+#ifdef ENABLE_IARM
+static void eventHandler_nm_mgr(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+{
+    if (strcmp(owner, IARM_BUS_NM_SRV_MGR_NAME) != 0)
+    {
+        printf ("ERROR - nm_mgr unexpected event: owner %s, eventId: %d, data: %p, size: %d.\n", owner, (int)eventId, data, len);
+        return;
+    }
+    if (data == nullptr || len == 0)
+    {
+        printf ("ERROR - event with NO DATA: eventId: %d, data: %p, size: %d.\n", (int)eventId, data, len);
+        return;
+    }
+
+    switch (eventId)
+    {
+        case IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventInterfaceEnabledStatus_t *e = (IARM_BUS_NetSrvMgr_Iface_EventInterfaceEnabledStatus_t*) data;
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS interface = %s, enabled = %d\n",
+                    e->interface, e->status);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventInterfaceConnectionStatus_t *e = (IARM_BUS_NetSrvMgr_Iface_EventInterfaceConnectionStatus_t*) data;
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS interface = %s, connected = %d\n",
+                    e->interface, e->status);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventInterfaceIPAddress_t *e = (IARM_BUS_NetSrvMgr_Iface_EventInterfaceIPAddress_t*) data;
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS interface = %s, ip_address = %s, acquired = %d\n",
+                    e->interface, e->ip_address, e->acquired);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventDefaultInterface_t *e = (IARM_BUS_NetSrvMgr_Iface_EventDefaultInterface_t*) data;
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE oldInterface = %s newInterface = %s\n",
+                    e->oldInterface, e->newInterface);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventData_t iarmData = { 0 };
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED = %d \n", iarmData.isInterfaceEnabled);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventData_t iarmData = { 0 };
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE = %d for interface %s\n", iarmData.isInterfaceEnabled,
+                    iarmData.setInterface);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE:
+        {
+            IARM_BUS_NetSrvMgr_Iface_EventData_t iarmData = { 0 };
+            printf ("IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED = %d \n", iarmData.isInterfaceEnabled);
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE:
+        {
+            printf("IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE broadcast!");
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED:
+        {
+            printf("IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED event!");
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED:
+        {
+            printf("IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED  event!");
+            break;
+        }
+        case IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA:
+        {
+            printf("IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA  event!");
+            break;
+        }
+    }
+}
+#endif //#ifdef ENABLE_IARM
+
+#ifdef ENABLE_IARM
+static void eventHandler_wifi_mgr(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+{
+    if (strcmp(owner, IARM_BUS_NM_SRV_MGR_NAME) != 0)
+    {
+        printf ("ERROR - wifi_mgr unexpected event: owner %s, eventId: %d, data: %p, size: %d.\n", owner, (int)eventId, data, len);
+        return;
+    }
+    if (data == nullptr || len == 0)
+    {
+        printf ("ERROR - event with NO DATA: eventId: %d, data: %p, size: %d.\n", (int)eventId, data, len);
+        return;
+    }
+
+    switch (eventId)
+    {
+        case IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs:
+        {
+            IARM_BUS_WiFiSrvMgr_EventData_t *e = (IARM_BUS_WiFiSrvMgr_EventData_t *)data;
+            printf ("IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs data.wifiSSIDList.ssid_list = %s\n",
+            e->data.wifiSSIDList.ssid_list);
+            break;
+        }
+        case IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDsIncr:
+        {
+            IARM_BUS_WiFiSrvMgr_EventData_t *e = (IARM_BUS_WiFiSrvMgr_EventData_t*) data;
+            printf ("IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDsIncr data.wifiSSIDList.more_data = %d data.wifiSSIDList.ssid_list = %s\n",
+                    e->data.wifiSSIDList.more_data, e->data.wifiSSIDList.ssid_list);
+            break;
+        }
+        case IARM_BUS_WIFI_MGR_EVENT_onError:
+        {
+            IARM_BUS_WiFiSrvMgr_EventData_t *e = (IARM_BUS_WiFiSrvMgr_EventData_t*) data;
+            printf ("IARM_BUS_WIFI_MGR_EVENT_onError data.wifiError.code = %d\n",
+                     e->data.wifiError.code);
+            break;
+        }
+        case IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged:
+        {
+            IARM_BUS_WiFiSrvMgr_EventData_t *e = (IARM_BUS_WiFiSrvMgr_EventData_t*) data;
+            printf ("IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged data.wifiStateChange.state = %d\n",
+                     e->data.wifiStateChange.state);
+            break;
+        }
+        case IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged:
+        {
+            IARM_BUS_WiFiSrvMgr_EventData_t *e = (IARM_BUS_WiFiSrvMgr_EventData_t*) data;
+            printf ("IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged data.wifiSSIDList.ssid_list = %s data.wifiStateChange.state = %d \n",
+            e->data.wifiSSIDList.ssid_list, e->data.wifiStateChange.state);
+            break;
+        }
+    }
+}
+#endif //#ifdef ENABLE_IARM
+
+static void NET_MGR_registerForEvents()
+{
+    #ifdef ENABLE_IARM
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    if (Net_Srv_Reg_Events)
+    {
+        printf("[%s] Already registered\n", __FUNCTION__);
+    }
+    else
+    {
+        Net_Srv_Reg_Events = true;
+
+        IARM_Result_t res;
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE , eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED, eventHandler_nm_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA, eventHandler_nm_mgr) );
+
+    }
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+}
+
+static void WIFI_MGR_registerForEvents()
+{
+#ifdef ENABLE_IARM
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    if (Wifi_Mgr_Reg_Events)
+    {
+        printf("[%s] Already registered\n", __FUNCTION__);
+    }
+    else
+    {
+        Wifi_Mgr_Reg_Events = true;
+
+        IARM_Result_t res;
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs , eventHandler_wifi_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDsIncr, eventHandler_wifi_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onError, eventHandler_wifi_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged, eventHandler_wifi_mgr) );
+        IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged, eventHandler_wifi_mgr) );
+
+    }
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+}
+
+static void NET_MGR_unregisterForEvents()
+{
+#ifdef ENABLE_IARM
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    if (!Net_Srv_Reg_Events)
+    {
+        printf("[%s] Already unregistered\n", __FUNCTION__);
+    }
+    else
+    {
+        IARM_Result_t res;
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE) );
+
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_ENABLED) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SET_INTERFACE_CONTROL_PERSISTENCE) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE ) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_SWITCH_TO_PRIVATE ) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_STOP_LNF_WHILE_DISCONNECTED) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_AUTO_SWITCH_TO_PRIVATE_ENABLED) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA) );
+
+        Net_Srv_Reg_Events = false;
+    }
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+}
+
+static void WIFI_MGR_unregisterForEvents()
+{
+#ifdef ENABLE_IARM
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+
+    if (!Wifi_Mgr_Reg_Events)
+    {
+        printf("[%s] Already unregistered\n", __FUNCTION__);
+    }
+    else
+    {
+        IARM_Result_t res;
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDsIncr) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onError) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged) );
+        IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged) );
+
+        Wifi_Mgr_Reg_Events = false;
+    }
+
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+#endif
+}
+
+static void cleanup()
+{
+#ifdef ENABLE_IARM
+    if (Wifi_Mgr_Reg_Events)
+    {
+        WIFI_MGR_unregisterForEvents();
+    }
+    if (Net_Srv_Reg_Events)
+    {
+        NET_MGR_unregisterForEvents();
+    }
+#endif //#ifdef ENABLE_IARM
+    return;
+}
+
+void signal_handler (int sigNum)
+{
+#ifdef ENABLE_IARM
+    printf ("%s(): Received signal %d \n",__FUNCTION__, sigNum);
+
+    cleanup();
+    
+    exit(0);
+
+#endif //#ifdef ENABLE_IARM
+}
 
 int main()
 {
@@ -586,13 +897,19 @@ int main()
     IARM_Result_t retVal = IARM_RESULT_SUCCESS;
 //    printf("[%s] Starting \'%s\' Client.\r\n", __FUNCTION__, IARM_BUS_NM_SRV_MGR_NAME);
 
+        /* Signal handler */
+    signal (SIGHUP, signal_handler);
+    signal (SIGINT, signal_handler);
+    signal (SIGQUIT, signal_handler);
+    signal (SIGTERM, signal_handler);
+
     IARM_Bus_Init(NM_MGR_WIFI_CLIENT);
     IARM_Bus_Connect();
 
     do
     {
         printf("\n==================================================================\n");
-        printf("*****	Network Mgr: Execute WiFi Manager Api's		**** 	");
+        printf("*****	Network Mgr: Execute WiFi Manager Api's		****	");
         printf("\n==================================================================\n");
         printf( "1. getAvailableSSIDs\n" );
         printf( "2. getCurrentState\n" );
@@ -616,6 +933,10 @@ int main()
         printf( "18. stopProgressiveWifiScanning\n");
         printf( "19. disconnectSSID\n");
         printf( "20. cancelWPSPairing\n");
+        printf( "21. net_srv_mgr_registerForEvents\n");
+        printf( "22. net_srv_mgr_unregisterForEvents\n");
+        printf( "23. wifi_mgr_registerForEvents\n");
+        printf( "24. wifi_mgr_unregisterForEvents\n");
         printf( "0. Exit." );
         printf( "\n==================================================================\n");
 
@@ -687,6 +1008,18 @@ int main()
         case Test_cancelWPSPairing:
             WIFI_MGR_API_cancelWPSPairing();
             break;
+        case Test_nm_registerForEvents:
+            NET_MGR_registerForEvents();
+            break;
+        case Test_nm_unregisterForEvents:
+            NET_MGR_unregisterForEvents();
+            break;
+        case Test_wifi_registerForEvents:
+            WIFI_MGR_registerForEvents();
+            break;
+        case Test_wifi_unregisterForEvents:
+            WIFI_MGR_unregisterForEvents();
+            break;
         default:
             loop = false;
             printf( "Wrong Input..., try again.\n" );
@@ -694,10 +1027,11 @@ int main()
         }
     } while (loop);
 
+    cleanup();
+
     IARM_Bus_Disconnect();
     IARM_Bus_Term();
 //    printf("[%s] Exiting... \'%s\' Client Exiting\r\n", __FUNCTION__, IARM_BUS_NM_SRV_MGR_NAME );
 
 #endif
 }
-
