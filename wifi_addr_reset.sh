@@ -31,11 +31,11 @@ ip route flush cache
 log "Restarting Local Services"
 
 systemctl restart ${LOCAL_SERVICE}
-/lib/rdk/zcip.sh
+/lib/rdk/zcip.sh &
 ip route add 224.0.0.0/4 dev $MOCA_INTERFACE
 
-systemctl restart xupnp.service
-systemctl restart xcal-device.service
+systemctl restart xupnp.service &
+systemctl restart xcal-device.service &
 
-wait # for any restarted link local services to finish start up before exiting
-systemctl restart dibbler.service
+#wait # for any restarted link local services to finish start up before exiting
+systemctl restart dibbler.service &
