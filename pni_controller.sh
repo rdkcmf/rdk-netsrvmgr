@@ -303,6 +303,7 @@ else # run pni loop
     else
         pni="$ETHERNET_INTERFACE"
         nonpni="$WIFI_INTERFACE"
+        [ "$CONFIG_ALLOW_PNI_TO_DISABLE_WIFI" == "false" ] && set_wifi_state up
     fi
     while true; do
         try_interface "$pni" "pni" && break
