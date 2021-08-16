@@ -32,6 +32,12 @@
 #include "NetworkMgrMain.h"
 
 #define NM_MGR_WIFI_CLIENT "NetworkMgrWiFiClientApps"
+#ifdef SAFEC_RDKV
+#include "safec_lib.h"
+#else
+#define STRCPY_S(dest,size,source)                    \
+        strcpy(dest, source);
+#endif
 
 int Net_Srv_Reg_Events = false;
 int Wifi_Mgr_Reg_Events = false;
@@ -85,7 +91,7 @@ static void WIFI_MGR_API_getAvailableSSIDsWithName()
     scanf("%s",ssid);
     printf("\nEnter the band to scan 2.4 / 5 / 0 :");
     scanf("%lf",&freq);
-    strcpy(param.SSID,ssid);
+    STRCPY_S(param.SSID, sizeof(param.SSID), ssid);
     param.frequency = freq;
     retVal = IARM_Bus_Call_with_IPCTimeout(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, (void *)&param, sizeof(IARM_Bus_WiFiSrvMgr_SpecificSsidList_Param_t),timeout);
     printf("\n***********************************");
@@ -325,8 +331,8 @@ static void WIFI_MGR_API_connect()
         std::cin >> passphrase;
         std::cout <<"	Enter securitymode	:	" ;
         std::cin >> securitymode;
-        strcpy (param.data.connect.ssid, ssid.c_str());
-        strcpy (param.data.connect.passphrase, passphrase.c_str());
+        STRCPY_S (param.data.connect.ssid, sizeof(param.data.connect.ssid), ssid.c_str());
+        STRCPY_S (param.data.connect.passphrase, sizeof(param.data.connect.passphrase), passphrase.c_str());
         param.data.connect.security_mode=(SsidSecurity)securitymode;
 	printf("\n ssid = %s  passphrase = %s  security mode = %d",param.data.connect.ssid,param.data.connect.passphrase,param.data.connect.security_mode);
     }
@@ -376,8 +382,8 @@ static void WIFI_MGR_API_saveSSID()
     std::cin >>ssid;
     std::cout << "\nEnter passphrase	:" ;
     std::cin >> passphrase;
-    strcpy (param.data.connect.ssid, ssid.c_str());
-    strcpy (param.data.connect.passphrase, passphrase.c_str());
+    STRCPY_S (param.data.connect.ssid, sizeof(param.data.connect.ssid), ssid.c_str());
+    STRCPY_S (param.data.connect.passphrase, sizeof(param.data.connect.passphrase), passphrase.c_str());
 
     retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_saveSSID, (void *)&param, sizeof(param));
 

@@ -50,6 +50,7 @@
 #include "netsrvmgrUtiles.h"
 #include <string.h>
 #include <errno.h>
+#include "netsrvmgrIarm.h"
 #ifdef ENABLE_NLMONITOR
 #include "netlinkifc.h"
 #else
@@ -64,6 +65,12 @@
 #define INTERFACE_STATUS_FILE_PATH_BUFFER 100
 #define INTERFACE_STATUS_FILE_PATH "/sys/class/net/%s/operstate"
 #define ETHERNET_UP_STATUS "UP"
+#ifdef SAFEC_RDKV
+#include "safec_lib.h"
+#else
+#define STRCPY_S(dest,size,source)                    \
+        strcpy(dest, source);
+#endif
 
 EntryExitLogger::EntryExitLogger (const char* func, const char* file) :
         func (func), file (file)
@@ -230,7 +237,7 @@ static bool getIPv4RouteInterface (char *devname)
             ctr = strtok_r (NULL, " \t", &sptr);
             if (ptr != NULL && ctr != NULL && strcmp (ctr, "00000000") == 0)
             {
-                strcpy (devname, ptr);
+                STRCPY_S(devname, INTERFACE_SIZE, ptr);
 //                readDevFile(devname);
                 RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__, devname);
                 route_found = true;
@@ -299,7 +306,7 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
             {
                 if ((loopvar+1) < toklength )
                 {
-                    strcpy(deviceName,"ETHERNET");
+                    STRCPY_S(deviceName, INTERFACE_SIZE, "ETHERNET");
                     result=TRUE;
                     break;
                 }
@@ -308,7 +315,7 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
             {
                 if ((loopvar+1) < toklength )
                 {
-                    strcpy(deviceName,"MOCA");
+                    STRCPY_S(deviceName, INTERFACE_SIZE, "MOCA");
                     result=TRUE;
                     break;
                 }
@@ -317,7 +324,7 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
             {
                 if ((loopvar+1) < toklength )
                 {
-                    strcpy(deviceName,"WIFI");
+                    STRCPY_S(deviceName, INTERFACE_SIZE, "WIFI");
                     result=TRUE;
                     break;
                 }
@@ -364,7 +371,7 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
         tmpAddrPtr = tmpAddrPtr->ifa_next;
     }
     freeifaddrs(ifAddrStruct);
-    strcpy(devAllInterface,device->str);
+    STRCPY_S(devAllInterface, INTERFACE_LIST, device->str);
     g_string_free(device,TRUE);
     RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return count;
@@ -506,7 +513,7 @@ bool netSrvMgrUtiles::getInterfaceConfig(const char *ifName, const unsigned int 
              RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping reserved ip %s\n", __FUNCTION__, __LINE__, tempStr.c_str());
              continue;
           }
-          strcpy(interfaceIp,tempStr.c_str());
+          STRCPY_S(interfaceIp, INET6_ADDRSTRLEN, tempStr.c_str());
        }
     }
     /* To get Net Mask */
@@ -608,7 +615,7 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
          RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping reserved ip %s\n", __FUNCTION__, __LINE__, tempStr.c_str());
          continue;
       }
-      strcpy(stbip,tempStr.c_str());
+      STRCPY_S(stbip, MAX_IP_ADDRESS_LEN, tempStr.c_str());
       ret=true;
    }
 
@@ -666,7 +673,7 @@ bool netSrvMgrUtiles::currentActiveInterface(char *currentInterface)
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] current interface not there \n", __FUNCTION__, __LINE__);
         return false;
     }
-    strcpy(currentInterface,ifcStr.c_str());
+    STRCPY_S(currentInterface, INTERFACE_SIZE, ifcStr.c_str());
     return true;
 }
 
@@ -771,7 +778,7 @@ bool netSrvMgrUtiles::getNetMask_IfName(const char *ifName_in,const unsigned int
             ipaddr = (struct sockaddr_in *)&ifr.ifr_netmask;
             if (inet_ntop(family, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
             {
-                strcpy(netMask_out, address);
+                STRCPY_S(netMask_out, INET6_ADDRSTRLEN, address);
                 RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Netmask %s \n", __FUNCTION__, __LINE__,netMask_out);
                 ret = true;
             }

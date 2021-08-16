@@ -53,6 +53,12 @@
 #include "rfcapi.h"     // for RFC queries
 #endif
 
+#ifdef SAFEC_RDKV
+#include "safec_lib.h"
+#else
+#define STRCPY_S(dest,size,source)                    \
+        strcpy(dest, source);
+#endif
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
 
@@ -417,7 +423,7 @@ int main(int argc, char *argv[])
         confProp.wifiProps.bEnableLostFound = false;
         confProp.wifiProps.lnfRetryInSecs = MAX_TIME_OUT_PERIOD;
         confProp.wifiProps.lnfStartInSecs = MAX_TIME_OUT_PERIOD;
-        strcpy(confProp.wifiProps.authServerURL,"http://localhost:50050/authService/getDeviceId");
+        STRCPY_S(confProp.wifiProps.authServerURL, sizeof(confProp.wifiProps.authServerURL), "http://localhost:50050/authService/getDeviceId");
 #endif
     }
     Read_Telemetery_Param_File();
@@ -627,19 +633,19 @@ static bool read_ConfigProps()
                     }
                     if(0 == strncasecmp(GET_AUTHTOKEN_URL, keys[key], strlen(keys[key]) ) )
                     {
-                        strcpy(confProp.wifiProps.getAuthTokenUrl,value);
+                        STRCPY_S(confProp.wifiProps.getAuthTokenUrl, sizeof(confProp.wifiProps.getAuthTokenUrl), value);
                     }
                     if(0 == strncasecmp(GET_LFAT_URL, keys[key], strlen(keys[key]) ) )
                     {
-                        strcpy(confProp.wifiProps.getLfatUrl,value);
+                        STRCPY_S(confProp.wifiProps.getLfatUrl, sizeof(confProp.wifiProps.getLfatUrl), value);
                     }
                     if(0 == strncasecmp(SET_LFAT_URL, keys[key], strlen(keys[key]) ) )
                     {
-                        strcpy(confProp.wifiProps.setLfatUrl,value);
+                        STRCPY_S(confProp.wifiProps.setLfatUrl, sizeof(confProp.wifiProps.setLfatUrl), value);
                     }
                     if(0 == strncasecmp(LFAT_VERSION, keys[key], strlen(keys[key]) ) )
                     {
-                        strcpy(confProp.wifiProps.lfatVersion,value);
+                        STRCPY_S(confProp.wifiProps.lfatVersion, sizeof(confProp.wifiProps.lfatVersion), value);
                     }
                     if(0 == strncasecmp(LFAT_TTL, keys[key], strlen(keys[key]) ) )
                     {
@@ -652,7 +658,7 @@ static bool read_ConfigProps()
 #endif
                     if(0 == strncasecmp(AUTHSERVER_URL, keys[key], strlen(keys[key])))
                     {
-                        strcpy(confProp.wifiProps.authServerURL,value);
+                        STRCPY_S(confProp.wifiProps.authServerURL, sizeof(confProp.wifiProps.authServerURL), value);
                     }
                     if(0 == strncasecmp(DISABLE_WPS_XRE, keys[key], strlen(keys[key])))
                     {
@@ -806,7 +812,9 @@ IARM_Result_t getActiveInterface(void *arg)
     IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
     param->activeIface[0]='\0';
     if(netSrvMgrUtiles::getRouteInterfaceType(devName))
-        strcpy(param->activeIface,devName);
+    {
+        STRCPY_S(param->activeIface, sizeof(param->activeIface), devName);
+    }
     else
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Route Found.\n", __FUNCTION__, __LINE__);
@@ -817,7 +825,9 @@ IARM_Result_t getActiveInterface(void *arg)
                 RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Active interface type failed for %s  \n", __FUNCTION__, __LINE__,devName);
             }
             else
-                strcpy(param->activeIface,devName);
+            {
+                STRCPY_S(param->activeIface, sizeof(param->activeIface), devName);
+            }	
         }
         else
         {
@@ -964,7 +974,7 @@ IARM_Result_t getSTBip(void *arg)
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
         if(netSrvMgrUtiles::getSTBip(stbip,&isIpv6))
         {
-           strcpy(param->activeIfaceIpaddr,stbip);
+           STRCPY_S(param->activeIfaceIpaddr, sizeof(param->activeIfaceIpaddr), stbip);
            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
         }
         else
@@ -982,7 +992,7 @@ IARM_Result_t getSTBip_family(void *arg)
 
 	if (netSrvMgrUtiles::getSTBip_family(stbip,param->ipfamily))
 	{
-           strcpy(param->activeIfaceIpaddr,stbip);
+           STRCPY_S(param->activeIfaceIpaddr, sizeof(param->activeIfaceIpaddr), stbip);
            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
 	}
         else
@@ -1234,7 +1244,9 @@ bool getDNSip (const unsigned int family, char *primaryDNS, char *secondaryDNS)
         {
             ss >> std::ws >> value;
             if (1 == inet_pton(family, value.c_str(), s))
-                strcpy(dns[i++], value.c_str());
+            {
+                    STRCPY_S(dns[i++], INET6_ADDRSTRLEN, value.c_str());
+            }
         }
     }
     f.close();
@@ -1458,14 +1470,14 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     }
     else if (0 == strcasecmp(interface, getenv("ETHERNET_INTERFACE")))
     {
-        strcpy(param->interface,"ETHERNET");
+        STRCPY_S(param->interface, sizeof(param->interface), "ETHERNET");
         struct stat stat_buf;
         param->autoconfig = (access( "/opt/persistent/ip.eth0.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.eth0.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
 
     }
     else if (0 == strcasecmp(interface, getenv("WIFI_INTERFACE")))
     {
-        strcpy(param->interface,"WIFI");
+        STRCPY_S(param->interface, sizeof(param->interface), "WIFI");
         struct stat stat_buf;
         param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.wifi.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
     }
@@ -1491,11 +1503,11 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     }
     else if (netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
     {
-        strcpy(param->ipversion,"IPV6");
+        STRCPY_S(param->ipversion, sizeof(param->ipversion), "IPV6");
     }
     else if (netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET, param->ipaddress, param->netmask))
     {
-        strcpy(param->ipversion,"IPV4");
+        STRCPY_S(param->ipversion, sizeof(param->ipversion), "IPV4");
         is_ipv6=false;
     }
     else
@@ -1517,8 +1529,8 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     /* To get Primary and Secondary DNS */
     if (getDNSip(is_ipv6 ? AF_INET6 : AF_INET,primaryDNSaddr, secondaryDNSaddr))
     {
-        strcpy(param->primarydns, primaryDNSaddr);
-        strcpy(param->secondarydns, secondaryDNSaddr);
+        STRCPY_S(param->primarydns, sizeof(param->primarydns), primaryDNSaddr);
+        STRCPY_S(param->secondarydns, sizeof(param->secondarydns), secondaryDNSaddr);
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Primary DNS %s \n", __FUNCTION__, __LINE__, param->primarydns);
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Secondary DNS %s \n", __FUNCTION__, __LINE__, param->secondarydns);
     }

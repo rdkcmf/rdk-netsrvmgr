@@ -49,6 +49,12 @@ extern "C" {
 #include "secure_wrapper.h"
 }
 #endif
+#ifdef SAFEC_RDKV
+#include "safec_lib.h"
+#else
+#define MEMCPY_S(dest,dsize,source,ssize)	\
+	memcpy(dest,source,ssize);
+#endif
 
 int messageLength;
 GList* gwList = NULL;
@@ -173,7 +179,7 @@ bool RouteNetworkMgr::getGatewayResults(char* gatewayResults, unsigned int messa
 
         if(ret == IARM_RESULT_SUCCESS)
         {
-            memcpy(gatewayResults, ((char *)param + sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t)), param->bufLength);
+            MEMCPY_S(gatewayResults,messageLength+1, ((char *)param + sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t)), param->bufLength);
             gatewayResults[param->bufLength] = '\0';
             returnStatus =  TRUE;
         }

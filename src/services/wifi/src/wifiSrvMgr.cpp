@@ -42,6 +42,12 @@
 
 #define SAVE_SSID 1
 #define DELAY_LNF_TIMER_COUNT 5  //Each time wait will be 60 seconds
+#ifdef SAFEC_RDKV
+#include "safec_lib.h"
+#else
+#define STRCPY_S(dest,size,source)                    \
+        strcpy(dest, source);
+#endif
 
 #ifdef USE_RDK_WIFI_HAL
 #ifdef ENABLE_IARM
@@ -1029,8 +1035,7 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
     if( retVal == true )
     {
         char *ssid = tmpSavedWiFiConnList.ssidSession.ssid;
-//        memcpy(param->data.getPairedSSID.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
-        strncpy(param->data.getPairedSSID.ssid, ssid,SSID_SIZE);
+        STRCPY_S(param->data.getPairedSSID.ssid, sizeof(param->data.getPairedSSID.ssid), ssid);
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] getPairedSSID SSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__, ssid);
         param->status = true;
     }
@@ -1138,9 +1143,9 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSIDInfo(void *arg)
     if( retVal == true )
     {
         char *ssid = tmpSavedWiFiConnList.ssidSession.ssid;
-        memcpy(param->data.getPairedSSIDInfo.ssid, ssid, SSID_SIZE);
+        STRCPY_S(param->data.getPairedSSIDInfo.ssid, sizeof(param->data.getPairedSSIDInfo.ssid), ssid);
         char *bssid = tmpSavedWiFiConnList.ssidSession.bssid;
-        memcpy(param->data.getPairedSSIDInfo.bssid, bssid, BSSID_BUFF);
+        STRCPY_S(param->data.getPairedSSIDInfo.bssid, sizeof(param->data.getPairedSSIDInfo.bssid), bssid);
         memset(securityModeString,0,BUFF_LENGTH_32);
         convertSecurityModeToString(securityModeString,tmpSavedWiFiConnList.ssidSession.security_mode);
         strncpy(param->data.getPairedSSIDInfo.security,securityModeString,BUFF_LENGTH_32-1);
@@ -1608,7 +1613,7 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
         }
         memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
         get_CurrentSsidInfo(&currSsidInfo);
-        memcpy(param->data.ssid.params.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
+        STRCPY_S(param->data.ssid.params.ssid, sizeof(param->data.ssid.params.ssid), currSsidInfo.ssidSession.ssid);
         if(currSsidInfo.ssidSession.ssid[0] != '\0')
         {
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] get current SSID (%s).\n", MODULE_NAME,__FUNCTION__, __LINE__,
@@ -1618,7 +1623,7 @@ IARM_Result_t WiFiNetworkMgr::getSSIDProps(void *arg)
         {
 	    memset(&currSsidInfo, '\0', sizeof(currSsidInfo));
             getWpaSsid(&currSsidInfo);
-            memcpy(param->data.ssid.params.ssid, currSsidInfo.ssidSession.ssid, SSID_SIZE);
+            STRCPY_S(param->data.ssid.params.ssid, sizeof(param->data.ssid.params.ssid), currSsidInfo.ssidSession.ssid);
 
            if(currSsidInfo.ssidSession.ssid[0] != '\0')
 	   {

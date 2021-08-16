@@ -23,6 +23,7 @@
 #include <fstream>
 #include <string>
 
+
 #ifdef ENABLE_LOST_FOUND
 #include <time.h>
 #endif // ENABLE_LOST_FOUND
@@ -36,8 +37,15 @@ extern "C" {
 #include "secure_wrapper.h"
 }
 #endif
+#ifdef SAFEC_RDKV
+#include "safec_lib.h"
+#else
+#define STRCPY_S(dest,size,source)                    \
+        strcpy(dest, source);
+#endif
 
 #define WIFI_HAL_VERSION_SIZE   6
+#define MAX_WIFI_STATUS_STRING 32
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
 gchar deviceID[DEVICEID_SIZE];
@@ -411,25 +419,25 @@ static bool get_WiFiStatusCodeAsString (WiFiStatusCode_t code, char* string)
     switch (code)
     {
     case WIFI_UNINSTALLED:
-        strcpy (string, "UNINSTALLED");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "UNINSTALLED");
         break;
     case WIFI_DISABLED:
-        strcpy (string, "DISABLED");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "DISABLED");
         break;
     case WIFI_DISCONNECTED:
-        strcpy (string, "DISCONNECTED");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "DISCONNECTED");
         break;
     case WIFI_PAIRING:
-        strcpy (string, "PAIRING");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "PAIRING");
         break;
     case WIFI_CONNECTING:
-        strcpy (string, "CONNECTING");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "CONNECTING");
         break;
     case WIFI_CONNECTED:
-        strcpy (string, "CONNECTED");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "CONNECTED");
         break;
     case WIFI_FAILED:
-        strcpy (string, "FAILED");
+        STRCPY_S (string, MAX_WIFI_STATUS_STRING, "FAILED");
         break;
     default:
         return false;
@@ -1518,7 +1526,7 @@ void *wifiConnStatusThread(void* arg)
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     wifi_sta_stats_t stats;
     WiFiStatusCode_t wifiStatusCode;
-    char wifiStatusAsString[32];
+    char wifiStatusAsString[MAX_WIFI_STATUS_STRING];
     int radioIndex = 0;
     struct timespec condGoTimeout;
 
@@ -1903,7 +1911,7 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
     if(getMfrData(mfrSerialNum,mfrType))
     {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] mfrSerialNum = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrSerialNum->str,mfrType );
-        strcpy(dev_info->serial_num,mfrSerialNum->str);
+        STRCPY_S(dev_info->serial_num, sizeof(dev_info->serial_num), mfrSerialNum->str);
     }
     else
     {
@@ -1915,7 +1923,7 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
     if(getMfrData(deviceMacAddr,mfrType))
     {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] deviceMacAddr = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,deviceMacAddr->str,mfrType );
-        strcpy(dev_info->mac,deviceMacAddr->str);
+        STRCPY_S(dev_info->mac, sizeof(dev_info->mac), deviceMacAddr->str);
 
     }
     else
@@ -1928,7 +1936,7 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
     if(getMfrData(mfrModelName,mfrType))
     {
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] mfrModelName = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrModelName->str,mfrType );
-        strcpy(dev_info->model,mfrModelName->str);
+        STRCPY_S(dev_info->model, sizeof(dev_info->model), mfrModelName->str);
     }
     else
     {
@@ -1939,7 +1947,7 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] dummy auth token update \n", MODULE_NAME,__FUNCTION__, __LINE__);
     memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
-    strcpy(dev_info->auth_token,"xact_token");
+    STRCPY_S(dev_info->auth_token, sizeof(dev_info->auth_token), "xact_token");
 
 out:
     g_string_free(mfrSerialNum,TRUE);
@@ -2767,9 +2775,11 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
     switch (type) {
     case hostIf_StringType:
     case hostIf_DateTimeType:
+    {
         param.paramtype = hostIf_StringType;
-        strcpy(param.paramValue, (char *) value);
+        STRCPY_S(param.paramValue, sizeof(param.paramValue), (char *) value);
         break;
+    }
         case  hostIf_IntegerType:
         case hostIf_UnsignedIntType:
             put_int(param.paramValue, *(int*)value);
@@ -2870,8 +2880,8 @@ bool storeMfrWifiCredentials(void)
     }
     memset(&param,0,sizeof(param));
     param.requestType=WIFI_SET_CREDENTIALS;
-    strcpy(param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
-    strcpy(param.wifiCredentials.cPassword,savedWiFiConnList.ssidSession.passphrase);
+    STRCPY_S(param.wifiCredentials.cSSID, sizeof(param.wifiCredentials.cSSID), savedWiFiConnList.ssidSession.ssid);
+    STRCPY_S(param.wifiCredentials.cPassword, sizeof(param.wifiCredentials.cPassword), savedWiFiConnList.ssidSession.passphrase);
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in storing wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
@@ -3296,7 +3306,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
     response = cJSON_Parse(retStr);
     RDK_ASSERT_NOT_NULL(response);
     RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "version"));
-    strcpy(lfat->version, cJSON_GetObjectItem(response, "version")->valuestring);
+    STRCPY_S(lfat->version, sizeof(lfat->version), cJSON_GetObjectItem(response, "version")->valuestring);
     RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "expires"));
     lfat->ttl = cJSON_GetObjectItem(response, "expires")->valueint;
     RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "LFAT"));
@@ -3304,7 +3314,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
     lfat->token = (char *) malloc(lfat->len+1);
     if(lfat->token == NULL)
         return ENOMEM;
-    strcpy(lfat->token, cJSON_GetObjectItem(response, "LFAT")->valuestring);
+    STRCPY_S(lfat->token, lfat->len+1, cJSON_GetObjectItem(response, "LFAT")->valuestring);
     lfat->token[lfat->len] = '\0';
     cJSON_Delete(response);
     return 0;
@@ -3343,9 +3353,9 @@ int laf_get_lfat(laf_lfat_t *lfat)
           if (fd != NULL) {
             readValue(fd, LFAT_VERSION, version);
             if(version != NULL){
-              strcpy(lfat->version, version);
+                STRCPY_S(lfat->version, sizeof(lfat->version), version);
             }else{
-              strcpy(lfat->version, "1.1");
+                STRCPY_S(lfat->version, sizeof(lfat->version), "1.1");
             }
 
             readValue(fd, LFAT_TTL, ttl);
@@ -3365,7 +3375,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
         else //If .lnf_conf file is not present
         { 
           // Read from netsrvmgr.conf 
-          strcpy(lfat->version, confProp.wifiProps.lfatVersion);
+          STRCPY_S(lfat->version, sizeof(lfat->version), confProp.wifiProps.lfatVersion);
           lfat->ttl = confProp.wifiProps.lfatTTL;
           RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %ld\n",lfat->version, lfat->ttl);
         }
