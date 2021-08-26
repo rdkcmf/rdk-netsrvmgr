@@ -2,12 +2,16 @@
 
 THIS_SCRIPT=$(basename "$0")
 
+. /etc/device.properties
+
+if [ -f /etc/env_setup.sh ]; then
+    . /etc/env_setup.sh
+fi
+
 log()
 {
     echo "$(date '+%Y %b %d %H:%M:%S.%6N') [$THIS_SCRIPT#$$]: ${FUNCNAME[1]}: $*" >> /opt/logs/netsrvmgr.log
 }
-
-. /etc/device.properties
 
 [ -f /lib/systemd/system/virtual-moca-iface.service ] && [ -f /lib/systemd/system/virtual-wifi-iface.service ] && RUN_LINK_LOCAL_SERVICES=true
 
