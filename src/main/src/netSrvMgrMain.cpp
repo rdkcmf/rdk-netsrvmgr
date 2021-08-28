@@ -306,60 +306,6 @@ static void defaultRouteCallback(std::string args)
         return;
 
     detectDefaultInterfaceChange();
-
-    if (tokens[6] != "add")
-        return; // rest of the function is only relevant to "default route add" messages
-
-    unsigned int family = (unsigned int)stoul(tokens[0]);
-    std::string &interface = tokens[1];
-    std::string &gatewayip = tokens[3];
-    std::string &metric = tokens[5];
-
-    std::string wifi_interface (getenvOrDefault("WIFI_INTERFACE", ""));
-    std::string moca_interface (getenvOrDefault("MOCA_INTERFACE", ""));
-    std::string ethernet_interface (getenvOrDefault("ETHERNET_INTERFACE", ""));
-
-    if ((interface != wifi_interface) && (interface != moca_interface) && (interface != ethernet_interface))
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Unrecognized interface %s\n", __FUNCTION__, __LINE__, interface.c_str());
-        return;
-    }
-    if (!std::all_of(metric.begin(), metric.end(), ::isdigit))
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a Numerical value. Received Priority =%s\n", __FUNCTION__, __LINE__, metric.c_str());
-        return;
-    }
-
-    unsigned int ui_metric = (unsigned int)stoul(metric);
-
-    if (ui_metric != DEFAULT_PRIORITY)
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Priority is not a default value. Received Priority =%u\n", __FUNCTION__, __LINE__, ui_metric);
-        return;
-    }
-    if (NetLinkIfc::get_instance()->userdefinedrouteexists(interface, gatewayip, family))
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: User defined routes are present for Gateway : %s\n", __FUNCTION__, __LINE__, gatewayip.c_str());
-        return;
-    }
-    if ( ( ( ( interface == moca_interface ) || ( interface == ethernet_interface ) ) && ( access("/tmp/ani_wifi", F_OK) == 0 ) )
-        || ( ( interface == wifi_interface ) && ( access("/tmp/ani_wifi", F_OK) != 0 ) ) )
-    {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Not Changing Priority for default route via %s\n", __FUNCTION__, __LINE__, interface.c_str());
-        return;
-    }
-
-    // prioritize (assign lower metric to) the default route via the interface that should be made the active network interface (ani)
-    int priorityvalue = DEFAULT_PRIORITY / 2;
-    int prioritystop = priorityvalue + MAX_DEFAULT_ROUTES_PER_INTERFACE;
-    for (;priorityvalue< prioritystop;++priorityvalue)
-    {
-        if (!NetLinkIfc::get_instance()->routeexists(interface, gatewayip, family, priorityvalue))
-            break;
-    }
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Changing Priority for default route via %s, with gateway %s from %u to %d\n",
-            __FUNCTION__, __LINE__, interface.c_str(), gatewayip.c_str(), ui_metric, priorityvalue);
-    NetLinkIfc::get_instance()->changedefaultroutepriority(interface, gatewayip, family, ui_metric, priorityvalue);
 }
 
 #endif // ifdef ENABLE_NLMONITOR
