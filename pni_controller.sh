@@ -283,6 +283,11 @@ if [ "$1" == "ipv4_reconfigure_interface" ]; then
     exit $?
 fi
 
+if [ "$1" == "uses_virtual_interface" ]; then
+    [ "$RUN_LINK_LOCAL_SERVICES" == "true" ]
+    exit $?
+fi
+
 # sleep 5 # delay to filter out ethernet glitches / fast link state transitions
 
 if [ -f /tmp/wifi_disallowed ]; then

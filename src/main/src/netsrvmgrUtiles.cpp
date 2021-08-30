@@ -751,11 +751,20 @@ bool netSrvMgrUtiles::getNetMask_IfName(const char *ifName_in,const unsigned int
     bool ret = false;
     int sock;
     char address[INET6_ADDRSTRLEN]={0};
+
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock > 0)
     {
         ifr.ifr_addr.sa_family = family;
+
         strncpy(ifr.ifr_name, ifName_in, IFNAMSIZ-1);
+
+        /* If the device uses virtual interface, then get the subnet mask of the virtual interface */
+        if (!system("/lib/rdk/pni_controller.sh uses_virtual_interface"))
+        {
+            strcat(ifr.ifr_name, ":0");
+        }
+
         /* To get Net Mask */
         if (ioctl(sock, SIOCGIFNETMASK, &ifr) != -1)
         {
