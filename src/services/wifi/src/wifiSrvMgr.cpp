@@ -1105,7 +1105,13 @@ bool convertSecurityModeToString(char* securityModeStr,SsidSecurity sec_mode)
          case NET_WIFI_SECURITY_WPA3_SAE:
             strncpy(securityModeStr,"WPA3",BUFF_LENGTH_32-1);
             break;
-         case NET_WIFI_SECURITY_NONE:
+         case NET_WIFI_SECURITY_WPA_WPA2_PSK:
+	    strncpy(securityModeStr,"WPA-WPA2-Personal",BUFF_LENGTH_32-1);
+	    break;
+	 case NET_WIFI_SECURITY_WPA_WPA2_ENTERPRISE:
+	    strncpy(securityModeStr,"WPA-WPA2-Enterprise",BUFF_LENGTH_32-1);
+	    break;
+	 case NET_WIFI_SECURITY_NONE:
             strncpy(securityModeStr,"None",BUFF_LENGTH_32-1);
             break;
          default:
