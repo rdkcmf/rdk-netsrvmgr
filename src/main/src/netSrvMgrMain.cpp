@@ -878,8 +878,16 @@ IARM_Result_t getInterfaceList(void *arg)
     std::vector<iface_info> interfaces;
     NetLinkIfc::get_instance()->getInterfaces(interfaces);
     list->size = interfaces.size();
+    if (list->size > (sizeof(list->interfaces)/sizeof(list->interfaces[0])))
+    {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Size of list is larger than allocated size. Size returned = %d\n",
+                __FUNCTION__, __LINE__,list->size);
+        return IARM_RESULT_IPCCORE_FAIL;
+    }
     for (int i = 0; i < list->size; i++)
     {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Before Copying name=%s, mac=%s, flags=0x%08x\n",
+                __FUNCTION__, __LINE__, interfaces[i].m_if_name.c_str(), interfaces[i].m_if_macaddr.c_str(), interfaces[i].m_if_flags);
         snprintf(list->interfaces[i].name, sizeof(list->interfaces[i].name), "%s", interfaces[i].m_if_name.c_str());
         snprintf(list->interfaces[i].mac, sizeof(list->interfaces[i].mac), "%s", interfaces[i].m_if_macaddr.c_str());
         list->interfaces[i].flags = interfaces[i].m_if_flags;
