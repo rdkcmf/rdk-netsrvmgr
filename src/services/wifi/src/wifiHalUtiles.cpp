@@ -3238,7 +3238,7 @@ void logs_Period2_Params()
 }
 
 
-void readValues(FILE *pFile, char *pToken, char *data)
+void readValue(FILE *pFile, char *pToken, char *data)
 {
     char buffer[DATA_LEN];
     char *keyValue;
@@ -3335,14 +3335,14 @@ int laf_get_lfat(laf_lfat_t *lfat)
           memset(ttl, '\0', MAX_VERSION_LEN);
           fd = fopen(LFAT_CONF_FILE, "r");
           if (fd != NULL) {
-            readValues(fd, LFAT_VERSION, version);
+            readValue(fd, LFAT_VERSION, version);
             if(version != NULL){
               strcpy(lfat->version, version);
             }else{
               strcpy(lfat->version, "1.1");
             }
 
-            readValues(fd, LFAT_TTL, ttl);
+            readValue(fd, LFAT_TTL, ttl);
             if(ttl != NULL){
               value = strtol(ttl, &eptr, 10);
               lfat->ttl = value;
@@ -3413,12 +3413,15 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 {
   RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
   char* tokenfilename = getlfatfilename();
-  char buffer[512];
-  memset(buffer, 0, 512);
   if(NULL != lfat->token){
-      RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Updating lfat token after token expiry\n");
-      sprintf(buffer,"echo \"%s\" > %s",lfat->token,tokenfilename);
-      system(buffer);
+      RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Updating lfat token after token expiry/recovery\n");
+      int result = getSetFileContent(tokenfilename, "set", lfat->token);
+      RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "tokenfilename : %s lfat->token : %s", tokenfilename, lfat->token);
+      if (result)
+      {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "Error setting lfat token\n");
+        return -1;
+      }
   }else {
        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "LFAT Token is Null");
        return -1;

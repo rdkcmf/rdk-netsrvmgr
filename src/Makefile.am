@@ -37,7 +37,7 @@ AM_CXXFLAGS += -DENABLE_LOST_FOUND
 endif
 
 if XCAM_SUPPORT
-AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include -I$(RDK_SOURCE_PATH)/../opensource/include/cjson -I$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/
+AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include -I$(RDK_SOURCE_PATH)/../opensource/include/cjson -I$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/ -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
 sysconf_DATA = $(top_srcdir)/conf/netsrvmgr.conf
 endif
 
@@ -64,18 +64,18 @@ AM_LDFLAGS += -llaf -lcurl
 endif
 
 if XCAM_SUPPORT
-AM_LDFLAGS += -L$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/ -lbreakpadwrap
+AM_LDFLAGS += -L$(RDK_PROJECT_ROOT_PATH)/breakpadwrap/ -lbreakpadwrap -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
 AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
 endif
 
 if XHB1
-AM_CXXFLAGS += -DXHB1
-AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound
+AM_CXXFLAGS += -DXHB1 -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
 endif
 
 if XHC3
-AM_CXXFLAGS += -DXHC3
-AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound
+AM_CXXFLAGS += -DXHC3 -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
 endif
 
 if RTMESSAGE

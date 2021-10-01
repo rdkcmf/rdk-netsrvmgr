@@ -31,12 +31,14 @@
 #ifdef ENABLE_XCAM_SUPPORT
 extern "C" {
 #include "rdkc_api.h"
+#include "sysUtils.h"
 }
 #endif
 
 #if defined(XHB1) || defined(XHC3)
 extern "C" {
 #include "mfrApi.h"
+#include "sysUtils.h"
 }
 #endif
 

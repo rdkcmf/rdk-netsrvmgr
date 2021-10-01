@@ -37,18 +37,18 @@ AM_CXXFLAGS += $(IARM_CFLAGS)  $(NLMONITOR_CFLAGS) $(NL_CFLAGS)
 AM_LDFLAGS = $(IARM_LFLAGS)  $(NLMONITOR_LINK)
 
 if XCAM_SUPPORT
-AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include
-AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound
+AM_CXXFLAGS += -DENABLE_XCAM_SUPPORT -I$(RDK_FSROOT_PATH)/usr/include -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
+AM_LDFLAGS += -lrdkc -lcgicomm -lcgilib -lsccomm -lmxml -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
 endif
 
 if XHB1
-AM_CXXFLAGS += -DXHB1 -I$(RDK_PROJECT_ROOT_PATH)/mfrlibs/include
-AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound
+AM_CXXFLAGS += -DXHB1 -I$(RDK_PROJECT_ROOT_PATH)/mfrlibs/include -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv8-a/alsa-lib/usr/lib/ -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
 endif
 
 if XHC3
-AM_CXXFLAGS += -DXHC3 -I$(RDK_PROJECT_ROOT_PATH)/mfrlibs/include
-AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound
+AM_CXXFLAGS += -DXHC3 -I$(RDK_PROJECT_ROOT_PATH)/mfrlibs/include -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
 endif
 
 if RTMESSAGE
