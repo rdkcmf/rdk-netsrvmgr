@@ -21,6 +21,7 @@ LOCAL_SERVICE=network@${WIFI_INTERFACE}.service
 if [ -f /lib/systemd/system/virtual-moca-iface.service ]; then
 LOCAL_SERVICE=virtual-wifi-iface.service
 fi
+(/bin/busybox kill -STOP $$; /bin/busybox kill -CONT $$)
 
 log "Flushing Address and routes"
 ip addr flush dev $WIFI_INTERFACE scope global
