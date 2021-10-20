@@ -75,7 +75,7 @@ endif
 
 if XHC3
 AM_CXXFLAGS += -DXHC3 -I$(RDK_SOURCE_PATH)/../utility/sysUtils/include/
-AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils
+AM_LDFLAGS += -lmfrApi -lcgicomm -lsccomm -lmxml -L$(RDK_PROJECT_ROOT_PATH)/sdk/fsroot/ramdisk/amba/prebuild/third-party/armv7-a-hf/alsa-lib/usr/lib/ -lasound -L$(RDK_SOURCE_PATH)/../utility/sysUtils/src/ -lsysutils  -Wl,-rpath-link,$(RDK_FSROOT_PATH)/usr/lib/
 endif
 
 if RTMESSAGE
