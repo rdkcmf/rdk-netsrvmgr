@@ -1642,7 +1642,7 @@ bool cancelWPSPairingOperation()
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to Cancel WPS operation, Looks like no in-progress wps operation.  : \"%s\".\n",\
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to Cancel WPS operation, Looks like no in-progress wps operation.\n",
                 MODULE_NAME,__FUNCTION__, __LINE__);
         ret = false;
     }
