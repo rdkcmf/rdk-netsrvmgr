@@ -398,6 +398,38 @@ static IARM_Result_t WiFi_IARM_Bus_BroadcastEvent(const char *ownerName, IARM_Ev
         IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
 	return IARM_RESULT_SUCCESS;
 }
+
+bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType)
+{
+    bool bRet;
+    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
+    IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    memset(&param, 0, sizeof(param));
+    param.type = mfrType;
+    iarmRet = IARM_Bus_Call(IARM_BUS_MFRLIB_NAME, IARM_BUS_MFRLIB_API_GetSerializedData, &param, sizeof(param));
+    if(iarmRet == IARM_RESULT_SUCCESS)
+    {
+        if(param.buffer && param.bufLen)
+        {
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] serialized data %s for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,param.buffer,mfrType );
+            g_string_assign(mfrDataStr,param.buffer);
+            bRet = true;
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] serialized data is empty for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrType );
+            bRet = false;
+        }
+    }
+    else
+    {
+        bRet = false;
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM CALL failed  for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrType );
+    }
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return bRet;
+}
 #endif
 
 static void set_WiFiStatusCode( WiFiStatusCode_t status)
@@ -802,7 +834,78 @@ bool connect_WpsPush()
     return ret;
 }
 
+static bool get_WpsPIN(char *wps_pin)
+{
+    LOG_ENTRY_EXIT;
 
+    bool result = false;
+#ifdef ENABLE_IARM
+    GString *mfrSerialPin = g_string_new(NULL);
+    if (getMfrData(mfrSerialPin, mfrSERIALIZED_TYPE_WPSPIN))
+    {
+        snprintf(wps_pin, 8+1, "%s", mfrSerialPin->str);
+        result = true;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s] getting serialized pin from mfr failed.\n", __FUNCTION__);
+    }
+    g_string_free(mfrSerialPin, TRUE);
+#endif
+    return result;
+}
+
+//Connect using WPS pin
+// if wps_pin = “xxxxxxxx" (or some other condition like "wps_pin not 8 digits")
+//     get PIN by making a call to Mfr (or some function that gets a PIN)
+// else
+//     pass wps_pin to wifihal
+//     if wps_pin = “” (this check happens in wifihal)
+//         have wpa_supplicant auto-generate PIN
+//     else
+//         have wpa_supplicant use the passed wps_pin
+bool connect_WpsPin(char *wps_pin)
+{
+    LOG_ENTRY_EXIT;
+
+    if (!wps_pin)
+        return false;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s] wps_pin = %s\n", __FUNCTION__, wps_pin);
+
+    if (0 == strcmp(wps_pin, "xxxxxxxx") && false == get_WpsPIN(wps_pin))
+        return false;
+
+    if (WIFI_CONNECTED == get_WiFiStatusCode())
+    {
+        wifi_disconnectEndpoint(1, wifiConnData.ssid);
+        usleep(100000);
+        for (int i = 1; i <= 30 && WIFI_CONNECTED == get_WiFiStatusCode(); i++)
+            usleep(100000);
+    }
+
+    set_WiFiConnectionType(WIFI_CON_WPS);
+
+    INT wpsStatus = wifi_setCliWpsEnrolleePin(1, wps_pin);
+    if (RETURN_OK == wpsStatus)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s] wifi_setCliWpsEnrolleePin called successfully\n", __FUNCTION__);
+        return true;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s] wifi_setCliWpsEnrolleePin returned %d\n", __FUNCTION__, wpsStatus);
+#ifdef ENABLE_IARM
+        IARM_BUS_WiFiSrvMgr_EventData_t eventData;
+        memset(&eventData, 0, sizeof(eventData));
+        eventData.data.wifiStateChange.state = WIFI_FAILED;
+        WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
+                IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged,
+                (void*) &eventData, sizeof(eventData));
+#endif
+        return false;
+    }
+}
 
 INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
 {
@@ -1851,38 +1954,6 @@ bool getmacaddress(gchar* ifname,GString *data)
 }
 
 #ifdef ENABLE_IARM
-bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType)
-{
-    bool bRet;
-    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
-    IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    memset(&param, 0, sizeof(param));
-    param.type = mfrType;
-    iarmRet = IARM_Bus_Call(IARM_BUS_MFRLIB_NAME, IARM_BUS_MFRLIB_API_GetSerializedData, &param, sizeof(param));
-    if(iarmRet == IARM_RESULT_SUCCESS)
-    {
-        if(param.buffer && param.bufLen)
-        {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] serialized data %s for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,param.buffer,mfrType );
-            g_string_assign(mfrDataStr,param.buffer);
-            bRet = true;
-        }
-        else
-        {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] serialized data is empty for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrType );
-            bRet = false;
-        }
-    }
-    else
-    {
-        bRet = false;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM CALL failed  for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrType );
-    }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    return bRet;
-}
-
 bool getDeviceInfo(laf_device_info_t *dev_info)
 {
     bool bRet = true;

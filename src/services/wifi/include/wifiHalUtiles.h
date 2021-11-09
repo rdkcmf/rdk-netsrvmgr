@@ -186,6 +186,14 @@ bool shutdownWifi();
 bool connect_WpsPush();
 
 /**
+ * @brief This function will attempt to start WPS based on the supplied PIN.
+ * If currently connected to WiFi, this will disconnect before attempting WPS.
+ *
+ * @return  Returns true on successful call to trigger WPS PIN, false otherwise.
+ */
+bool connect_WpsPin(char* wps_pin);
+
+/**
  * @brief This callback function received to handle WIFI connect action.
  *
  * @param[in] ssidIndex    Service Set Identifier.

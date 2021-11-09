@@ -47,6 +47,7 @@ public:
     static IARM_Result_t setEnabled(void *arg);
     static IARM_Result_t connect(void *arg);
     static IARM_Result_t initiateWPSPairing(void *arg);
+    static IARM_Result_t initiateWPSPairing2(void *arg);
     static IARM_Result_t saveSSID(void* arg);
     static IARM_Result_t clearSSID(void* arg);
     static IARM_Result_t disconnectSSID(void* arg);

@@ -52,29 +52,30 @@
 #define LNF_SECURE_SSID "D375C1D9F8B041E2A1995B784064977B"
 
 /*IARM Interface for wifiManager_2 */
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs     "getAvailableSSIDs"      /**< Retrives the array of strings representing ssids */
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName     "getAvailableSSIDsWithName"      /**< Retrives the array of strings representing ssids info for a specifc ssid and band */
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync "getAvailableSSIDsAsync"    /**< Retrives the array of strings representing ssids */
-#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr "getAvailableSSIDsAsyncIncr"    /**< Retrives the array of strings representing ssids in incremental way */
-#define IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning "stopProgressiveWifiScanning"    /**< Stop any in-prpogress wifi progressive scanning thread */
-#define IARM_BUS_WIFI_MGR_API_getCurrentState       "getCurrentState"        /**< Retrives the current state */
-#define IARM_BUS_WIFI_MGR_API_getConnectedSSID	    "getConnectedSSID"       /**< Returns the properties of the currently connected SSID */
-#define IARM_BUS_WIFI_MGR_API_cancelWPSPairing      "cancelWPSPairing"       /**< Cancel in progress WPS Opearion */
-#define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /**< Returns the paired ssid as a string */
-#define IARM_BUS_WIFI_MGR_API_setEnabled            "setEnabled"             /**< Enable the wifi adapter on the box */
-#define IARM_BUS_WIFI_MGR_API_connect               "connect"                /**< Connect with given or saved ssid and passphrase */
-#define IARM_BUS_WIFI_MGR_API_initiateWPSPairing    "initiateWPSPairing"     /**< Initiates the connection via WPS */
-#define IARM_BUS_WIFI_MGR_API_saveSSID              "saveSSID"               /**< Save the ssid and passphrase */
-#define IARM_BUS_WIFI_MGR_API_clearSSID             "clearSSID"              /**< Clear the given ssid */
-#define IARM_BUS_WIFI_MGR_API_disconnectSSID        "disconnectSSID"         /**< Disconnect from current SSID*/
-#define IARM_BUS_WIFI_MGR_API_getPairedSSID         "getPairedSSID"          /**< Get the paired SSID */
-#define IARM_BUS_WIFI_MGR_API_isPaired              "isPaired"               /**< Retrieve the paired status */
-#define IARM_BUS_WIFI_MGR_API_getLNFState           "getLNFState"            /**< Retrives the LNF state */
-#define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected          "isStopLNFWhileDisconnected"    /**< Check if LNF is stopped */
-#define IARM_BUS_WIFI_MGR_API_getConnectionType     "getConnectionType"    /**< Retrives the current state */
-#define IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults        "getSwitchToPrivateResults"    /**< get all switch to private results */
-#define IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled          "isAutoSwitchToPrivateEnabled"    /**< informs whether switch to private is enabled */
-#define IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo          "getPairedSSIDInfo"    /**< get last paired ssid info */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDs             "getAvailableSSIDs"             /**< Retrieve array of strings representing SSIDs */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName     "getAvailableSSIDsWithName"     /**< Retrieve array of strings representing SSIDs info for a specific SSID and band */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync        "getAvailableSSIDsAsync"        /**< Retrieve array of strings representing SSIDs */
+#define IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsyncIncr    "getAvailableSSIDsAsyncIncr"    /**< Retrieve array of strings representing SSIDs in an incremental way */
+#define IARM_BUS_WIFI_MGR_API_stopProgressiveWifiScanning   "stopProgressiveWifiScanning"   /**< Stop any in-progress wifi progressive scanning thread */
+#define IARM_BUS_WIFI_MGR_API_getCurrentState               "getCurrentState"               /**< Retrieve current state */
+#define IARM_BUS_WIFI_MGR_API_getConnectedSSID              "getConnectedSSID"              /**< Return properties of the currently connected SSID */
+#define IARM_BUS_WIFI_MGR_API_cancelWPSPairing              "cancelWPSPairing"              /**< Cancel in-progress WPS */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSID                 "getPairedSSID"                 /**< Return paired SSID as a string */
+#define IARM_BUS_WIFI_MGR_API_setEnabled                    "setEnabled"                    /**< Enable wifi adapter on the box */
+#define IARM_BUS_WIFI_MGR_API_connect                       "connect"                       /**< Connect with given or saved SSID and passphrase */
+#define IARM_BUS_WIFI_MGR_API_initiateWPSPairing            "initiateWPSPairing"            /**< Initiate connection via WPS */
+#define IARM_BUS_WIFI_MGR_API_initiateWPSPairing2           "initiateWPSPairing2"           /**< Initiate connection via WPS via either Push Button or PIN */
+#define IARM_BUS_WIFI_MGR_API_saveSSID                      "saveSSID"                      /**< Save SSID and passphrase */
+#define IARM_BUS_WIFI_MGR_API_clearSSID                     "clearSSID"                     /**< Clear given SSID */
+#define IARM_BUS_WIFI_MGR_API_disconnectSSID                "disconnectSSID"                /**< Disconnect from current SSID */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSID                 "getPairedSSID"                 /**< Get paired SSID */
+#define IARM_BUS_WIFI_MGR_API_isPaired                      "isPaired"                      /**< Retrieve the paired status */
+#define IARM_BUS_WIFI_MGR_API_getLNFState                   "getLNFState"                   /**< Retrieve the LNF state */
+#define IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected    "isStopLNFWhileDisconnected"    /**< Check if LNF is stopped */
+#define IARM_BUS_WIFI_MGR_API_getConnectionType             "getConnectionType"             /**< Get connection type the current state */
+#define IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults     "getSwitchToPrivateResults"     /**< Get all switch to private results */
+#define IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled  "isAutoSwitchToPrivateEnabled"  /**< Inform whether switch to private is enabled */
+#define IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo             "getPairedSSIDInfo"             /**< Get last paired ssid info */
 
 
 /*Diagnostic Apis */
@@ -272,6 +273,13 @@ typedef struct _IARM_Bus_WiFiSrvMgr_Param_t {
     } data;
     bool status;
 } IARM_Bus_WiFiSrvMgr_Param_t;
+
+typedef struct _IARM_Bus_WiFiSrvMgr_WPS_Parameters_t
+{
+    bool pbc;
+    char pin[9];
+    bool status;
+} IARM_Bus_WiFiSrvMgr_WPS_Parameters_t;
 
 /*! Event Data associated with WiFi Service Manager */
 typedef struct _IARM_BUS_WiFiSrvMgr_EventData_t {

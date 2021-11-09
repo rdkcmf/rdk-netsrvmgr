@@ -47,34 +47,68 @@ typedef enum _NetworkManager_Route_EventId_t {
         IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_MAX,
 } IARM_Bus_NetworkManager_Route_EventId_t;
 
-enum {
-    Test_getAvailableSSIDs =1,
-    Test_getCurrentState = 2,
-    Test_setEnabled = 3,
-    Test_getPairedSSID =4,
-    Test_connect = 5,
-    Test_initiateWPSPairing = 6,
-    Test_saveSSID = 7,
-    Test_clearSSID =8,
-    Test_isPaired =9,
-    Test_getRadioProps =10,
-    Test_getRadioStatsProps =11,
-    Test_getSSIDProps =12,
+enum option {
+    Exit,
+    Test_getAvailableSSIDs,
+    Test_getCurrentState,
+    Test_setEnabled,
+    Test_getPairedSSID,
+    Test_connect,
+    Test_initiateWPSPairing,
+    Test_initiateWPSPairing2,
+    Test_saveSSID,
+    Test_clearSSID,
+    Test_isPaired,
+    Test_getRadioProps,
+    Test_getRadioStatsProps,
+    Test_getSSIDProps,
 #ifdef ENABLE_LOST_FOUND
-    Test_getLAFState = 13,
+    Test_getLAFState,
 #endif
-    Test_getConnectedSSID = 14,
-    Test_getEndPointProps = 15,
-    Test_getAvailableSSIDsWithName = 16,
-    Test_getAvailableSSIDsIncr = 17,
-    Test_stopProgressiveScanning = 18,
-    Test_disconnectSSID = 19,
-    Test_cancelWPSPairing = 20,
-    Test_nm_registerForEvents = 21,
-    Test_nm_unregisterForEvents = 22,
-    Test_wifi_registerForEvents = 23,
-    Test_wifi_unregisterForEvents = 24,
+    Test_getConnectedSSID,
+    Test_getEndPointProps,
+    Test_getAvailableSSIDsWithName,
+    Test_getAvailableSSIDsIncr,
+    Test_stopProgressiveScanning,
+    Test_disconnectSSID,
+    Test_cancelWPSPairing,
+    Test_nm_registerForEvents,
+    Test_nm_unregisterForEvents,
+    Test_wifi_registerForEvents,
+    Test_wifi_unregisterForEvents,
     Test_Max_Api,
+};
+
+struct { option number; char* name; } options[] =
+{
+        { Test_getAvailableSSIDs, "getAvailableSSIDs" },
+        { Test_getCurrentState, "getCurrentState" },
+        { Test_setEnabled, "setEnabled" },
+        { Test_getPairedSSID, "getPairedSSID" },
+        { Test_connect, "connect" },
+        { Test_initiateWPSPairing, "initiateWPSPairing" },
+        { Test_initiateWPSPairing2, "initiateWPSPairing2" },
+        { Test_saveSSID, "saveSSID" },
+        { Test_clearSSID, "clearSSID" },
+        { Test_isPaired, "isPaired" },
+        { Test_getRadioProps, "getRadioProps" },
+        { Test_getRadioStatsProps, "getRadioStatsProps" },
+        { Test_getSSIDProps, "getSSIDProps" },
+#ifdef ENABLE_LOST_FOUND
+        { Test_getLAFState, "getLAFState" },
+#endif
+        { Test_getConnectedSSID, "getConnectedSSID" },
+        { Test_getEndPointProps, "getEndPointProps" },
+        { Test_getAvailableSSIDsWithName, "getAvailableSSIDsWithName" },
+        { Test_getAvailableSSIDsIncr, "getAvailableSSIDsAsycIncr" },
+        { Test_stopProgressiveScanning, "stopProgressiveWifiScanning" },
+        { Test_disconnectSSID, "disconnectSSID" },
+        { Test_cancelWPSPairing, "cancelWPSPairing" },
+        { Test_nm_registerForEvents, "net_srv_mgr_registerForEvents" },
+        { Test_nm_unregisterForEvents, "net_srv_mgr_unregisterForEvents" },
+        { Test_wifi_registerForEvents, "wifi_mgr_registerForEvents" },
+        { Test_wifi_unregisterForEvents, "wifi_mgr_unregisterForEvents" },
+        { Exit, "Exit" }
 };
 
 static void WIFI_MGR_API_getAvailableSSIDsWithName()
@@ -363,6 +397,45 @@ static void WIFI_MGR_API_initiateWPSPairing()
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 #endif
 }
+
+static bool user_answers_yes_to(char* question)
+{
+    char answer;
+    std::cout << "\n" << question << " (y/n) ";
+    std::cin >> answer;
+    return answer == 'y' || answer == 'Y';
+}
+
+static void WIFI_MGR_API_initiateWPSPairing2()
+{
+    printf("[%s] Entering...\r\n", __FUNCTION__);
+#ifdef ENABLE_IARM
+    IARM_Bus_WiFiSrvMgr_WPS_Parameters_t wps_parameters = {0};
+    if (user_answers_yes_to("PBC ?"))
+        wps_parameters.pbc = true;
+    else if (user_answers_yes_to("Auto-generate PIN ?"))
+        wps_parameters.pin[0] = '\0';
+    else if (user_answers_yes_to("Use serialized PIN ?"))
+        strcpy(wps_parameters.pin, "xxxxxxxx");
+    else
+    {
+        std::string pin;
+        std::cout << "\nEnter PIN (8 digits): ";
+        std::cin >> pin;
+        strncpy(wps_parameters.pin, pin.c_str(), 8);
+    }
+
+    IARM_Bus_Call( IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_initiateWPSPairing2, (void *)&wps_parameters, sizeof(wps_parameters));
+
+    printf("\n***********************************");
+    printf("\n \"%s\", status: \"%s\"", IARM_BUS_WIFI_MGR_API_initiateWPSPairing2, wps_parameters.status ? "true" : "false");
+    if (wps_parameters.status == true && !wps_parameters.pbc)
+        printf("\n \"%s\", PIN = \"%s\"", IARM_BUS_WIFI_MGR_API_initiateWPSPairing2, wps_parameters.pin);
+    printf("\n***********************************\n");
+#endif
+    printf("[%s] Exiting..\r\n", __FUNCTION__);
+}
+
 
 static void WIFI_MGR_API_saveSSID()
 {
@@ -917,35 +990,9 @@ int main()
         printf("\n==================================================================\n");
         printf("*****	Network Mgr: Execute WiFi Manager Api's		****	");
         printf("\n==================================================================\n");
-        printf( "1. getAvailableSSIDs\n" );
-        printf( "2. getCurrentState\n" );
-        printf( "3. setEnabled\n" );
-        printf( "4. getPairedSSID\n");
-        printf( "5. connect\n");
-        printf( "6. initiateWPSPairing\n");
-        printf( "7. saveSSID\n");
-        printf( "8. clearSSID\n");
-        printf( "9. isPaired\n");
-        printf( "10. getRadioProps\n");
-        printf( "11. getRadioStatsProps\n");
-        printf( "12. getSSIDProps\n");
-#ifdef ENABLE_LOST_FOUND
-        printf( "13. getLAFState\n");
-#endif
-        printf( "14. getConnectedSSID\n");
-        printf( "15. getEndPointProps\n");
-        printf( "16. getAvailableSSIDsWithName\n");
-        printf( "17. getAvailableSSIDsAsycIncr\n");
-        printf( "18. stopProgressiveWifiScanning\n");
-        printf( "19. disconnectSSID\n");
-        printf( "20. cancelWPSPairing\n");
-        printf( "21. net_srv_mgr_registerForEvents\n");
-        printf( "22. net_srv_mgr_unregisterForEvents\n");
-        printf( "23. wifi_mgr_registerForEvents\n");
-        printf( "24. wifi_mgr_unregisterForEvents\n");
-        printf( "0. Exit." );
+        for (int n = sizeof(options)/sizeof(options[0]), i = 0; i < n; i++)
+            printf( "%d. %s\n", options[i].number, options[i].name);
         printf( "\n==================================================================\n");
-
         printf( "\n Selection: " );
         std::cin >> input;
 
@@ -972,6 +1019,9 @@ int main()
             break;
         case Test_initiateWPSPairing:
             WIFI_MGR_API_initiateWPSPairing();
+            break;
+        case Test_initiateWPSPairing2:
+            WIFI_MGR_API_initiateWPSPairing2();
             break;
         case Test_saveSSID:
             WIFI_MGR_API_saveSSID();

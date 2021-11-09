@@ -277,6 +277,7 @@ int  WiFiNetworkMgr::Init()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setEnabled, setEnabled);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_connect, connect);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_initiateWPSPairing, initiateWPSPairing);
+    IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_initiateWPSPairing2, initiateWPSPairing2);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getPairedSSID, getPairedSSID);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getPairedSSIDInfo, getPairedSSIDInfo);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_saveSSID, saveSSID);
@@ -930,20 +931,30 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
     return ret;
 }
 
-IARM_Result_t WiFiNetworkMgr::initiateWPSPairing(void* arg)
+IARM_Result_t WiFiNetworkMgr::initiateWPSPairing(void *arg)
 {
-    IARM_Result_t ret = IARM_RESULT_SUCCESS;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-
+    LOG_ENTRY_EXIT;
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     param->status = false;
 #ifdef USE_RDK_WIFI_HAL
     pthread_mutex_lock(&wpsConnLock);
-    param->status = connect_WpsPush()? true: false;
+    param->status = connect_WpsPush();
     pthread_mutex_unlock(&wpsConnLock);
 #endif
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    return ret;
+    return IARM_RESULT_SUCCESS;
+}
+
+IARM_Result_t WiFiNetworkMgr::initiateWPSPairing2(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    IARM_Bus_WiFiSrvMgr_WPS_Parameters_t *params = (IARM_Bus_WiFiSrvMgr_WPS_Parameters_t*) arg;
+    params->status = false;
+#ifdef USE_RDK_WIFI_HAL
+    pthread_mutex_lock(&wpsConnLock);
+    params->status = params->pbc ? connect_WpsPush() : connect_WpsPin(params->pin);
+    pthread_mutex_unlock(&wpsConnLock);
+#endif
+    return IARM_RESULT_SUCCESS;
 }
 
 IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
