@@ -37,6 +37,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef ENABLE_STUN_CLIENT
+#include "StunClient.h"
+#endif
+
 #ifdef ENABLE_ROUTE_SUPPORT
 #include "routeSrvMgr.h"
 #endif
@@ -61,6 +65,12 @@
 #endif
 char configProp_FilePath[100] = {'\0'};;
 netMgrConfigProps confProp;
+
+#ifdef ENABLE_STUN_CLIENT
+#define STUN_DEFAULT_BIND_TIMEOUT 30 //seconds
+#define STUN_DEFAULT_CACHE_TIMEOUT 0 //seconds (0 for disable)
+stun::client stunClient;
+#endif
 
 /*Telemetry Configuration Parameter List*/
 #ifdef USE_RDK_WIFI_HAL
@@ -106,6 +116,9 @@ static IARM_Result_t getSTBip_family(void *arg);
 static IARM_Result_t isConnectedToInternet(void *arg);
 static IARM_Result_t setConnectivityTestEndpoints(void *arg);
 static IARM_Result_t isAvailable(void *arg);
+#ifdef ENABLE_STUN_CLIENT
+static IARM_Result_t getPublicIP(void* arg);
+#endif
 #endif // ifdef ENABLE_IARM
 
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
@@ -121,6 +134,9 @@ static bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool isConnectedToInternet(bool& connectivity);
 static bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints);
+#ifdef ENABLE_STUN_CLIENT
+static bool getPublicIP(IARM_BUS_NetSrvMgr_Iface_StunRequest_t *param);
+#endif
 #endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 
 #ifdef USE_RDK_WIFI_HAL
@@ -164,7 +180,7 @@ static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& desc
  * the specified environment variable's value if it is not NULL.
  * the specified default value otherwise.
  */
-char* getenvOrDefault (const char* name, char* defaultValue)
+const char* getenvOrDefault (const char* name, const char* defaultValue)
 {
     char* value = getenv (name);
     return value ? value : defaultValue;
@@ -444,6 +460,9 @@ int main(int argc, char *argv[])
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isConnectedToInternet, isConnectedToInternet);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_setConnectivityTestEndpoints, setConnectivityTestEndpoints);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_isAvailable, isAvailable);
+#ifdef ENABLE_STUN_CLIENT
+    IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getPublicIP, getPublicIP);
+#endif
     IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE, _eventHandler);
 #endif
 #ifdef ENABLE_SD_NOTIFY
@@ -668,6 +687,59 @@ static bool read_ConfigProps()
                 }
                 if(keys) g_strfreev(keys);
             }
+#ifdef ENABLE_STUN_CLIENT
+            else if(0 == strncasecmp(STUN_CONFIG, groups[group], strlen(groups[group])))
+            {
+                keys = g_key_file_get_keys(key_file, groups[group], &num_keys, &error);
+                for(key = 0; key < num_keys; key++)
+                {
+                    value = g_key_file_get_value(key_file,	groups[group],	keys[key],	&error);
+
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[ \t\tkey %u/%u: \t%s => %s]\n", key, num_keys - 1, keys[key], value);
+
+                    if(0 == strncasecmp(STUN_SERVER, keys[key], strlen(keys[key])))
+                    {
+                        STRCPY_S(confProp.stunProps.server, sizeof(confProp.stunProps.server), value);
+                    }
+                    else if(0 == strncasecmp(STUN_PORT, keys[key], strlen(keys[key])))
+                    {
+                        confProp.stunProps.port = atoi(value);
+                    }
+                    else if(0 == strncasecmp(STUN_INTERFACE, keys[key], strlen(keys[key])))
+                    {
+                        STRCPY_S(confProp.stunProps.interface, sizeof(confProp.stunProps.interface), value);
+                    }
+                    else if(0 == strncasecmp(STUN_IPV6, keys[key], strlen(keys[key])))
+                    {
+                        confProp.stunProps.ipv6 = (atoi(value) == 0) ? false : true;
+                    }
+                    else if(0 == strncasecmp(STUN_BIND_TIMEOUT, keys[key], strlen(keys[key])))
+                    {
+                        confProp.stunProps.bind_timeout = atoi(value);
+                    }
+                    else if(0 == strncasecmp(STUN_CACHE_TIMEOUT, keys[key], strlen(keys[key])))
+                    {
+                        confProp.stunProps.cache_timeout = atoi(value);
+                    }
+                    if(value) g_free(value);
+                }
+                if(keys) g_strfreev(keys);
+
+                if(!confProp.stunProps.bind_timeout)
+                    confProp.stunProps.bind_timeout = STUN_DEFAULT_BIND_TIMEOUT;
+
+                if(!confProp.stunProps.cache_timeout)
+                    confProp.stunProps.cache_timeout = STUN_DEFAULT_CACHE_TIMEOUT;
+
+                RDK_LOG(RDK_LOG_WARN, LOG_NMGR, "stun config: server=%s port=%u iface=%s ipv6=%u bind_timeout=%u cache_timeout=%u\n",
+                    confProp.stunProps.server,
+                    confProp.stunProps.port,
+                    confProp.stunProps.interface,
+                    confProp.stunProps.ipv6,
+                    confProp.stunProps.bind_timeout,
+                    confProp.stunProps.cache_timeout);
+            }
+#endif
         }
         if(groups) g_strfreev(groups);
     }
@@ -1022,6 +1094,14 @@ IARM_Result_t isAvailable(void *arg)
     RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM_BUS_NETSRVMGR_API_isAvailable is called \n",MODULE_NAME,__FUNCTION__,__LINE__ );
     return IARM_RESULT_SUCCESS;
 }
+#ifdef ENABLE_STUN_CLIENT
+IARM_Result_t getPublicIP(void *arg)
+{
+    LOG_ENTRY_EXIT;
+    IARM_BUS_NetSrvMgr_Iface_StunRequest_t *param = (IARM_BUS_NetSrvMgr_Iface_StunRequest_t *)arg;
+    return getPublicIP (param) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
+}
+#endif
 #endif // ENABLE_IARM
 
 
@@ -1613,6 +1693,55 @@ bool setInterfaceState (std::string interface_name, bool enabled)
     system (command);
     return true;
 }
+
+#ifdef ENABLE_STUN_CLIENT
+bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
+{
+    std::string     host    (param->server[0]        ? param->server             : confProp.stunProps.server);
+    uint16_t        port    (param->port             ? param->port               : confProp.stunProps.port);
+    stun::protocol  proto   (param->ipv6             ? stun::protocol::af_inet6  : stun::protocol::af_inet);
+    uint16_t        bindtm  (param->bind_timeout     ? param->bind_timeout       : confProp.stunProps.bind_timeout);
+    uint16_t        cachetm (param->cache_timeout    ? param->cache_timeout      : confProp.stunProps.cache_timeout);
+    std:string interface;
+
+    if (0 == strcasecmp(param->interface, "WIFI"))
+    {
+        interface = getenvOrDefault("WIFI_INTERFACE", "");
+    }
+    else if (0 == strcasecmp(param->interface, "ETHERNET"))
+    {
+        interface = getenvOrDefault("ETHERNET_INTERFACE", "");
+    }
+    else if (0 == strcasecmp(param->interface, "MOCA"))
+    {
+        interface = getenvOrDefault("MOCA_INTERFACE", "");
+    }
+
+    if (interface.empty())
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to identify interface\n", __FUNCTION__);
+        return false;
+    }
+    else
+    {
+        if (!param->ipv6)
+            interface += ":0";
+        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface value: %s\n", __FUNCTION__, interface.c_str());
+    }
+    std::string     iface   (param->interface[0]     ? interface          : confProp.stunProps.interface);
+
+    stun::bind_result result;
+    if(stunClient.bind(host, port, iface, proto, bindtm, cachetm, result))
+    {
+        strncpy(param->public_ip, result.public_ip.c_str(), MAX_IP_ADDRESS_LEN);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+#endif
 
 #endif // ifndef ENABLE_XCAM_SUPPORT and XHB1 and XHC3
 

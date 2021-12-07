@@ -51,6 +51,7 @@
 #define INTERFACE_LIST 50
 #define MAX_IP_ADDRESS_LEN 46
 #define MAX_IP_FAMILY_SIZE 10
+#define MAX_HOST_NAME_LEN 128
 #define IARM_BUS_NETSRVMGR_API_getActiveInterface "getActiveInterface"
 #define IARM_BUS_NETSRVMGR_API_getNetworkInterfaces "getNetworkInterfaces"
 #define IARM_BUS_NETSRVMGR_API_getInterfaceList "getInterfaceList"
@@ -67,6 +68,7 @@
 #define IARM_BUS_NETSRVMGR_API_isConnectedToInternet "isConnectedToInternet"
 #define IARM_BUS_NETSRVMGR_API_setConnectivityTestEndpoints "setConnectivityTestEndpoints"
 #define IARM_BUS_NETSRVMGR_API_isAvailable "isAvailable"
+#define IARM_BUS_NETSRVMGR_API_getPublicIP "getPublicIP"
 
 typedef enum _NetworkManager_MoCA_EventId_t {
         IARM_BUS_NETWORK_MANAGER_MOCA_TELEMETRY_LOG=20,
@@ -151,6 +153,18 @@ typedef struct
     unsigned char size;
     char          endpoints[5][260]; // domain name max length + ':' + port number max chars + '\0' = 253+1+5+1 = 260
 } IARM_BUS_NetSrvMgr_Iface_TestEndpoints_t;
+
+typedef struct
+{
+    char server[MAX_HOST_NAME_LEN];
+    uint16_t port;
+    bool ipv6;
+    char interface[16];
+    uint16_t bind_timeout;
+    uint16_t cache_timeout;
+    bool sync;
+    char public_ip[MAX_IP_ADDRESS_LEN];
+} IARM_BUS_NetSrvMgr_Iface_StunRequest_t;
 
 /** @} */  //END OF GROUP NETSRVMGR_TYPES
 

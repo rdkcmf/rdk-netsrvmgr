@@ -72,6 +72,14 @@ extern "C" {
 #define LFAT_TTL			"LFAT_TTL"
 #define LAF_CONNECTION_RETRY            "LAF_CONNECTION_RETRY"
 
+#define STUN_CONFIG                     "Stun_Config"
+#define STUN_SERVER                     "STUN_SERVER"
+#define STUN_PORT                       "STUN_PORT"
+#define STUN_INTERFACE                  "STUN_INTERFACE"
+#define STUN_IPV6                       "STUN_IPV6"
+#define STUN_BIND_TIMEOUT               "STUN_BIND_TIMEOUT"
+#define STUN_CACHE_TIMEOUT              "STUN_CACHE_TIMEOUT"
+
 #define WIFI_BCK_PATHNAME				"/opt/persistent/wifi"
 #define WIFI_BCK_FILENAME				"/opt/persistent/wifi/wifiConnectionInfo.json"
 #define WIFI_CONN_DETAILS				"wifi_conn_details"
@@ -123,9 +131,20 @@ typedef struct  _wifiMgrConfigProps
     unsigned int lfatTTL;
 } wifiMgrConfigProps;
 
+typedef struct _stunConfigProps
+{
+    char server[BUFFER_SIZE_128];
+    uint16_t port;
+    bool ipv6;
+    char interface[16];
+    uint16_t bind_timeout;
+    uint16_t cache_timeout;
+} stunConfigProps;
+
 typedef struct  _netMgrConfigProps
 {
     wifiMgrConfigProps wifiProps;
+    stunConfigProps stunProps;
 } netMgrConfigProps;
 
 /** @} */  //END OF GROUP NETSRVMGR_TYPES

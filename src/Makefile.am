@@ -93,6 +93,12 @@ bin_PROGRAMS = netsrvmgr
 netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp \
 			$(top_srcdir)/src/main/src/NetworkMedium.cpp \
 			$(top_srcdir)/src/main/src/netsrvmgrUtiles.cpp
+			
+if !XCAM_SUPPORT
+netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/StunClient.cpp
+AM_CXXFLAGS += -DENABLE_STUN_CLIENT
+endif
+
 if LOSTFOUND
 netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
 endif
