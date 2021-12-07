@@ -117,6 +117,7 @@ private:
     int create_wpa_supplicant_conf_from_netapp_db (const char* wpa_supplicant_conf_file, const char* netapp_db_file);
 /** @} */  //END OF GROUP NETSRVMGR_APIS
 #endif // ENABLE_XCAM_SUPPORT
+    int removeWifiCredsFromNonSecuredPartition(void);
 
     static bool m_isenabled;
     static WiFiNetworkMgr* instance;

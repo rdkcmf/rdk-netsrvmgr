@@ -262,6 +262,33 @@ int WiFiNetworkMgr::create_wpa_supplicant_conf_from_netapp_db (const char* wpa_s
 }
 #endif // #ifndef ENABLE_XCAM_SUPPORT
 
+int WiFiNetworkMgr::removeWifiCredsFromNonSecuredPartition(void)
+{
+    const char *wpaSupplicantConfFile = "/opt/wifi/wpa_supplicant.conf";
+    const char *wifiRoamingFile = "/opt/wifi/wifi_roamingControl.json";
+    int retValue = 0;
+
+    if(!access(wpaSupplicantConfFile, F_OK))
+    {
+        if((retValue = remove(wpaSupplicantConfFile)) == -1)
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: Failed to remove wpa_supplicant.conf [%s]\n",
+            __FUNCTION__, wpaSupplicantConfFile);
+        }
+    }
+
+    if(!access(wifiRoamingFile, F_OK))
+    {
+        if((retValue = remove(wifiRoamingFile)) == -1)
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s: Failed to remove wifi_roamingControl.json [%s]\n",
+            __FUNCTION__, wifiRoamingFile);
+        }
+    }
+
+    return retValue;
+}
+
 int  WiFiNetworkMgr::Init()
 {
     #ifdef ENABLE_IARM
@@ -340,6 +367,9 @@ int  WiFiNetworkMgr::Init()
 #ifndef ENABLE_XCAM_SUPPORT
     create_wpa_supplicant_conf_from_netapp_db ("/opt/secure/wifi/wpa_supplicant.conf", "/opt/secure/wifi/NetApp.db");
 #endif // ENABLE_XCAM_SUPPORT
+
+    /* Remove the WiFi credentials from the non-secured partition */
+    removeWifiCredsFromNonSecuredPartition();
 
     return 0;
 }
