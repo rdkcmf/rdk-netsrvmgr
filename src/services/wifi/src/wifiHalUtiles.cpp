@@ -21,8 +21,6 @@
 #include "netsrvmgrUtiles.h"
 
 #include <fstream>
-#include <string>
-
 
 #ifdef ENABLE_LOST_FOUND
 #include <time.h>
@@ -934,6 +932,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     static unsigned int switchLnf2Priv=0;
     static unsigned int switchPriv2Lnf=0;
     bool retVal = false;
+    bool sameSSid = true;
     int radioIndex = 0;
     wifi_sta_stats_t stats;
 #ifdef ENABLE_IARM
@@ -946,6 +945,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
+    if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
+    {
+        sameSSid = false;
+    }
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
@@ -1007,9 +1010,19 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             /* one condition variable is signaled */
 #ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-            if(access("/opt/persistent/ip.wifi.0", F_OK ) != 0){
-                netSrvMgrUtiles::triggerDhcpReleaseAndRenew(getenv("WIFI_INTERFACE"));
-            }
+            if (access("/opt/persistent/ip.wifi.0", F_OK ) != 0)
+	    {
+                if (!sameSSid)
+		{
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:wifi_addr_reset.sh\n");
+                    system("/bin/sh /lib/rdk/wifi_addr_reset.sh");
+                }
+                else
+		{
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:triggerDhcpReleaseAndRenew\n");
+                    netSrvMgrUtiles::triggerDhcpReleaseAndRenew(getenv("WIFI_INTERFACE"));
+                }
+	    }
 #endif
 #ifdef ENABLE_LOST_FOUND
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
@@ -1085,7 +1098,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 }
             }
         } else if (ACTION_ON_DISCONNECT == action) {
-	    WiFiStatusCode_t prevStatus = get_WiFiStatusCode();
             set_WiFiStatusCode(WIFI_DISCONNECTED);
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
             strncpy(wifiConnData.ssid, ap_SSID, sizeof(wifiConnData.ssid));
@@ -1098,15 +1110,6 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_DISCONNECTED);
 #endif
 	        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
-		if (prevStatus != WIFI_CONNECTING) {
-		   //flush network connections, when connection is not in progress.
-		   std::string command, script_name;
-		   script_name = "/lib/rdk/wifi_addr_reset.sh";
-		   command = "/bin/sh ";
-		   command += script_name;
-		   system(command.c_str());
-		}
-
         }
         break;
     case WIFI_HAL_CONNECTING:
