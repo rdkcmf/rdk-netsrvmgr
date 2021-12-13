@@ -1175,6 +1175,7 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
     LOG_ENTRY_EXIT;
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enable = [%d] persist = [%d]\n", __FUNCTION__, interface, enabled, persist);
 
+#ifndef USE_RDK_WIFI_HAL
     if (strcmp (interface, "ETHERNET") == 0)
     {
         if (enabled)
@@ -1188,7 +1189,24 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
             return false;
         }
     }
-#ifdef USE_RDK_WIFI_HAL
+#else
+    if (strcmp (interface, "ETHERNET") == 0)
+    {
+        if (enabled)
+        {
+            unmark("ethernet_disallowed", persist); // remove marker file (if present) that says "ETHERNET is disallowed"
+            setInterfaceState (getenvOrDefault("ETHERNET_INTERFACE", ""), true);
+            launch_pni_controller();
+            return true;
+        }
+        else // if (validate_interface_can_be_disabled(interface)) not needed for ETHERNET as per clarification in ticket
+        {
+            mark("ethernet_disallowed", persist); // touch marker file that says "ETHERNET is disallowed"
+            setInterfaceState (getenvOrDefault("ETHERNET_INTERFACE", ""), false);
+            launch_pni_controller();
+            return true;
+        }
+    }
     else if (strcmp (interface, "WIFI") == 0)
     {
         if (enabled)
@@ -1204,7 +1222,7 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
             mark("wifi_disallowed", persist); // touch marker file that says "WIFI is disallowed"
             setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), false);
             setWifiEnabled(false);
-            setDefaultInterface("ETHERNET", persist);
+            launch_pni_controller();
             return true;
         }
         else
@@ -1213,7 +1231,7 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
             return false;
         }
     }
-#endif // USE_RDK_WIFI_HAL
+#endif // ifndef USE_RDK_WIFI_HAL
     else
     {
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is invalid.\n", __FUNCTION__, interface);

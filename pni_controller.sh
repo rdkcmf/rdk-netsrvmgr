@@ -294,9 +294,17 @@ fi
 
 # sleep 5 # delay to filter out ethernet glitches / fast link state transitions
 
-if [ -f /tmp/wifi_disallowed ]; then
+if [ -f /tmp/ethernet_disallowed ] && [ -f /tmp/wifi_disallowed ]; then
+    log "$ETHERNET_INTERFACE and $WIFI_INTERFACE are disallowed!"
+    set_interface_state "$ETHERNET_INTERFACE" down
+    set_wifi_state down
+    exit 0
+elif [ -f /tmp/wifi_disallowed ]; then
     set_wifi_state down
     try_interface "$ETHERNET_INTERFACE" "$WIFI_INTERFACE is disallowed" # pni setting is irrelevant
+elif [ -f /tmp/ethernet_disallowed ]; then
+    set_interface_state "$ETHERNET_INTERFACE" down
+    try_interface "$WIFI_INTERFACE" "$ETHERNET_INTERFACE is disallowed" # pni setting is irrelevant
 elif [ "$(cat /sys/class/net/"$ETHERNET_INTERFACE"/carrier)" != "1" ]; then
     try_interface "$WIFI_INTERFACE" "no carrier on $ETHERNET_INTERFACE" # pni setting is irrelevant
 elif [ "$CONFIG_DISABLE_PNI" == "true" ] || [ "$(tr181 Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable 2>&1 > /dev/null)" != "true" ]; then

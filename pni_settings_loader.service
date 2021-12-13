@@ -8,6 +8,7 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=-/bin/cp /opt/persistent/pni_wifi /tmp
 ExecStart=-/bin/cp /opt/persistent/wifi_disallowed /tmp
+ExecStart=-/bin/cp /opt/persistent/ethernet_disallowed /tmp
 
 [Install]
 WantedBy=multi-user.target
