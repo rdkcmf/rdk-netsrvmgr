@@ -42,6 +42,8 @@ extern "C" {
         strcpy(dest, source);
 #endif
 
+#include <sys/stat.h>
+
 #define WIFI_HAL_VERSION_SIZE   6
 #define MAX_WIFI_STATUS_STRING 32
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
@@ -983,14 +985,18 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                        NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                        NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Clearing ipv6 ip and routes .\n",__FUNCTION__, __LINE__);
+                       struct stat stat_buf;
+                       if (stat("/tmp/ani_wifi", &stat_buf) == 0) // if active network interface = WIFI
+                       {
 #ifdef YOCTO_BUILD
-                       v_secure_system("/lib/rdk/enableIpv6Autoconf.sh %s &", ifcStr.c_str());
+                           v_secure_system("/lib/rdk/enableIpv6Autoconf.sh %s &", ifcStr.c_str());
 #else
-                       std::string enableV6 = "/lib/rdk/enableIpv6Autoconf.sh ";
-                       enableV6 += ifcStr;  //adding interface
-                       enableV6 += " &";
-                       system(enableV6.c_str());
+                           std::string enableV6 = "/lib/rdk/enableIpv6Autoconf.sh ";
+                           enableV6 += ifcStr;  //adding interface
+                           enableV6 += " &";
+                           system(enableV6.c_str());
 #endif
+                       }
                    }
                    else
                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No WiFi interface .\n",__FUNCTION__, __LINE__);
