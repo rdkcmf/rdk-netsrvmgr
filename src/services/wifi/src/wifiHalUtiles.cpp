@@ -1011,18 +1011,20 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifndef ENABLE_XCAM_SUPPORT
             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             if (access("/opt/persistent/ip.wifi.0", F_OK ) != 0)
-	    {
+            {
+#if !defined(XHB1) && !defined(XHC3)
                 if (!sameSSid)
-		{
+                {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:wifi_addr_reset.sh\n");
                     system("/bin/sh /lib/rdk/wifi_addr_reset.sh");
                 }
                 else
-		{
+#endif
+                {
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:triggerDhcpReleaseAndRenew\n");
                     netSrvMgrUtiles::triggerDhcpReleaseAndRenew(getenv("WIFI_INTERFACE"));
                 }
-	    }
+            }
 #endif
 #ifdef ENABLE_LOST_FOUND
             memset(&wifiConnData, '\0', sizeof(wifiConnData));
