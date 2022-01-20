@@ -2136,6 +2136,7 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
     bool ret = false;
     unsigned int tokenlength=0;
     int readtoken=0;
+    char* partnerIdFile = "/opt/usr_config/partnerid.txt";
 #ifdef ENABLE_XCAM_SUPPORT
     struct basic_info xcam_dev_info;
     memset((void*)&xcam_dev_info, 0, sizeof(struct basic_info));
@@ -2167,6 +2168,14 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
     }
 #endif
 #if defined(ENABLE_XCAM_SUPPORT) || defined(XHB1) || defined(XHC3)
+    int get_result = getSetFileContent(partnerIdFile, "get", dev_info->partnerId);
+    if (get_result)
+      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error reteiving partnerId \n", MODULE_NAME, __FUNCTION__, __LINE__);
+    else
+    {
+      dev_info->partnerId[strcspn(dev_info->partnerId, "\n")] = 0;
+      RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] PartnerID obtained is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__, dev_info->partnerId);
+    }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] auth token update for xcam\n", MODULE_NAME,__FUNCTION__, __LINE__);
     memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
     readtoken = get_token_length(tokenlength);
