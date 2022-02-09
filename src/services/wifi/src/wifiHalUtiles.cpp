@@ -947,7 +947,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 
-    if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
+    if ((strcmp(savedWiFiConnList.ssidSession.ssid, "") != 0) && (strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0))
     {
         sameSSid = false;
     }
