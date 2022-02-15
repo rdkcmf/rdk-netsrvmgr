@@ -961,11 +961,13 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif
 #ifdef ENABLE_LOST_FOUND
             if (! laf_is_lnfssid(ap_SSID))
+#endif //ENABLE_LOST_FOUND
             {
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] savedWiFiConnList.ssidSession.ssid = %s ap_SSID = %s\n",MODULE_NAME,__FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid,ap_SSID);
                 if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
                 {
                     storeMfrWifiCredentials();
+#ifdef ENABLE_LOST_FOUND
                     //bounce xre connection if we move from one private ssid to another ssid
                     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Moving from one SSID = %s  to another SSID = %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,savedWiFiConnList.ssidSession.ssid,ap_SSID);
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
@@ -1001,9 +1003,9 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                    else
                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No WiFi interface .\n",__FUNCTION__, __LINE__);
 #endif
+#endif //ENABLE_LOST_FOUND
                 }
             }
-#endif
 #ifdef ENABLE_IARM
             notify = true;
 #if 0       /* Do not bounce for any network switch. Do it only from LF to private. */
@@ -2923,8 +2925,14 @@ bool connectToMfrWifiCredentials()
     param.requestType=WIFI_GET_CREDENTIALS;
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
-        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        if (param.wifiCredentials.iSecurityMode == -1){
+        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials having no security mode \n",MODULE_NAME,__FUNCTION__,__LINE__ );
         retVal = connect_withSSID(ssidIndex, param.wifiCredentials.cSSID, NET_WIFI_SECURITY_WPA_PSK_AES, NULL, param.wifiCredentials.cPassword, param.wifiCredentials.cPassword, true, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
+        }
+        else{
+        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials having the security mode %d\n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.iSecurityMode );
+        retVal = connect_withSSID(ssidIndex, param.wifiCredentials.cSSID, (SsidSecurity)param.wifiCredentials.iSecurityMode, NULL, param.wifiCredentials.cPassword, param.wifiCredentials.cPassword, true, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
+        }
     }
     else
     {
@@ -2957,7 +2965,8 @@ bool storeMfrWifiCredentials(void)
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
         if ((strcmp (param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid) == 0) &&
-                (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0))
+                (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0) &&
+                (param.wifiCredentials.iSecurityMode == savedWiFiConnList.ssidSession.security_mode || param.wifiCredentials.iSecurityMode == -1) )
         {
             RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",
                     MODULE_NAME, __FUNCTION__, __LINE__, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
@@ -2973,6 +2982,7 @@ bool storeMfrWifiCredentials(void)
     param.requestType=WIFI_SET_CREDENTIALS;
     STRCPY_S(param.wifiCredentials.cSSID, sizeof(param.wifiCredentials.cSSID), savedWiFiConnList.ssidSession.ssid);
     STRCPY_S(param.wifiCredentials.cPassword, sizeof(param.wifiCredentials.cPassword), savedWiFiConnList.ssidSession.passphrase);
+    param.wifiCredentials.iSecurityMode = savedWiFiConnList.ssidSession.security_mode;
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in storing wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
@@ -2982,10 +2992,11 @@ bool storeMfrWifiCredentials(void)
         {
             RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
             if ((strcmp (param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid) == 0) &&
-                    (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0))
+                    (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0) &&
+                    (param.wifiCredentials.iSecurityMode == savedWiFiConnList.ssidSession.security_mode || param.wifiCredentials.iSecurityMode == -1) )
             {
                 retVal=true;
-                RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] Successfully stored the credentails and verified stored ssid %s current ssid %s \n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid);
+                RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Successfully stored the credentails and verified stored ssid %s current ssid %s and security_mode %d\n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid,param.wifiCredentials.iSecurityMode);
             }
             else
             {
