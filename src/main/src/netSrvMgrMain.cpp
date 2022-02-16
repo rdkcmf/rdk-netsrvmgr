@@ -442,7 +442,9 @@ int main(int argc, char *argv[])
         STRCPY_S(confProp.wifiProps.authServerURL, sizeof(confProp.wifiProps.authServerURL), "http://localhost:50050/authService/getDeviceId");
 #endif
     }
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)  && !defined(XHV1)
     Read_Telemetery_Param_File();
+#endif
 #ifdef ENABLE_IARM
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getActiveInterface, getActiveInterface);
     IARM_Bus_RegisterCall(IARM_BUS_NETSRVMGR_API_getNetworkInterfaces, getNetworkInterfaces);
