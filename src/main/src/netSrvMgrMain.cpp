@@ -1704,7 +1704,8 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
     stun::protocol  proto   (param->ipv6             ? stun::protocol::af_inet6  : stun::protocol::af_inet);
     uint16_t        bindtm  (param->bind_timeout     ? param->bind_timeout       : confProp.stunProps.bind_timeout);
     uint16_t        cachetm (param->cache_timeout    ? param->cache_timeout      : confProp.stunProps.cache_timeout);
-    std:string interface;
+    std:string interface = param->interface;
+    char activeInterface[INTERFACE_SIZE];
 
     if (0 == strcasecmp(param->interface, "WIFI"))
     {
@@ -1718,18 +1719,27 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
     {
         interface = getenvOrDefault("MOCA_INTERFACE", "");
     }
-
-    if (interface.empty())
+    else if (interface.empty())
+    {
+        if(!netSrvMgrUtiles::getRouteInterface(activeInterface))
+        {
+            if(!netSrvMgrUtiles::currentActiveInterface(activeInterface))
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No routable  interface found.\n", __FUNCTION__, __LINE__);
+                return false;
+            }
+        }
+        interface = activeInterface;
+    }
+    else
     {
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to identify interface\n", __FUNCTION__);
         return false;
     }
-    else
-    {
-        if (!param->ipv6)
-            interface += ":0";
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface value: %s\n", __FUNCTION__, interface.c_str());
-    }
+
+    if (!param->ipv6)
+        interface += ":0";
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface value: %s\n", __FUNCTION__, interface.c_str());
     std::string     iface   (param->interface[0]     ? interface          : confProp.stunProps.interface);
 
     stun::bind_result result;
