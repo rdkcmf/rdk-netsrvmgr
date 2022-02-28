@@ -100,6 +100,16 @@ typedef struct _IARM_BUS_NetSrvMgr_Iface_EventData_t {
    char ipfamily[MAX_IP_FAMILY_SIZE];
 } IARM_BUS_NetSrvMgr_Iface_EventData_t;
 
+typedef enum _NetworkManager_GetIPSettings_ErrorCode_t
+{
+  NETWORK_IPADDRESS_ACQUIRED,
+  NETWORK_IPADDRESS_NOTFOUND,
+  NETWORK_NO_ROUTE_INTERFACE,
+  NETWORK_NO_DEFAULT_ROUTE,
+  NETWORK_DNS_NOT_CONFIGURED,
+  NETWORK_INVALID_IPADDRESS,
+} NetworkManager_GetIPSettings_ErrorCode_t;
+
 typedef struct {
     char interface[16];
     char ipversion[16];
@@ -110,6 +120,7 @@ typedef struct {
     char primarydns[INET6_ADDRSTRLEN];
     char secondarydns[INET6_ADDRSTRLEN];
     bool isSupported;
+    NetworkManager_GetIPSettings_ErrorCode_t errCode;
 } IARM_BUS_NetSrvMgr_Iface_Settings_t;
 
 typedef struct {

@@ -1431,20 +1431,8 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface [%s], ipversion [%s], autoconfig [%d], ipaddress [%s], netmask [%s], gateway [%s], primarydns [%s], secondarydns [%s]\n",
             __FUNCTION__, param->interface, param->ipversion, param->autoconfig, param->ipaddress, param->netmask, param->gateway, param->primarydns, param->secondarydns);
 
+    std:string secondarydns = param->secondarydns;
     const char* RFC_MANUALIP_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable";
-    if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] RFC for manual IP settings is not enabled\n", __FUNCTION__);
-        param->isSupported = false;
-        return false;
-    }
-
-    if (0 != strcasecmp(param->ipversion, "ipv4"))
-    {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] unsupported ipversion [%s].\n", __FUNCTION__, param->ipversion);
-        param->isSupported = false;
-        return false;
-    }
 
     bool ethernet = true;
     if (0 == strcasecmp(param->interface, "WIFI"))
@@ -1471,6 +1459,7 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
 
     if (param->autoconfig)
     {
+        param->isSupported = true;
         if (autoconfig)
         {
             RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] already in autoconfig mode. \n", __FUNCTION__);
@@ -1486,6 +1475,20 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     }
     else
     {
+        if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] RFC for manual IP settings is not enabled\n", __FUNCTION__);
+            param->isSupported = false;
+            return false;
+        }
+
+        if (0 != strcasecmp(param->ipversion, "ipv4"))
+        {
+            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] unsupported ipversion [%s].\n", __FUNCTION__, param->ipversion);
+            param->isSupported = false;
+            return false;
+        }
+
         struct in_addr ipv4address;
         if (!inet_pton(AF_INET, param->ipaddress, &ipv4address))
         {
@@ -1507,10 +1510,13 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
             RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid primarydns [%s]\n", __FUNCTION__, param->primarydns);
             return false;
         }
-        if (strlen(param->secondarydns) && !inet_pton(AF_INET, param->secondarydns, &ipv4address))
+        if (!secondarydns.empty())
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid secondarydns [%s]\n", __FUNCTION__, param->secondarydns);
-            return false;
+            if (!inet_pton(AF_INET, param->secondarydns, &ipv4address))
+            {
+                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid secondarydns [%s]\n", __FUNCTION__, param->secondarydns);
+                return false;
+            }
         }
         IARM_BUS_NetSrvMgr_Iface_Settings_t current_ip_settings = {};
         if (!autoconfig && ip_settings_file_read(ip_settings_file, current_ip_settings) && ip_settings_compare(current_ip_settings, *param))
@@ -1545,6 +1551,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "ManualIPSettings RFC is disabled\n");
     }
+    param->errCode = NETWORK_IPADDRESS_ACQUIRED;
     if (0 == strcasecmp (param->interface, "WIFI") )
     {
         char* c = getenv("WIFI_INTERFACE");
@@ -1563,6 +1570,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     else if (!netSrvMgrUtiles::currentActiveInterface(interface))
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No routable  interface found.\n", __FUNCTION__, __LINE__);
+        param->errCode = NETWORK_NO_ROUTE_INTERFACE;
         return false;
     }
     else if (0 == strcasecmp(interface, getenv("ETHERNET_INTERFACE")))
@@ -1586,7 +1594,8 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
         {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
-            return false;
+            param->errCode = NETWORK_IPADDRESS_NOTFOUND;
+            return true;
         }
     }
     else if (strcasecmp (param->ipversion, "IPV4") == 0)
@@ -1595,7 +1604,8 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET, param->ipaddress, param->netmask))
         {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
-            return false;
+            param->errCode = NETWORK_IPADDRESS_NOTFOUND;
+            return true;
         }
     }
     else if (netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
@@ -1610,7 +1620,8 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     else
     {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
-        return false;
+        param->errCode = NETWORK_IPADDRESS_NOTFOUND;
+        return true;
     }
 
     /* ipv4/ ipv6 default route depends  on is_ipv6 flag */
@@ -1622,6 +1633,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     else
     {
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway not present [%s:%d] \n", __FUNCTION__, __LINE__);
+        param->errCode = NETWORK_NO_DEFAULT_ROUTE;
     }
     /* To get Primary and Secondary DNS */
     if (getDNSip(is_ipv6 ? AF_INET6 : AF_INET,primaryDNSaddr, secondaryDNSaddr))
@@ -1634,6 +1646,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     else
     {
         RDK_LOG(RDK_LOG_INFO, LOG_NMGR," No DNS ip is confiured [%s:%d]  \n", __FUNCTION__, __LINE__);
+        param->errCode = NETWORK_DNS_NOT_CONFIGURED; //DNS file is not present
     }
     return true;
 }
