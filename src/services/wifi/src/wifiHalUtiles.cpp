@@ -1585,6 +1585,7 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
         snprintf (ConnParams->ssidSession.passphrase, sizeof(ConnParams->ssidSession.passphrase), "%s", pairedSSIDInfo.ap_passphrase);
         snprintf (ConnParams->ssidSession.bssid, sizeof(ConnParams->ssidSession.bssid), "%s", pairedSSIDInfo.ap_bssid);
         snprintf (ConnParams->ssidSession.security, sizeof(ConnParams->ssidSession.security), "%s", pairedSSIDInfo.ap_security);
+        snprintf (ConnParams->ssidSession.security_WEPKey, sizeof(ConnParams->ssidSession.security_WEPKey), "%s", pairedSSIDInfo.ap_wep_key);
         RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,
                 "[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s \n",
                 MODULE_NAME, __FUNCTION__, __LINE__,
@@ -1604,6 +1605,16 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
         {
             RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_SAE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA3_SAE;
+        }
+        else if (ConnParams->ssidSession.security_WEPKey[0]!=NULL)
+        {
+           RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] security_WEPKey is %s \n", MODULE_NAME,__FUNCTION__, __LINE__, ConnParams->ssidSession.security_WEPKey );
+           if ( strlen(ConnParams->ssidSession.security_WEPKey) == 26 || strlen(ConnParams->ssidSession.security_WEPKey) == 13 ){
+              ConnParams->ssidSession.security_mode = NET_WIFI_SECURITY_WEP_128;
+           }
+           else{
+               ConnParams->ssidSession.security_mode = NET_WIFI_SECURITY_WEP_64;
+           }
         }
         else
         {
