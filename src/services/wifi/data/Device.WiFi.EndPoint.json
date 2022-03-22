@@ -1,9 +1,0 @@
-{
-  "name": "Device.WiFi.EndPoint",
-  "provider" : "netsrvmgr_wifiEndPoint",
-  "is_list" : true,
-  "properties":
-    [
-      {"name": "Status", "type": "string", "optional": false, "writable": false, "version": "2.0"}
-    ]
-}

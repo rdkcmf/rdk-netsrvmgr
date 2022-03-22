@@ -68,11 +68,3 @@ if RDKWIFIHAL
 noinst_LTLIBRARIES = libwifiservices.la
 libwifiservices_la_SOURCES += src/wifiSrvMgr.cpp src/wifiHalUtiles.cpp
 endif
-
-if RTMESSAGE
-#libwifiservices_la_SOURCES += src/wifi_provider.cpp
-install-data-local:
-	mkdir -p $(RDK_FSROOT_PATH)/etc/model
-	cp -fpR data/* $(RDK_FSROOT_PATH)/etc/model/
-endif
-

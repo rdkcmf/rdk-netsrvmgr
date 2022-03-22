@@ -107,12 +107,6 @@ if RDKWIFIHAL
 netsrvmgr_LDADD += $(top_builddir)/src/services/wifi/libwifiservices.la
 endif
 
-if RTMESSAGE
-install-data-local:
-	mkdir -p $(RDK_FSROOT_PATH)/etc/model
-	cp -fpR $(top_builddir)/src/services/wifi/data/* $(RDK_FSROOT_PATH)/etc/model/
-endif
-
 if ROUTE_SUPPORT
 netsrvmgr_LDADD +=  $(top_builddir)/src/services/route/librouteservices.la
 endif
