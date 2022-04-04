@@ -49,6 +49,7 @@
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 #define INTERFACE_SIZE 10
 #define INTERFACE_LIST 50
+#define NETSRVMGR_INTERFACES_MAX 16
 #define MAX_IP_ADDRESS_LEN 46
 #define MAX_IP_FAMILY_SIZE 10
 #define MAX_HOST_NAME_LEN 128
@@ -131,7 +132,7 @@ typedef struct {
 
 typedef struct {
     unsigned char         size;
-    NetSrvMgr_Interface_t interfaces[8];
+    NetSrvMgr_Interface_t interfaces[NETSRVMGR_INTERFACES_MAX];
 } IARM_BUS_NetSrvMgr_InterfaceList_t;
 
 typedef struct {
