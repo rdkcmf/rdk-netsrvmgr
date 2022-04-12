@@ -1737,11 +1737,11 @@ bool clearSSID_On_Disconnect_AP()
 
 #ifdef ENABLE_LOST_FOUND
         if ( false == isLAFCurrConnectedssid )
+#endif //ENABLE_LOST_FOUND
         {
             memset(&savedWiFiConnList, 0 ,sizeof(savedWiFiConnList));
             eraseMfrWifiCredentials();
         }
-#endif //ENABLE_LOST_FOUND
     }
     return ret;
 }
