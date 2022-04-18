@@ -21,6 +21,15 @@
 #include "netsrvmgrUtiles.h"
 
 #include <fstream>
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+#include <cJSON.h>
+
+#include "sysMgr.h"
+#include <libIBus.h>
+#include <libIARMCore.h>
+
+#include "xdiscovery.h"
+#endif
 
 #ifdef ENABLE_LOST_FOUND
 #include <time.h>
@@ -46,6 +55,10 @@ extern "C" {
 
 #define WIFI_HAL_VERSION_SIZE   6
 #define MAX_WIFI_STATUS_STRING 32
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+#define MAX_DEVICE_INFO_STRING_LENGTH 32
+#endif
+
 static WiFiStatusCode_t gWifiAdopterStatus = WIFI_UNINSTALLED;
 static WiFiConnectionTypeCode_t gWifiConnectionType = WIFI_CON_UNKNOWN;
 gchar deviceID[DEVICEID_SIZE];
@@ -73,6 +86,16 @@ bool bAutoSwitchToPrivateEnabled=true;
 bool bSwitch2Private=false;
 bool bPrivConnectionLost=false;
 #define TOTAL_NO_OF_RETRY 5
+#endif
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+int apDetailsBuffLength;
+bool bsignalAPDetailsReady = true;
+pthread_cond_t condAPDetails = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutexAPDetails = PTHREAD_MUTEX_INITIALIZER;
+pthread_t apDetailsCollectionThread;
+char deviceModel[MAX_DEVICE_INFO_STRING_LENGTH] = {0};
+char deviceMake[MAX_DEVICE_INFO_STRING_LENGTH] = {0};
+char deviceMACAddr[MAX_DEVICE_INFO_STRING_LENGTH] = {0};
 #endif
 bool bShutdownWifi=false;
 pthread_t wifiStatusMonitorThread;
@@ -907,6 +930,43 @@ bool connect_WpsPin(char *wps_pin)
     }
 }
 
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+{
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    if (strcmp(owner, IARM_BUS_SYSMGR_NAME) == 0)
+    {
+        switch(eventId)
+        {
+            case IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE:
+            {
+                IARM_Bus_SYSMgr_EventData_t *eventData = (IARM_Bus_SYSMgr_EventData_t*)data;
+                pthread_mutex_lock(&mutexAPDetails);
+                bsignalAPDetailsReady = true;
+                if(0 == pthread_cond_signal(&condAPDetails))
+                {
+                    apDetailsBuffLength = eventData->data.xupnpData.deviceInfoLength;
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signal to fetch the data from upnp  %d \n", MODULE_NAME,__FUNCTION__, __LINE__, eventData->data.xupnpData.deviceInfoLength );
+                }
+                pthread_mutex_unlock(&mutexAPDetails);
+                break;
+            }
+        }
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    }
+}
+
+void initializeDiscovery(void)
+{
+    IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME,IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE, _evtHandler);
+}
+
+void shutdownDiscovery(void)
+{
+    IARM_Bus_UnRegisterEventHandler(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_UPDATE);
+}
+#endif
+
 INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
 {
     int ret = RETURN_OK;
@@ -926,6 +986,181 @@ INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *con
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return ret;
 }
+
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+bool parseAPDetails(char *array)
+{
+    guint counter = 0;
+    bool retVal = TRUE;
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    if(array)
+    {
+        cJSON *rootJson = cJSON_Parse(array);
+        if(rootJson)
+        {
+            cJSON *deviceFullData = cJSON_GetObjectItem(rootJson, "xmediagateways");
+
+            if(deviceFullData)
+            {
+                guint deviceCount = cJSON_GetArraySize(deviceFullData);
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] gateway count in json %d \n", __FUNCTION__, __LINE__, deviceCount);
+                char *devType, *devModel, *devMake, *devMACAddr;
+
+                for (counter = 0; counter < deviceCount; counter++)
+                {
+                    cJSON *deviceData = cJSON_GetArrayItem(deviceFullData, counter);
+                    devType = devModel = devMake = devMACAddr = NULL;
+
+                    if(deviceData) {
+                        if(cJSON_GetObjectItem(deviceData, "DevType"))
+                            devType = cJSON_GetObjectItem(deviceData, "DevType")->valuestring;
+
+                        if(g_strrstr(g_strstrip(devType),"XB"))
+                        {
+                            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Device type  %s Device count %d \n", MODULE_NAME, __FUNCTION__, __LINE__, devType, counter);
+                            if (cJSON_GetObjectItem(deviceData, "modelClass"))
+                                devModel = cJSON_GetObjectItem(deviceData, "modelClass")->valuestring;
+                            if(cJSON_GetObjectItem(deviceData, "make"))
+                                devMake = cJSON_GetObjectItem(deviceData, "make")->valuestring;
+                            if(cJSON_GetObjectItem(deviceData, "bcastMacAddress"))
+                                devMACAddr = cJSON_GetObjectItem(deviceData, "bcastMacAddress")->valuestring;
+
+                            if(devModel)
+                            {
+                                STRCPY_S(deviceModel, sizeof(deviceModel), devModel);
+                            }
+
+                            if(devMake)
+                            {
+                                STRCPY_S(deviceMake, sizeof(deviceMake), devMake);
+                            }
+
+                            if(devMACAddr)
+                            {
+                                STRCPY_S(deviceMACAddr, sizeof(deviceMACAddr), devMACAddr);
+                            }
+
+                            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Device Model: %s Device Make: %s MAC Addr: %s\n", MODULE_NAME, __FUNCTION__, __LINE__, deviceModel, deviceMake, deviceMACAddr);
+                            break;
+                        }
+                        else
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] not a valid XB device %s \n", MODULE_NAME,__FUNCTION__, __LINE__, devType);
+                        }
+                    } else {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get XB details \n", MODULE_NAME, __FUNCTION__, __LINE__);
+                    }
+                }
+            }
+            else
+            {
+                retVal = FALSE;
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] No AP Details to parse gwcount \n", MODULE_NAME, __FUNCTION__, __LINE__);
+            }
+            cJSON_Delete(rootJson);
+        }
+        else
+        {
+             retVal = FALSE;
+             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] JSON is empty \n",__FUNCTION__, __LINE__ );
+        }
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Device list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        retVal = FALSE;
+    }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return retVal;
+}
+
+bool getAPDetails(unsigned int msgLength)
+{
+    IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t *param = NULL;
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    bool returnStatus = FALSE;
+
+    char apDetails[msgLength + 1];
+    memset(&apDetails, 0, sizeof(apDetails));
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    ret = IARM_Malloc(IARM_MEMTYPE_PROCESSLOCAL, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + msgLength + 1, (void**)&param);
+    if(ret == IARM_RESULT_SUCCESS)
+    {
+        param->bufLength = msgLength;
+
+        ret = IARM_Bus_Call(_IARM_XUPNP_NAME,IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo,
+                            (void *)param, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + msgLength + 1);
+
+        if(ret == IARM_RESULT_SUCCESS)
+        {
+            MEMCPY_S(apDetails, msgLength + 1, ((char *)param + sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t)), param->bufLength);
+            apDetails[param->bufLength] = '\0';
+            returnStatus =  TRUE;
+        }
+        else
+        {
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        }
+
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] apDetails %s \n", MODULE_NAME,__FUNCTION__, __LINE__, apDetails);
+        IARM_Free(IARM_MEMTYPE_PROCESSLOCAL, param);
+
+        /* Parse the UPnP device information */
+        returnStatus = parseAPDetails(apDetails);
+    }
+    else
+    {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo , IARM_Malloc Failed  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return returnStatus;
+}
+
+void* getAPMakeAndModel(void *arg)
+{
+    bool ret = 0;
+    int msgLength;
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+
+    while (!bShutdownWifi) {
+        pthread_mutex_lock(&mutexAPDetails);
+        while(bsignalAPDetailsReady == false) {
+            pthread_cond_wait(&condAPDetails, &mutexAPDetails);
+        }
+
+        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Started fetching device data from upnp msg len = %d  ***** \n", MODULE_NAME, __FUNCTION__, __LINE__, apDetailsBuffLength);
+
+        msgLength = apDetailsBuffLength;
+        bsignalAPDetailsReady = false;
+        ret = getAPDetails(msgLength);
+        pthread_mutex_unlock(&mutexAPDetails);
+
+        if(ret && strlen(deviceModel) > 0 && strlen(deviceMake) > 0)
+        {
+            shutdownDiscovery();
+            break;
+        }
+    }
+
+    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    return NULL;
+}
+
+void collectAPDetails(void)
+{
+    pthread_attr_t attr;
+
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(&apDetailsCollectionThread, &attr, getAPMakeAndModel, NULL);
+}
+#endif
 
 void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned short action)
 {
@@ -1067,7 +1302,24 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
                 memset(&stats, 0, sizeof(wifi_sta_stats_t));
                 wifi_getStats(radioIndex, &stats);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d,%d,%d,%s\n",stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI,(int)stats.sta_LastDataDownlinkRate,(int)stats.sta_LastDataUplinkRate,stats.sta_BAND);
+
+                if(!sameSSid)
+                {
+                    memset(&deviceModel, 0, sizeof(deviceModel));
+                    memset(&deviceMake, 0, sizeof(deviceMake));
+                    memset(&deviceMACAddr, 0, sizeof(deviceMACAddr));
+                    collectAPDetails();
+                    initializeDiscovery();
+                }
+
+                if(!strlen(deviceModel) && !strlen(deviceMake))
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND);
+                }
+                else
+                {
+                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND, deviceMake, deviceModel, deviceMACAddr);
+                }
 #endif // ENABLE_XCAM_SUPPORT, XHC3 and XHB1 not enabled
             }
             else {
@@ -1678,8 +1930,17 @@ void *wifiConnStatusThread(void* arg)
 #if !defined (XHB1) && !defined (XHC3)
             memset(&stats, 0, sizeof(wifi_sta_stats_t));
             wifi_getStats(radioIndex, &stats);
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%d,%d,%d,%d,%d,%s\n",
-                stats.sta_SSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI,(int)stats.sta_LastDataDownlinkRate,(int)stats.sta_LastDataUplinkRate,stats.sta_BAND);
+
+#if !defined(ENABLE_XCAM_SUPPORT)
+            if((strlen(deviceModel) > 0) && (strlen(deviceMake) > 0))
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND, deviceMake, deviceModel, deviceMACAddr);
+            }
+            else
+#endif
+            {
+                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND);
+            }
 #endif
             //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
 
@@ -3662,6 +3923,21 @@ bool shutdownWifi()
     RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] calling pthread_join wifiStatusMonitorThread\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     pthread_join (wifiStatusMonitorThread, NULL);
 
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+    pthread_mutex_lock(&mutexAPDetails);
+    bsignalAPDetailsReady = true;
+    if(0 == pthread_cond_signal(&condAPDetails)) {
+        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signalling apDetailsCollectionThread to exit cond wait \n", MODULE_NAME, __FUNCTION__, __LINE__ );
+    }
+    pthread_mutex_unlock(&mutexAPDetails);
+
+    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] calling pthread_cancel apDetailsCollectionThread \n", MODULE_NAME, __FUNCTION__, __LINE__);
+    if ((apDetailsCollectionThread) && (pthread_cancel(apDetailsCollectionThread) == -1 )) {
+        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] apDetailsCollectionThread cancel failed! \n", MODULE_NAME, __FUNCTION__, __LINE__);
+        result = false;
+    }
+#endif
+
 #ifdef ENABLE_LOST_FOUND
     if ((lafConnectThread) && (pthread_cancel(lafConnectThread) == -1 )) {
         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lafConnectThread cancel failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
@@ -3688,6 +3964,10 @@ bool shutdownWifi()
     wifiStatusLock = PTHREAD_MUTEX_INITIALIZER;
     condGo = PTHREAD_COND_INITIALIZER;
     mutexGo = PTHREAD_MUTEX_INITIALIZER;
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+    condAPDetails = PTHREAD_COND_INITIALIZER;
+    mutexAPDetails = PTHREAD_MUTEX_INITIALIZER;
+#endif
     memset(&gSsidList,0,sizeof gSsidList);
     memset(&savedWiFiConnList,0,sizeof savedWiFiConnList);
     memset(&wifiConnData,0,sizeof wifiConnData);
