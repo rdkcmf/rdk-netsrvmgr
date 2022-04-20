@@ -118,6 +118,7 @@ typedef struct {
     char ipaddress[INET6_ADDRSTRLEN];
     char netmask[INET6_ADDRSTRLEN];
     char gateway[INET6_ADDRSTRLEN];
+    char dhcp_server[INET6_ADDRSTRLEN];
     char primarydns[INET6_ADDRSTRLEN];
     char secondarydns[INET6_ADDRSTRLEN];
     bool isSupported;

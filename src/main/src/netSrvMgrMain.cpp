@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #ifdef ENABLE_STUN_CLIENT
 #include "StunClient.h"
@@ -71,6 +72,7 @@ netMgrConfigProps confProp;
 #define STUN_DEFAULT_CACHE_TIMEOUT 0 //seconds (0 for disable)
 stun::client stunClient;
 #endif
+#define NETSRVMGR_DHCP_SERVERIP_PATH "/tmp/netsrvmgr.dhcp.server.ip"
 
 /*Telemetry Configuration Parameter List*/
 #ifdef USE_RDK_WIFI_HAL
@@ -142,6 +144,8 @@ static bool getPublicIP(IARM_BUS_NetSrvMgr_Iface_StunRequest_t *param);
 #ifdef USE_RDK_WIFI_HAL
 static bool setWifiEnabled (bool newState);
 #endif // USE_RDK_WIFI_HAL
+std::string gDhcpServerIP;
+static bool getDhcpServerIP();
 
 void NetworkMgr_SignalHandler (int sigNum)
 {
@@ -245,6 +249,14 @@ static void eventInterfaceIPAddressStatusChanged (const std::string& interface, 
     if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS, &e, sizeof(e)))
     {
         RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+    }
+
+    if (!is_ipv6)
+    {
+        if (getDhcpServerIP())
+        {
+            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Updated the DHCP Server IP Address: [%s] \n", gDhcpServerIP.c_str());
+        }
     }
 }
 
@@ -1350,6 +1362,31 @@ bool getDNSip (const unsigned int family, char *primaryDNS, char *secondaryDNS)
     return true;
 }
 
+static bool getDhcpServerIP()
+{
+    std::string line;;
+    std::ifstream f(NETSRVMGR_DHCP_SERVERIP_PATH);
+    if (!f.is_open())
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "DHCP SERVER IP file is not present [%s:%d]  \n", __FUNCTION__, __LINE__);
+        return false;
+    }
+
+    std::getline (f, line);
+    struct in_addr ipv4address;
+    if (inet_pton(AF_INET, line.c_str(), &ipv4address) <= 0)
+    {
+        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid ipaddress [%s]\n", __FUNCTION__, line.c_str());
+        f.close();
+        return false;
+    }
+
+    gDhcpServerIP = line;
+    f.close();
+
+    return true;
+}
+
 // returns true if IP settings are the same, false otherwise
 bool ip_settings_compare(const IARM_BUS_NetSrvMgr_Iface_Settings_t& ip_settings1, const IARM_BUS_NetSrvMgr_Iface_Settings_t& ip_settings2)
 {
@@ -1635,6 +1672,18 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway not present [%s:%d] \n", __FUNCTION__, __LINE__);
         param->errCode = NETWORK_NO_DEFAULT_ROUTE;
     }
+
+    /* To DHCP Server IP */
+    if ((param->autoconfig) && (!is_ipv6))
+    {
+        snprintf(param->dhcp_server, sizeof(param->dhcp_server), "%s", gDhcpServerIP.c_str());
+    }
+    else
+    {
+        snprintf(param->dhcp_server, sizeof(param->dhcp_server), "");
+    }
+    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "DHCP Server IP Address [%s] \n", param->dhcp_server);
+
     /* To get Primary and Secondary DNS */
     if (getDNSip(is_ipv6 ? AF_INET6 : AF_INET,primaryDNSaddr, secondaryDNSaddr))
     {
