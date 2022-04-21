@@ -89,6 +89,10 @@ bool WiFiNetworkMgr::instanceIsReady = false;
 pthread_mutex_t wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t wifiScanLock = PTHREAD_MUTEX_INITIALIZER;
 
+#ifdef USE_TELEMETRY_2_0
+wifi_telemetry_ops_t wifi_telemetry_ops;
+#endif // #ifdef USE_TELEMETRY_2_0
+
 WiFiNetworkMgr::WiFiNetworkMgr() {}
 WiFiNetworkMgr::~WiFiNetworkMgr() { }
 
@@ -291,10 +295,9 @@ int WiFiNetworkMgr::removeWifiCredsFromNonSecuredPartition(void)
 
 int  WiFiNetworkMgr::Init()
 {
-    #ifdef ENABLE_IARM
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_ENTRY_EXIT;
 
-
+#ifdef ENABLE_IARM
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDs, getAvailableSSIDs);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsWithName, getAvailableSSIDsWithName);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getAvailableSSIDsAsync, getAvailableSSIDsAsync);
@@ -318,8 +321,6 @@ int  WiFiNetworkMgr::Init()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRoamingCtrls, getRoamingCtrls);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_setRoamingCtrls, setRoamingCtrls);
 #endif
-
-
 #ifdef ENABLE_LOST_FOUND
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getLNFState, getLNFState);
     IARM_Bus_RegisterEventHandler(IARM_BUS_AUTHSERVICE_NAME, IARM_BUS_AUTHSERVICE_EVENT_SWITCH_TO_PRIVATE, _eventHandler);
@@ -329,7 +330,6 @@ int  WiFiNetworkMgr::Init()
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isStopLNFWhileDisconnected, isStopLNFWhileDisconnected);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_isAutoSwitchToPrivateEnabled, isAutoSwitchToPrivateEnabled);
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getSwitchToPrivateResults, getSwitchToPrivateResults);
-
 #endif
     /* Diagnostic Api's*/
     IARM_Bus_RegisterCall(IARM_BUS_WIFI_MGR_API_getRadioProps, getRadioProps);
@@ -342,11 +342,10 @@ int  WiFiNetworkMgr::Init()
     /* Front Panel Event Listner  */
     IARM_Bus_RegisterEventHandler(IARM_BUS_IRMGR_NAME, IARM_BUS_IRMGR_EVENT_IRKEY, _irEventHandler);
 #endif
-
-
     /* Notification RPC:*/
     IARM_Bus_RegisterEvent(IARM_BUS_WIFI_MGR_EVENT_MAX);
-#endif //ENABLE_XCAM
+#endif // #ifdef ENABLE_IARM
+
     memset(&gSsidList, '\0', sizeof(ssidList));
     /*Check for WiFi Capability */
     isWiFiCapable();
@@ -371,11 +370,21 @@ int  WiFiNetworkMgr::Init()
     /* Remove the WiFi credentials from the non-secured partition */
     removeWifiCredsFromNonSecuredPartition();
 
+#ifdef USE_TELEMETRY_2_0
+    wifi_telemetry_ops.init = telemetry_init;
+    wifi_telemetry_ops.event_s = telemetry_event_s;
+    wifi_telemetry_ops.event_d = telemetry_event_d;
+    wifi_telemetry_callback_register (&wifi_telemetry_ops);
+    telemetry_init("wifihal");
+#endif // #ifdef USE_TELEMETRY_2_0
+
     return 0;
 }
 
 int  WiFiNetworkMgr::Start()
 {
+    LOG_ENTRY_EXIT;
+
     bool retVal=false;
 
 #ifdef ENABLE_RTMESSAGE
@@ -466,17 +475,15 @@ int  WiFiNetworkMgr::Start()
     }
 #endif
 
-    /*Register connect and disconnect call back */
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return 0;
 }
 
 int  WiFiNetworkMgr::Stop()
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_ENTRY_EXIT;
+
     wpsConnLock = PTHREAD_MUTEX_INITIALIZER;
     shutdownWifi();
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     #ifdef ENABLE_RTMESSAGE
     #if defined(XHB1) || defined(XHC3)
       pthread_kill(wifiMsgThread, 0);

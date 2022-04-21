@@ -83,6 +83,29 @@ EntryExitLogger::~EntryExitLogger ()
     RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "Exit: %s [%s]\n", func, file);
 }
 
+#ifdef USE_TELEMETRY_2_0
+
+void telemetry_init(char* name)
+{
+    t2_init(name);
+}
+
+void telemetry_event_s(char* marker, char* value)
+{
+    T2ERROR t2error = t2_event_s(marker, value);
+    if (t2error != T2ERROR_SUCCESS)
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "t2_event_s(\"%s\", \"%s\") returned error code %d \n", marker, value, t2error);
+}
+
+void telemetry_event_d(char* marker, int value)
+{
+    T2ERROR t2error = t2_event_d(marker, value);
+    if (t2error != T2ERROR_SUCCESS)
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "t2_event_d(\"%s\", %d) returned error code %d \n", marker, value, t2error);
+}
+
+#endif // #ifdef USE_TELEMETRY_2_0
+
 static bool loadKeyFile (const char* filename, GKeyFile* keyFile);
 static bool writeKeyFile (const char* filename, GKeyFile* keyFile);
 

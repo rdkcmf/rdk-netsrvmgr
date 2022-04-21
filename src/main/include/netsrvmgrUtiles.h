@@ -64,6 +64,16 @@ public:
 
 #define LOG_ENTRY_EXIT EntryExitLogger entry_exit_logger (__FUNCTION__, __FILE__)
 
+#ifdef USE_TELEMETRY_2_0
+
+#include <telemetry_busmessage_sender.h>
+
+void telemetry_init(char* name);
+void telemetry_event_s(char* marker, char* value);
+void telemetry_event_d(char* marker, int value);
+
+#endif // #ifdef USE_TELEMETRY_2_0
+
 namespace netSrvMgrUtiles
 {
 /**

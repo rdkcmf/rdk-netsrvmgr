@@ -1447,6 +1447,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
             RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
+#ifdef USE_TELEMETRY_2_0
+            telemetry_event_d("WIFIV_ERR_HAL_SSIDChngd", 1);
+#endif // #ifdef USE_TELEMETRY_2_0
+
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)

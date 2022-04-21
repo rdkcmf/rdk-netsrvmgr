@@ -117,6 +117,11 @@ AM_LDFLAGS +=  -lrdkmocahal
 AM_CXXFLAGS += -DUSE_RDK_MOCA_HAL
 endif
 
+if TELEMETRY_2_0
+AM_LDFLAGS += -ltelemetry_msgsender
+AM_CXXFLAGS += -DUSE_TELEMETRY_2_0
+endif
+
 if DEBUG
 AM_CFLAGS += -g
 AM_CXXFLAGS += -g

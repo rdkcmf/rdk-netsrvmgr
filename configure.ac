@@ -234,6 +234,17 @@ AC_ARG_ENABLE([breakpad],
         	 esac
         	 ],
     	    [echo "breakpad is disabled"])
+AC_ARG_ENABLE([telemetry_2_0],
+        AS_HELP_STRING([--enable-telemetry_2_0],[This will enable/disable telemetry 2.0]),
+        [
+          case "${enableval}" in
+           yes) TELEMETRY_2_0=true ;;
+           no) TELEMETRY_2_0=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-telemetry_2_0 ]) ;;
+           esac
+           ],
+         [echo " telemetry 2.0 is enabled"])
+AM_CONDITIONAL([TELEMETRY_2_0], [test x$TELEMETRY_2_0 = xtrue])
 AC_SUBST(BREAKPAD_CFLAGS)
 AC_SUBST(BREAKPAD_LFLAGS)
 AC_SUBST(YOCTO_FLAG)

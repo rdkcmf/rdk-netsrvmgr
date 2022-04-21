@@ -63,6 +63,11 @@ if LOSTFOUND
 AM_LDFLAGS += -llaf
 endif
 
+if TELEMETRY_2_0
+AM_LDFLAGS += -ltelemetry_msgsender
+AM_CXXFLAGS += -DUSE_TELEMETRY_2_0
+endif
+
 libwifiservices_la_SOURCES =
 if RDKWIFIHAL
 noinst_LTLIBRARIES = libwifiservices.la
