@@ -38,7 +38,7 @@
 #include "sqlite3.h"
 #include "cJSON.h"
 #include <stdio.h>
-#endif // ENABLE_XCAM_SUPPORT 
+#endif // ENABLE_XCAM_SUPPORT
 
 #define SAVE_SSID 1
 #define DELAY_LNF_TIMER_COUNT 5  //Each time wait will be 60 seconds
@@ -584,42 +584,44 @@ IARM_Result_t WiFiNetworkMgr::getAvailableSSIDs(void *arg)
 void *getAvailableSSIDsThread(void* arg)
 {
    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-   
+
    IARM_Bus_WiFiSrvMgr_SsidList_Param_t param = {0};
-   
+
    IARM_Result_t ret = WiFiNetworkMgr::getAvailableSSIDs(&param);
-   
+
    if(ret == IARM_RESULT_SUCCESS)
    {
       RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] SSID List : [%s]\n", MODULE_NAME,__FUNCTION__, __LINE__, param.curSsids.jdata);
-      
+
       IARM_BUS_WiFiSrvMgr_EventData_t eventData;
-      
+
       strncpy( eventData.data.wifiSSIDList.ssid_list, param.curSsids.jdata, MAX_SSIDLIST_BUF );
       eventData.data.wifiSSIDList.ssid_list[MAX_SSIDLIST_BUF-1] = 0;
-      
+
       IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
                                      IARM_BUS_WIFI_MGR_EVENT_onAvailableSSIDs,
                                      (void *)&eventData, sizeof(eventData));
    }
    else
-      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ret != IARM_RESULT_SUCCESS\n", MODULE_NAME,__FUNCTION__, __LINE__);
-   
+       RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get Available SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
+
    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-   
    return NULL;
 }
 
 IARM_Result_t WiFiNetworkMgr::getAvailableSSIDsAsync(void *arg)
 {
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-    
+
     pthread_t getAvailableSSIDsPThread;
     pthread_attr_t attr;
+    int rc;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(&getAvailableSSIDsPThread, &attr, getAvailableSSIDsThread, NULL);
-
+    rc = pthread_create(&getAvailableSSIDsPThread, &attr, getAvailableSSIDsThread, NULL);
+    if (rc) {
+        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s] Thread creation failed with rc = %d\n", __FUNCTION__, rc);
+    }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return IARM_RESULT_SUCCESS;
 }
@@ -653,7 +655,7 @@ static IARM_Result_t scanAndBroadcastResults(bool moreData)
    {
       RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] SSID List : [%s]\n", MODULE_NAME,__FUNCTION__, __LINE__, param.curSsids.jdata);
       IARM_BUS_WiFiSrvMgr_EventData_t eventData;
-    
+
       strncpy( eventData.data.wifiSSIDList.ssid_list, param.curSsids.jdata, MAX_SSIDLIST_BUF );
       eventData.data.wifiSSIDList.ssid_list[MAX_SSIDLIST_BUF-1] = 0;
       eventData.data.wifiSSIDList.more_data = moreData;
@@ -663,7 +665,7 @@ static IARM_Result_t scanAndBroadcastResults(bool moreData)
                                      (void *)&eventData, sizeof(eventData));
    }
    else
-      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ret != IARM_RESULT_SUCCESS\n", MODULE_NAME,__FUNCTION__, __LINE__);
+      RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to broadcast SSID list\n", MODULE_NAME,__FUNCTION__, __LINE__);
    return ret;
 }
 
@@ -687,7 +689,7 @@ void *getAvailableSSIDsIncrThread(void* arg)
       getTimeValDiff(&start,&end,&timeDiff);
       RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "Successfully broadcasted scan results of 5GHz preferred channels in %ld.%09ld seconds.\n",(long)timeDiff.tv_sec,timeDiff.tv_nsec);
    }
-   else 
+   else
    {
       RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"Failed to broadcast 5GHz preferred scan results\n");
    }
@@ -1098,7 +1100,7 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
 
 /**
  *   Convert Security mode to String based on the Broadband specification
- *   Supported Security modes are 
+ *   Supported Security modes are
  *          None
  *          WEP-64
  *          WEP-128
@@ -1107,7 +1109,7 @@ IARM_Result_t WiFiNetworkMgr::getPairedSSID(void *arg)
  *          WPA-WPA2-Personal
  *          WPA-Enterprise
  *          WPA2-Enterprise
- *          WPA-WPA2-Enterprise  
+ *          WPA-WPA2-Enterprise
  */
 bool convertSecurityModeToString(char* securityModeStr,SsidSecurity sec_mode)
 {
@@ -1118,7 +1120,7 @@ bool convertSecurityModeToString(char* securityModeStr,SsidSecurity sec_mode)
       RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"securityModeStr is NULL, Failed to get Security mode string.\n");
       ret = false;
    }
-   else 
+   else
    {
       switch(sec_mode)
       {
@@ -1278,7 +1280,7 @@ IARM_Result_t WiFiNetworkMgr::cancelWPSPairing (void *arg)
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
 
 #ifdef USE_RDK_WIFI_HAL
-    retVal = cancelWPSPairingOperation(); 
+    retVal = cancelWPSPairingOperation();
 #endif
     param->status = retVal;
 
@@ -1514,7 +1516,7 @@ IARM_Result_t WiFiNetworkMgr::getRadioProps(void *arg)
     int actualRadioIndex = 0;
     if(strncmp(freqBand,"5GHz",BUFF_MIN-1) == 0)
         actualRadioIndex = 1;
-    
+
     if ( wifi_getRadioSupportedStandards(actualRadioIndex, output_string) == RETURN_OK) {
         RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] radio Supported standards  are %s .\n", MODULE_NAME,__FUNCTION__, __LINE__, output_string);
         snprintf(param->data.radio.params.supportedStandards,BUFF_LENGTH_24,output_string);

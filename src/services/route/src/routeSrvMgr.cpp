@@ -208,7 +208,7 @@ void getGatewayRouteData()
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     rc = pthread_create(&getGatewayRouteDataThread, &attr, &getGatewayRouteDataThrd, NULL);
     if (rc) {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"ERROR; return code from pthread_create() is %d\n", rc);
+        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"ERROR; getGatewayRouteData return code from pthread_create() is %d\n", rc);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
 }
@@ -235,7 +235,7 @@ gboolean RouteNetworkMgr::storeRouteDetails(unsigned int messageLength)
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"Failure in getting gateway results. \n");
+        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failure in getting gateway results. \n", __FUNCTION__, __LINE__);
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
     return retVal;

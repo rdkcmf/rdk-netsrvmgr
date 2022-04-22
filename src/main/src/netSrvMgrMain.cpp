@@ -1342,7 +1342,7 @@ bool getDNSip (const unsigned int family, char *primaryDNS, char *secondaryDNS)
     std::ifstream f("/etc/resolv.dnsmasq");
     if (!f.is_open())
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "DNS file is not present [%s:%d]  \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "DNS file is not present [%s:%d]  \n", __FUNCTION__, __LINE__);
         return false;
     }
     for (int i = 0; i < 2 && std::getline (f, line); )
@@ -1630,7 +1630,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipv6 ipaddress not found.\n", __FUNCTION__, __LINE__);
             param->errCode = NETWORK_IPADDRESS_NOTFOUND;
             return true;
         }
@@ -1640,7 +1640,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         is_ipv6=false;
         if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET, param->ipaddress, param->netmask))
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipv4 ipaddress not found.\n", __FUNCTION__, __LINE__);
             param->errCode = NETWORK_IPADDRESS_NOTFOUND;
             return true;
         }
