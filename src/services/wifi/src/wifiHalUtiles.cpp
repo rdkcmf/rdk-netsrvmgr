@@ -139,7 +139,7 @@ static void logs_Period2_Params();
 #define LFAT_VERSION                    "lfat_version"
 #define LFAT_TTL                        "lfat_ttl"
 #define LFAT_CONF_FILE                  "/mnt/ramdisk/env/.lnf_conf"
-#define DATA_LEN			4096
+#define DATA_LEN                        4096
 #define SCRIPT_FILE_TO_GET_DEVICE_ID    "/lib/rdk/getDeviceId.sh"
 #define WIFI_CONNECT_TIME               30
 
@@ -197,7 +197,7 @@ void rtConnection_init()
 #if defined(XHB1) || defined(XHC3)
   rtConnection_AddListener(con_recv, "RDKC.WIFI.CONNECT", onConnectWifi, con_recv);
 #endif
-  RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): rtConnection_init done ", __FILE__, __LINE__);
+ LOG_INFO("rtConnection_init done");
 }
 
 void rtConnection_destroy()
@@ -233,7 +233,7 @@ void onMessage(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void
 
 void onConnectWifi(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, void* closure)
 {
-  RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Called onConnectWifi ", __FILE__, __LINE__);
+ LOG_INFO("Called onConnectWifi");
 
   rtConnection con_recv = (rtConnection) closure;
 
@@ -261,12 +261,12 @@ void onConnectWifi(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, 
     rtMessage_GetString(req, "ap_SSID", &ap_SSID);
     rtMessage_GetInt32(req, "securityMode", &securityMode);
     rtMessage_GetString(req, "ap_security_PreSharedKey", &ap_security_PreSharedKey);
-    RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Received ap_SSID : %s securityMode : %d ap_security_PreSharedKey : %s", __FILE__, __LINE__, ap_SSID, securityMode, ap_security_PreSharedKey);
+    LOG_INFO("Received ap_SSID : %s securityMode : %d ap_security_PreSharedKey : %s", ap_SSID, securityMode, ap_security_PreSharedKey);
 
 #ifdef USE_RDK_WIFI_HAL
 /*    int status = scan_Neighboring_WifiAP(jbuff);
     jBuffLen = strlen(jbuff);
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Scan AP's SSID list buffer size : \n\"%d\"\n", MODULE_NAME,__FUNCTION__, __LINE__, jBuffLen);*/
+    LOG_INFO( "[%s] Scan AP's SSID list buffer size : \n\"%d\"", MODULE_NAME, jBuffLen);*/
 #endif
 
     retVal = connect_withSSID(ssidIndex, const_cast<char*>(ap_SSID), (SsidSecurity)6, NULL, const_cast<char*>(ap_security_PreSharedKey), const_cast<char*>(ap_security_PreSharedKey), saveSSID, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
@@ -277,19 +277,19 @@ void onConnectWifi(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, 
 
       while (false == isWifiConnected() && retry <= WIFI_CONNECT_TIME)
       {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d):  Waiting for wifi connection\n", __FILE__, __LINE__);
+       LOG_INFO("Waiting for wifi connection");
         sleep(1);
         retry++;
       }
 
       if (true == isWifiConnected())
       {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Wifi connection success\n", __FILE__, __LINE__);
+       LOG_INFO("Wifi connection success");
         retVal = 0;
       }
       else if (retry >= WIFI_CONNECT_TIME)
       {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): Wifi connection time out\n", __FILE__, __LINE__);
+       LOG_INFO("Wifi connection time out");
       }
     }
 
@@ -305,13 +305,13 @@ void onConnectWifi(rtMessageHeader const* hdr, uint8_t const* buff, uint32_t n, 
 
 void* rtMessage_Receive(void*)
 {
-  RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"%s(%d): rtMessage_Receive\n", __FILE__, __LINE__);
+  LOG_INFO("rtMessage_Receive");
   while (1)
   {
     rtError err = rtConnection_Dispatch(con_recv);
     if (err != RT_OK)
     {
-      RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"%s(%d): Dispatch Error: %s", __FILE__, __LINE__, rtStrError(err));
+      LOG_DBG("Dispatch Error: %s", rtStrError(err));
     }
     //Adding sleep to avoid logs flooding in case of rtrouted bad state
     usleep(10000);
@@ -326,7 +326,7 @@ bool getHALVersion()
     if(wifiHALVer[0] == 0)
     {
         wifi_getHalVersion(wifiHALVer);
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] WiFi HAL Version is %s \n",MODULE_NAME,__FUNCTION__, __LINE__,wifiHALVer);
+        LOG_INFO("[%s] WiFi HAL Version is %s",MODULE_NAME, wifiHALVer);
     }
     return true;
 }
@@ -336,11 +336,11 @@ SsidSecurity get_wifiSecurityModeFromString(char *secModeString, char *encryptio
 {
     if (!secModeString || !encryptionType)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to NULL. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Failed due to NULL.", MODULE_NAME);
         return NET_WIFI_SECURITY_NONE;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] securitymode = %s encryption = %s\n",
-            MODULE_NAME, __FUNCTION__, __LINE__, secModeString, encryptionType);
+    LOG_TRACE("[%s] securitymode = %s encryption = %s",
+            MODULE_NAME, secModeString, encryptionType);
     if (strlen(secModeString) == 0 && strlen(encryptionType) == 0)
         return NET_WIFI_SECURITY_NONE;
     if (0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
@@ -418,8 +418,8 @@ void logMilestone(const char *msg_code)
 static IARM_Result_t WiFi_IARM_Bus_BroadcastEvent(const char *ownerName, IARM_EventId_t eventId, void *data, size_t len)
 {
   //  if( !ethernet_on() )
-        IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
-	return IARM_RESULT_SUCCESS;
+    IARM_Bus_BroadcastEvent(ownerName, eventId, data, len);
+     return IARM_RESULT_SUCCESS;
 }
 
 bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType)
@@ -427,7 +427,7 @@ bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType)
     bool bRet;
     IARM_Bus_MFRLib_GetSerializedData_Param_t param;
     IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     memset(&param, 0, sizeof(param));
     param.type = mfrType;
     iarmRet = IARM_Bus_Call(IARM_BUS_MFRLIB_NAME, IARM_BUS_MFRLIB_API_GetSerializedData, &param, sizeof(param));
@@ -435,22 +435,22 @@ bool getMfrData(GString* mfrDataStr,mfrSerializedType_t mfrType)
     {
         if(param.buffer && param.bufLen)
         {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] serialized data %s for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,param.buffer,mfrType );
+            LOG_TRACE("[%s] serialized data %s for mfrtype %d", MODULE_NAME, param.buffer,mfrType );
             g_string_assign(mfrDataStr,param.buffer);
             bRet = true;
         }
         else
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] serialized data is empty for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrType );
+            LOG_ERR("[%s] serialized data is empty for mfrtype %d ",MODULE_NAME, mfrType );
             bRet = false;
         }
     }
     else
     {
         bRet = false;
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM CALL failed  for mfrtype %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrType );
+        LOG_ERR("[%s] IARM CALL failed  for mfrtype %d",MODULE_NAME, mfrType );
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return bRet;
 }
 #endif
@@ -459,7 +459,7 @@ static void set_WiFiStatusCode( WiFiStatusCode_t status)
 {
     pthread_mutex_lock(&wifiStatusLock);
     if(gWifiAdopterStatus != status)
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Wifi Status changed to %d \n", MODULE_NAME,__FUNCTION__, __LINE__, status );
+        LOG_TRACE("[%s] Wifi Status changed to %d", MODULE_NAME, status );
     gWifiAdopterStatus = status;
     pthread_mutex_unlock(&wifiStatusLock);
 }
@@ -516,9 +516,9 @@ WiFiStatusCode_t get_WifiRadioStatus()
 {
     bool ret = false;
     WiFiStatusCode_t status = WIFI_UNINSTALLED;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     status = get_WiFiStatusCode();
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit with state %d\n", MODULE_NAME,__FUNCTION__, __LINE__, status );
+    LOG_TRACE("[%s] Exit with state %d", MODULE_NAME, status );
     return status;
 }
 
@@ -526,12 +526,12 @@ void set_WiFiConnectionType( WiFiConnectionTypeCode_t value)
 {
     if(value < 0 || value > WIFI_CON_MAX)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Trying to set invalid Wifi Connection Type %d \n", MODULE_NAME,__FUNCTION__, __LINE__, value );
+        LOG_ERR("[%s] Trying to set invalid Wifi Connection Type %d ", MODULE_NAME, value );
         return;
     }
 
     if(gWifiConnectionType != value)
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Wifi Connection Type changed to %d ..\n", MODULE_NAME,__FUNCTION__, __LINE__, value );
+        LOG_ERR("[%s] Wifi Connection Type changed to %d ..", MODULE_NAME, value );
 
     gWifiConnectionType = value;
 }
@@ -548,7 +548,7 @@ bool updateWiFiList()
 #ifdef ENABLE_IARM
     HOSTIF_MsgData_t wifiParam = {0};
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     memset(&wifiParam, '\0', sizeof(HOSTIF_MsgData_t));
     strncpy(wifiParam.paramName, WIFI_SSID_ENABLE_PARAM, strlen(WIFI_SSID_ENABLE_PARAM) +1);
@@ -562,7 +562,7 @@ bool updateWiFiList()
     {
         bool ssidStatus = get_boolean(wifiParam.paramValue);
 
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Retrieved values from tr69hostif as \'%s\':\'%d\'.\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_SSID_ENABLE_PARAM, ssidStatus);
+        LOG_DBG("[%s] Retrieved values from tr69hostif as \'%s\':\'%d\'.", MODULE_NAME, WIFI_SSID_ENABLE_PARAM, ssidStatus);
 
         if(ssidStatus)
         {
@@ -598,12 +598,12 @@ bool updateWiFiList()
         }
         else
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] WiFi is disabled. [\'%s\':%d] \n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_SSID_ENABLE_PARAM, ssidStatus);
+            LOG_INFO("[%s] WiFi is disabled. [\'%s\':%d] ", MODULE_NAME, WIFI_SSID_ENABLE_PARAM, ssidStatus);
             ret = false;
         }
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
 #endif
     return ret;
 }
@@ -622,23 +622,23 @@ bool gpvFromTR069hostif( HOSTIF_MsgData_t *param)
     param->reqType = HOSTIF_GET;
 //    HOSTIF_MsgData_t param = &wifiParam;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     /* IARM get Call*/
     ret = IARM_Bus_Call(IARM_BUS_TR69HOSTIFMGR_NAME, IARM_BUS_TR69HOSTIFMGR_API_GetParams, (void *)param, sizeof(HOSTIF_MsgData_t));
 
     if(ret != IARM_RESULT_SUCCESS)
     {
-        RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d] Failed with returned \'%d\' for '\%s\''. \n",  MODULE_NAME,__FUNCTION__, __LINE__, ret, param->paramName);
+        LOG_FATAL("[%s] Failed with returned \'%d\' for '\%s\''.",  MODULE_NAME, ret, param->paramName);
         //ret = ERR_REQUEST_DENIED;
         return false;
     }
     else
     {
         ret = IARM_RESULT_SUCCESS;
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Successfully returned the value of \'%s\'.\n",  MODULE_NAME,__FUNCTION__, __LINE__, param->paramName);
+        LOG_DBG("[%s] Successfully returned the value of \'%s\'.",  MODULE_NAME, param->paramName);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return true;
 }
 #endif
@@ -648,19 +648,19 @@ void getWpaSsid(WiFiConnectionStatus *curSSIDConnInfo) {
     FILE *in = NULL;
     char buff[512] = {'\0'};
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     if ( WIFI_CONNECTED == getWpaStatus())
     {
         if(!(in = popen("wpa_cli status | grep -i '^ssid' | cut -d = -f 2", "r")))
         {
-	    RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d] Failed to read wpa_cli status.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
-	    return;
+              LOG_FATAL("[%s] Failed to read wpa_cli status.", MODULE_NAME);
+              return;
         }
 
         if(fgets(buff, sizeof(buff), in)!=NULL)
         {
-	    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d]  SSID: %s\n", MODULE_NAME,__FUNCTION__, __LINE__, buff);
+	    LOG_DBG("[%s] SSID: %s", MODULE_NAME, buff);
 	    size_t len = strlen(buff);
 	    if (len > 0 && buff[len-1] == '\n') {
 	        buff[len-1] = '\0';
@@ -669,7 +669,7 @@ void getWpaSsid(WiFiConnectionStatus *curSSIDConnInfo) {
 	    curSSIDConnInfo->isConnected = true;
         }
         else {
-	    RDK_LOG( RDK_LOG_FATAL, LOG_NMGR, "[%s:%s:%d]  Failed to get SSID.\n", MODULE_NAME,__FUNCTION__, __LINE__);
+	    LOG_FATAL("[%s] Failed to get SSID.", MODULE_NAME);
         }
         pclose(in);
 
@@ -685,11 +685,11 @@ WiFiStatusCode_t getWpaStatus()
     FILE *in = NULL;
     char buff[512] = {'\0'};
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     if(!(in = popen("wpa_cli status | grep -i wpa_state | cut -d = -f 2", "r")))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to read wpa_cli status.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Failed to read wpa_cli status.", MODULE_NAME);
         return wpa_state;
     }
 
@@ -699,11 +699,11 @@ WiFiStatusCode_t getWpaStatus()
 
     if (c == NULL)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d]  Failed to get State.\n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] Failed to get State.", MODULE_NAME);
         return wpa_state;
     }
 
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  State: %s\n", MODULE_NAME,__FUNCTION__, __LINE__, buff);
+    LOG_INFO("[%s] State: %s", MODULE_NAME, buff);
 
     // possible wpa_state values (as seen in wpa_supplicant_state_txt() function of wpa_supplicant) are:
     // DISCONNECTED, INACTIVE, INTERFACE_DISABLED, SCANNING,
@@ -730,7 +730,7 @@ WiFiStatusCode_t getWpaStatus()
         wpa_state = WIFI_DISABLED;
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return wpa_state;
 }
 
@@ -747,12 +747,12 @@ bool connect_WpsPush()
     IARM_BUS_WiFiSrvMgr_EventData_t eventData;
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     memset(&eventData, 0, sizeof(eventData));
 
 /*    if(WIFI_CONNECTING == get_WiFiStatusCode()) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connecting to AP is in Progress..., please try after 120 seconds.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Connecting to AP is in Progress..., please try after 120 seconds.", MODULE_NAME);
         return ret;
     }*/
 
@@ -777,8 +777,8 @@ bool connect_WpsPush()
 
         if(RETURN_OK == wpsStatus)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Received WPS KeyCode \"%d\";  Successfully called \"wifi_setCliWpsButtonPush(%d)\"; WPS Push button Success. \n",\
-                     MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+            LOG_INFO("[%s] Received WPS KeyCode \"%d\";  Successfully called \"wifi_setCliWpsButtonPush(%d)\"; WPS Push button Success. ",\
+                     MODULE_NAME, ssidIndex, wpsStatus);
             ret = true;
 
             /*Generate Event for Connect State
@@ -788,8 +788,8 @@ bool connect_WpsPush()
         }
         else
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_setCliWpsButtonPush(%d)\", WPS Push button press failed with status code (%d) \n",
-                     MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+            LOG_ERR("[%s] Received WPS KeyCode \"%d\";  Failed in \"wifi_setCliWpsButtonPush(%d)\", WPS Push button press failed with status code (%d) ",
+                     MODULE_NAME, ssidIndex, wpsStatus);
 
             eventData.data.wifiStateChange.state = WIFI_FAILED;
             WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
@@ -805,19 +805,19 @@ bool connect_WpsPush()
             time_t start_time = time(NULL);
             time_t timeout_period = start_time + confProp.wifiProps.max_timeout/*MAX_TIME_OUT_PERIOD */;
 
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Received WPS KeyCode \"%d\"; Already Connected to \"%s\" AP. \"wifi_disconnectEndpointd)\" Successfully on WPS Push. \n",\
-                     MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, wifiConnData.ssid, wpsStatus);
+            LOG_INFO("[%s] Received WPS KeyCode \"%d\"; Already Connected to \"%s\" AP. \"wifi_disconnectEndpointd)\" Successfully on WPS Push. ",\
+                     MODULE_NAME, ssidIndex, wifiConnData.ssid, wpsStatus);
             /* Check for status change from Callback function */
             while (start_time < timeout_period)
             {
                 if(WIFI_DISCONNECTED == gWifiAdopterStatus)  {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully received Disconnect state \"%d\". \n", MODULE_NAME,__FUNCTION__, __LINE__, gWifiAdopterStatus);
+                    LOG_INFO("[%s] Successfully received Disconnect state \"%d\". ", MODULE_NAME, gWifiAdopterStatus);
                     set_WiFiConnectionType(WIFI_CON_WPS);
                     ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
                     eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
                     set_WiFiStatusCode(eventData.data.wifiStateChange.state);
                     WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
-                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'%s\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__,
+                    LOG_ERR("[%s] Notification on 'onWIFIStateChanged' with state as \'%s\'(%d).", MODULE_NAME,
                              (ret?"CONNECTING": "FAILED"), eventData.data.wifiStateChange.state);
                     if(ret) {
                         remove(WIFI_BCK_FILENAME);
@@ -826,20 +826,20 @@ bool connect_WpsPush()
                     break;
                 }
                 else {
-                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to Disconnect \"%s\";  wait for %d sec (i.e., loop time : %s) to update disconnect state by wifi_disconnect_callback. (%d) \n",
-                             MODULE_NAME,__FUNCTION__, __LINE__, wifiConnData.ssid, MAX_TIME_OUT_PERIOD, ctime(&start_time), gWifiAdopterStatus);
+                    LOG_ERR("[%s] Failed to Disconnect \"%s\";  wait for %d sec (i.e., loop time : %s) to update disconnect state by wifi_disconnect_callback. (%d)",
+                             MODULE_NAME, wifiConnData.ssid, MAX_TIME_OUT_PERIOD, ctime(&start_time), gWifiAdopterStatus);
                     sleep(RETRY_TIME_INTERVAL);
                     start_time = time(NULL);
                 }
             }
         } else {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Received WPS KeyCode \"%d\";  Failed in \"wifi_disconnectEndpointd(%d)\", WPS Push button press failed with status code (%d) \n",
-                     MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, wpsStatus);
+            LOG_ERR("[%s] Received WPS KeyCode \"%d\";  Failed in \"wifi_disconnectEndpointd(%d)\", WPS Push button press failed with status code (%d)",
+                     MODULE_NAME, ssidIndex, wpsStatus);
         }
 
         if(false == ret)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Since failed to disconnect, so reconnecintg again. \"%d\". \n", MODULE_NAME,__FUNCTION__, __LINE__);
+            LOG_INFO("[%s] Since failed to disconnect, so reconnecintg again. \"%d\". ", MODULE_NAME);
             set_WiFiConnectionType(WIFI_CON_WPS);
             ret = (RETURN_OK == wifi_setCliWpsButtonPush(ssidIndex))?true:false;
             eventData.data.wifiStateChange.state = (ret)? WIFI_CONNECTING: WIFI_FAILED;
@@ -853,7 +853,7 @@ bool connect_WpsPush()
 #endif
 #endif
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return ret;
 }
 
@@ -871,7 +871,7 @@ static bool get_WpsPIN(char *wps_pin)
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s] getting serialized pin from mfr failed.\n", __FUNCTION__);
+        LOG_ERR("[%s] getting serialized pin from mfr failed.");
     }
     g_string_free(mfrSerialPin, TRUE);
 #endif
@@ -894,7 +894,7 @@ bool connect_WpsPin(char *wps_pin)
     if (!wps_pin)
         return false;
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s] wps_pin = %s\n", __FUNCTION__, wps_pin);
+    LOG_DBG("[%s] wps_pin = %s", wps_pin);
 
     if (0 == strcmp(wps_pin, "xxxxxxxx") && false == get_WpsPIN(wps_pin))
         return false;
@@ -912,12 +912,12 @@ bool connect_WpsPin(char *wps_pin)
     INT wpsStatus = wifi_setCliWpsEnrolleePin(1, wps_pin);
     if (RETURN_OK == wpsStatus)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s] wifi_setCliWpsEnrolleePin called successfully\n", __FUNCTION__);
+        LOG_INFO("wifi_setCliWpsEnrolleePin called successfully");
         return true;
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s] wifi_setCliWpsEnrolleePin returned %d\n", __FUNCTION__, wpsStatus);
+        LOG_ERR("wifi_setCliWpsEnrolleePin returned %d", wpsStatus);
 #ifdef ENABLE_IARM
         IARM_BUS_WiFiSrvMgr_EventData_t eventData;
         memset(&eventData, 0, sizeof(eventData));
@@ -933,7 +933,7 @@ bool connect_WpsPin(char *wps_pin)
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+   LOG_TRACE("[%s] Enter..");
     if (strcmp(owner, IARM_BUS_SYSMGR_NAME) == 0)
     {
         switch(eventId)
@@ -946,13 +946,13 @@ void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t l
                 if(0 == pthread_cond_signal(&condAPDetails))
                 {
                     apDetailsBuffLength = eventData->data.xupnpData.deviceInfoLength;
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signal to fetch the data from upnp  %d \n", MODULE_NAME,__FUNCTION__, __LINE__, eventData->data.xupnpData.deviceInfoLength );
+                    LOG_INFO("[%s] Signal to fetch the data from upnp  %d", MODULE_NAME, eventData->data.xupnpData.deviceInfoLength );
                 }
                 pthread_mutex_unlock(&mutexAPDetails);
                 break;
             }
         }
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_TRACE("[%s] Exit...", MODULE_NAME);
     }
 }
 
@@ -970,20 +970,20 @@ void shutdownDiscovery(void)
 INT wifi_connect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
 {
     int ret = RETURN_OK;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     wifiStatusCode_t connCode = *connStatus;
     wifi_status_action (connCode, AP_SSID, (unsigned short) ACTION_ON_CONNECT);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return ret;
 }
 
 INT wifi_disconnect_callback(INT ssidIndex, CHAR *AP_SSID, wifiStatusCode_t *connStatus)
 {
     int ret = RETURN_OK;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     wifiStatusCode_t connCode = *connStatus;
     wifi_status_action (connCode, AP_SSID, (unsigned short)ACTION_ON_DISCONNECT);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return ret;
 }
 
@@ -992,7 +992,7 @@ bool parseAPDetails(char *array)
 {
     guint counter = 0;
     bool retVal = TRUE;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter..", MODULE_NAME);
 
     if(array)
     {
@@ -1004,7 +1004,7 @@ bool parseAPDetails(char *array)
             if(deviceFullData)
             {
                 guint deviceCount = cJSON_GetArraySize(deviceFullData);
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] gateway count in json %d \n", __FUNCTION__, __LINE__, deviceCount);
+                LOG_INFO("gateway count in json %d", deviceCount);
                 char *devType, *devModel, *devMake, *devMACAddr;
 
                 for (counter = 0; counter < deviceCount; counter++)
@@ -1018,7 +1018,7 @@ bool parseAPDetails(char *array)
 
                         if(g_strrstr(g_strstrip(devType),"XB"))
                         {
-                            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Device type  %s Device count %d \n", MODULE_NAME, __FUNCTION__, __LINE__, devType, counter);
+                            LOG_INFO("[%s] Device type  %s Device count %d", MODULE_NAME, devType, counter);
                             if (cJSON_GetObjectItem(deviceData, "modelClass"))
                                 devModel = cJSON_GetObjectItem(deviceData, "modelClass")->valuestring;
                             if(cJSON_GetObjectItem(deviceData, "make"))
@@ -1041,38 +1041,38 @@ bool parseAPDetails(char *array)
                                 STRCPY_S(deviceMACAddr, sizeof(deviceMACAddr), devMACAddr);
                             }
 
-                            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Device Model: %s Device Make: %s MAC Addr: %s\n", MODULE_NAME, __FUNCTION__, __LINE__, deviceModel, deviceMake, deviceMACAddr);
+                            LOG_INFO("[%s] Device Model: %s Device Make: %s MAC Addr: %s", MODULE_NAME, deviceModel, deviceMake, deviceMACAddr);
                             break;
                         }
                         else
                         {
-                            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] not a valid XB device %s \n", MODULE_NAME,__FUNCTION__, __LINE__, devType);
+                           LOG_ERR("[%s] not a valid XB device %s", MODULE_NAME, devType);
                         }
                     } else {
-                        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get XB details \n", MODULE_NAME, __FUNCTION__, __LINE__);
+                        LOG_ERR("[%s] Failed to get XB details", MODULE_NAME);
                     }
                 }
             }
             else
             {
                 retVal = FALSE;
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] No AP Details to parse gwcount \n", MODULE_NAME, __FUNCTION__, __LINE__);
+                LOG_INFO("[%s] No AP Details to parse gwcount", MODULE_NAME);
             }
             cJSON_Delete(rootJson);
         }
         else
         {
              retVal = FALSE;
-             RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] JSON is empty \n",__FUNCTION__, __LINE__ );
+             LOG_INFO("JSON is empty");
         }
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Device list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Device list is empty", MODULE_NAME);
         retVal = FALSE;
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return retVal;
 }
 
@@ -1085,7 +1085,7 @@ bool getAPDetails(unsigned int msgLength)
     char apDetails[msgLength + 1];
     memset(&apDetails, 0, sizeof(apDetails));
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     ret = IARM_Malloc(IARM_MEMTYPE_PROCESSLOCAL, sizeof(IARM_Bus_SYSMGR_GetXUPNPDeviceInfo_Param_t) + msgLength + 1, (void**)&param);
     if(ret == IARM_RESULT_SUCCESS)
@@ -1103,10 +1103,10 @@ bool getAPDetails(unsigned int msgLength)
         }
         else
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+            LOG_ERR("[%s] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo IARM failed in the fetch ", MODULE_NAME);
         }
 
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] apDetails %s \n", MODULE_NAME,__FUNCTION__, __LINE__, apDetails);
+        LOG_TRACE("[%s] apDetails %s", MODULE_NAME, apDetails);
         IARM_Free(IARM_MEMTYPE_PROCESSLOCAL, param);
 
         /* Parse the UPnP device information */
@@ -1114,10 +1114,10 @@ bool getAPDetails(unsigned int msgLength)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo , IARM_Malloc Failed  \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] IARM_BUS_XUPNP_API_GetXUPNPDeviceInfo , IARM_Malloc Failed ", MODULE_NAME);
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return returnStatus;
 }
 
@@ -1126,7 +1126,7 @@ void* getAPMakeAndModel(void *arg)
     bool ret = 0;
     int msgLength;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     while (!bShutdownWifi) {
         pthread_mutex_lock(&mutexAPDetails);
@@ -1134,7 +1134,7 @@ void* getAPMakeAndModel(void *arg)
             pthread_cond_wait(&condAPDetails, &mutexAPDetails);
         }
 
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Started fetching device data from upnp msg len = %d  ***** \n", MODULE_NAME, __FUNCTION__, __LINE__, apDetailsBuffLength);
+        LOG_DBG("[%s] ***** Started fetching device data from upnp msg len = %d  ***** ", MODULE_NAME, apDetailsBuffLength);
 
         msgLength = apDetailsBuffLength;
         bsignalAPDetailsReady = false;
@@ -1148,7 +1148,7 @@ void* getAPMakeAndModel(void *arg)
         }
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return NULL;
 }
 
@@ -1180,7 +1180,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     memset(&eventData, 0, sizeof(eventData));
 #endif
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     if ((strcmp(savedWiFiConnList.ssidSession.ssid, "") != 0) && (strcmp(savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0))
     {
@@ -1188,7 +1188,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     }
     switch(connCode) {
     case WIFI_HAL_SUCCESS:
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully %s to AP %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, ap_SSID);
+        LOG_INFO("[%s] Successfully %s to AP %s.", MODULE_NAME, connStr, ap_SSID);
         if (ACTION_ON_CONNECT == action) {
             set_WiFiStatusCode(WIFI_CONNECTED);
 #ifdef ENABLE_IARM
@@ -1198,19 +1198,18 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             if (! laf_is_lnfssid(ap_SSID))
 #endif //ENABLE_LOST_FOUND
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] savedWiFiConnList.ssidSession.ssid = %s ap_SSID = %s\n",MODULE_NAME,__FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid,ap_SSID);
+                LOG_INFO("[%s] savedWiFiConnList.ssidSession.ssid = %s ap_SSID = %s",MODULE_NAME, savedWiFiConnList.ssidSession.ssid,ap_SSID);
                 if (strcmp (savedWiFiConnList.ssidSession.ssid, ap_SSID) != 0)
                 {
                     storeMfrWifiCredentials();
 #ifdef ENABLE_LOST_FOUND
                     //bounce xre connection if we move from one private ssid to another ssid
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Moving from one SSID = %s  to another SSID = %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,savedWiFiConnList.ssidSession.ssid,ap_SSID);
+                    LOG_INFO("[%s] Moving from one SSID = %s  to another SSID = %s", MODULE_NAME,savedWiFiConnList.ssidSession.ssid,ap_SSID);
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
                     xreReconnectReason=20; //RECONNECT_REASON_WIFI_NETWORK_CHANGE
                     if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
                     {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
- 
+                        LOG_ERR("refresh xre session failed ."); 
                     }
 #endif // ENABLE_XCAM_SUPPORT, XHC3 and XHB1 not enabled
 #ifdef ENABLE_NLMONITOR
@@ -1221,7 +1220,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                        //cleanup Global IPv6s assigned.
                        NetLinkIfc::get_instance()->deleteinterfaceip(ifcStr,AF_INET6);
                        NetLinkIfc::get_instance()->deleteinterfaceroutes(ifcStr,AF_INET6);
-                       RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Clearing ipv6 ip and routes .\n",__FUNCTION__, __LINE__);
+                       LOG_INFO("Clearing ipv6 ip and routes .");
                        struct stat stat_buf;
                        if (stat("/tmp/ani_wifi", &stat_buf) == 0) // if active network interface = WIFI
                        {
@@ -1236,7 +1235,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                        }
                    }
                    else
-                       RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No WiFi interface .\n",__FUNCTION__, __LINE__);
+                       LOG_ERR("No WiFi interface .");
 #endif
 #endif //ENABLE_LOST_FOUND
                 }
@@ -1246,25 +1245,25 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #if 0       /* Do not bounce for any network switch. Do it only from LF to private. */
             if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
             {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
+                LOG_ERR("[%s] refresh xre session failed .", MODULE_NAME);
             }
 #endif
 #endif
             /* one condition variable is signaled */
 #ifndef ENABLE_XCAM_SUPPORT
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]Trigger DHCP lease for new connection \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_INFO("[%s] Trigger DHCP lease for new connection", MODULE_NAME);
             if (access("/opt/persistent/ip.wifi.0", F_OK ) != 0)
             {
 #if !defined(XHB1) && !defined(XHC3)
                 if (!sameSSid)
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:wifi_addr_reset.sh\n");
+                    LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:wifi_addr_reset.sh");
                     system("/bin/sh /lib/rdk/wifi_addr_reset.sh");
                 }
                 else
 #endif
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:triggerDhcpReleaseAndRenew\n");
+                    LOG_INFO( "TELEMETRY_WIFI_CONNECTION_STATUS:triggerDhcpReleaseAndRenew");
                     netSrvMgrUtiles::triggerDhcpReleaseAndRenew(getenv("WIFI_INTERFACE"));
                 }
             }
@@ -1280,26 +1279,26 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 gWifiLNFStatus=CONNECTED_PRIVATE;
                 if(bStopLNFWhileDisconnected)
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Enable LNF \n",__FUNCTION__, __LINE__ );
+                    LOG_INFO("Enable LNF");
                     bStopLNFWhileDisconnected=false;
                 }
                 retVal = lastConnectedSSID(&savedWiFiConnList);
                 if(!retVal)
-                    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    LOG_ERR("[%s] Last connected ssid fetch failure ", MODULE_NAME);
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
                 if(!switchPriv2Lnf)
                     switchPriv2Lnf=1;
                 if(switchLnf2Priv)
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    LOG_INFO("[%s] Connecting private ssid. Bouncing xre connection.", MODULE_NAME);
                     xreReconnectReason = 21; // RECONNECT_REASON_WIFI_NETWORK_CHANGE_LNF_TO_PRIVATE
                     if(false == setHostifParam(XRE_REFRESH_SESSION_WITH_RR ,hostIf_IntegerType ,(void *)&xreReconnectReason))
                     {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] refresh xre session failed .\n",__FUNCTION__, __LINE__);
+                        LOG_ERR("refresh xre session failed .");
                     }
                     switchLnf2Priv=0;
                 }
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s\n",ap_SSID);
+                LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:CONNECTED,%s", ap_SSID);
                 memset(&stats, 0, sizeof(wifi_sta_stats_t));
                 wifi_getStats(radioIndex, &stats);
 
@@ -1314,16 +1313,16 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 
                 if(!strlen(deviceModel) && !strlen(deviceMake))
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND);
+                    LOG_INFO("TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND);
                 }
                 else
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND, deviceMake, deviceModel, deviceMACAddr);
+                    LOG_INFO("TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND, deviceMake, deviceModel, deviceMACAddr);
                 }
 #endif // ENABLE_XCAM_SUPPORT, XHC3 and XHB1 not enabled
             }
             else {
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] This is a LNF SSID so no storing \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_TRACE("[%s] This is a LNF SSID so no storing", MODULE_NAME);
                 isLAFCurrConnectedssid=true;
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
                 if(!switchLnf2Priv)
@@ -1344,13 +1343,13 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #ifdef ENABLE_IARM
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_CONNECTED;
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTED);
+            LOG_DBG("[%s] Notification on 'onWIFIStateChanged' with state as \'CONNECTED\'(%d).", MODULE_NAME, WIFI_CONNECTED);
 #endif
             while(bShutdownWifi!=true){
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] attempting Mutex try Lock \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_INFO("[%s] attempting Mutex try Lock ", MODULE_NAME );
                 if(0== pthread_mutex_trylock(&mutexGo)){
                     if(0 == pthread_cond_signal(&condGo)) {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                        LOG_INFO("[%s] Broadcast to monitor.", MODULE_NAME );
                     }
                     pthread_mutex_unlock(&mutexGo);
                     break;
@@ -1369,19 +1368,19 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             /*Generate Event for Disconnect State*/
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_DISCONNECTED;
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_DISCONNECTED);
+            LOG_DBG("[%s] Notification on 'onWIFIStateChanged' with state as \'DISCONNECTED\'(%d).", MODULE_NAME, WIFI_DISCONNECTED);
 #endif
-	        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED\n");
+	        LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_DISCONNECTED");
         }
         break;
     case WIFI_HAL_CONNECTING:
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting to AP in Progress... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_INFO("[%s] Connecting to AP in Progress...", MODULE_NAME);
             set_WiFiStatusCode(WIFI_CONNECTING);
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_CONNECTING;
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged' with state as \'CONNECTING\'(%d).\n", MODULE_NAME,__FUNCTION__, __LINE__, WIFI_CONNECTING);
+            LOG_DBG("[%s] Notification on 'onWIFIStateChanged' with state as \'CONNECTING\'(%d).", MODULE_NAME, WIFI_CONNECTING);
 #endif
         break;
 
@@ -1389,7 +1388,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
 #ifdef ENABLE_IARM
             notify = true;
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Disconnecting from AP in Progress... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_INFO("[%s] Disconnecting from AP in Progress...", MODULE_NAME);
 #endif
         }
         break;
@@ -1397,11 +1396,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
 #ifdef ENABLE_IARM
             notify = true;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., AP not found). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
+            LOG_ERR("[%s] Failed in %s with wifiStatusCode %d (i.e., AP not found). ", MODULE_NAME, connStr, connCode);
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_NO_SSID;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'NO_SSID\'(%d), CurrentState set as %d (DISCONNECTED)", \
+                     MODULE_NAME,eventId,  eventData.data.wifiError.code, WIFI_DISCONNECTED);
 #endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
@@ -1416,15 +1415,15 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         break;
 
     case WIFI_HAL_ERROR_TIMEOUT_EXPIRED:
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., Timeout expired). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
+        LOG_ERR("[%s] Failed in %s with wifiStatusCode %d (i.e., Timeout expired). ", MODULE_NAME, connStr, connCode);
         /* Event Id & Code */
         if(connCode_prev_state != connCode) {
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_UNKNOWN;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'FAILED\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'FAILED\'(%d).", \
+                     MODULE_NAME,eventId,  eventData.data.wifiError.code);
 #endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
@@ -1434,11 +1433,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         if(connCode_prev_state != connCode) {
 #ifdef ENABLE_IARM
             notify = true;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connStr, connCode);
+            LOG_ERR("[%s] Failed in %s with wifiStatusCode %d (i.e., Fail in Device/AP Disconnect).", MODULE_NAME, connStr, connCode);
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).", \
+                     MODULE_NAME, eventId,  eventData.data.wifiError.code);
 #endif
             set_WiFiStatusCode(WIFI_DISCONNECTED);
         }
@@ -1446,7 +1445,7 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
     /* the SSID of the network changed */
     case WIFI_HAL_ERROR_SSID_CHANGED:
         if(connCode_prev_state != connCode) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to SSID Change (%d) . \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode);
+            LOG_ERR("[%s] Failed due to SSID Change (%d) . ", MODULE_NAME, connCode);
 #ifdef USE_TELEMETRY_2_0
             telemetry_event_d("WIFIV_ERR_HAL_SSIDChngd", 1);
 #endif // #ifdef USE_TELEMETRY_2_0
@@ -1461,70 +1460,70 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
 #endif //ENABLE_LOST_FOUND
 #ifdef ENABLE_IARM
             notify = true;
-	    eventId = IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged;
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Notification on 'onSSIDsChanged (%d)'.\n", MODULE_NAME, __FUNCTION__, __LINE__, eventId);
+            eventId = IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged;
+            LOG_INFO("[%s] Notification on 'onSSIDsChanged (%d)'.", MODULE_NAME, eventId);
 
             //Two events need to be generated in this switch case, hence calling WiFi_IARM_Bus_BroadcastEvent() for IARM_BUS_WIFI_MGR_EVENT_onSSIDsChanged here itself
             WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,(IARM_EventId_t) eventId,(void *)&eventData,sizeof(eventData));
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast Event id \'%d\'. \n", MODULE_NAME, __FUNCTION__, __LINE__, eventId);
+            LOG_INFO("[%s] Broadcast Event id \'%d\'.", MODULE_NAME, eventId);
 
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_SSID_CHANGED;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'SSID_CHANGED\'(%d).", \
+                     MODULE_NAME, eventId,  eventData.data.wifiError.code);
 #endif
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_SSID_CHANGED\n");
+            LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_SSID_CHANGED");
         }
         break;
     /* the connection to the network was lost */
     case WIFI_HAL_ERROR_CONNECTION_LOST:
         if(connCode_prev_state != connCode) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to  CONNECTION LOST (%d) from %s. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode, ap_SSID);
+            LOG_ERR("[%s] Failed due to  CONNECTION LOST (%d) from %s.", MODULE_NAME, connCode, ap_SSID);
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_LOST;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'CONNECTION_LOST\'(%d).", \
+                     MODULE_NAME,eventId,  eventData.data.wifiError.code);
 #endif
-	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_LOST\n");
+	    LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_LOST");
         }
         break;
     /* the connection failed for an unknown reason */
     case WIFI_HAL_ERROR_CONNECTION_FAILED:
         if(connCode_prev_state != connCode)
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Connection Failed (%d) due to unknown reason.. \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            LOG_ERR("[%s] Connection Failed (%d) due to unknown reason.. ", MODULE_NAME, connCode );
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_FAILED;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_FAILED\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'CONNECTION_FAILED\'(%d).", \
+                     MODULE_NAME,eventId,  eventData.data.wifiError.code);
 #endif
-	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_FAILED\n");
+	    LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_FAILED");
         }
         break;
     /* the connection was interrupted */
     case WIFI_HAL_ERROR_CONNECTION_INTERRUPTED:
         if(connCode_prev_state != connCode) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Connection Interrupted (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            LOG_ERR("[%s] Failed due to Connection Interrupted (%d).", MODULE_NAME, connCode );
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_CONNECTION_INTERRUPTED;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'CONNECTION_INTERRUPTED\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'CONNECTION_INTERRUPTED\'(%d).", \
+                     MODULE_NAME,eventId,  eventData.data.wifiError.code);
 #endif
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_INTERRUPTED\n");
+            LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_CONNECTION_INTERRUPTED");
         }
         break;
     /* the connection failed due to invalid credentials */
     case WIFI_HAL_ERROR_INVALID_CREDENTIALS:
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Invalid Credentials. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            LOG_ERR("[%s] Failed due to Invalid Credentials. (%d). ", MODULE_NAME, connCode );
             set_WiFiStatusCode(WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
             if(confProp.wifiProps.bEnableLostFound)
@@ -1537,14 +1536,14 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_INVALID_CREDENTIALS;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'INVALID_CREDENTIALS\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'INVALID_CREDENTIALS\'(%d)", \
+                     MODULE_NAME,eventId,  eventData.data.wifiError.code);
 #endif
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_INVALID_CREDENTIALS\n");
+            LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_INVALID_CREDENTIALS");
         break;
     /* the connection failed due to authentication failure */
     case WIFI_HAL_ERROR_AUTH_FAILED:
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to Auth Failure (%d)\n", MODULE_NAME, __FUNCTION__, __LINE__, connCode);
+            LOG_ERR("[%s] Failed due to Auth Failure (%d)", MODULE_NAME, connCode);
             set_WiFiStatusCode (WIFI_DISCONNECTED);
 #ifdef ENABLE_LOST_FOUND
             if (confProp.wifiProps.bEnableLostFound)
@@ -1557,38 +1556,38 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_AUTH_FAILED;
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'AUTH_FAILED\'(%d).\n",
-                    MODULE_NAME, __FUNCTION__, __LINE__, eventId, eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'AUTH_FAILED\'(%d).",
+                    MODULE_NAME, eventId, eventData.data.wifiError.code);
 #endif
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_AUTH_FAILED\n");
+            LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_AUTH_FAILED");
         break;
     case WIFI_HAL_UNRECOVERABLE_ERROR:
         if(connCode_prev_state != connCode) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed due to UNRECOVERABLE ERROR. (%d). \n", MODULE_NAME,__FUNCTION__, __LINE__ , connCode );
+            LOG_ERR("[%s] Failed due to UNRECOVERABLE ERROR. (%d).", MODULE_NAME, connCode );
             set_WiFiStatusCode(WIFI_FAILED);
 #ifdef ENABLE_IARM
             notify = true;
             eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
             eventData.data.wifiStateChange.state = WIFI_FAILED;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onWIFIStateChanged (%d)' with state as \'FAILED\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiStateChange.state);
+            LOG_ERR("[%s] Notification on 'onWIFIStateChanged (%d)' with state as \'FAILED\'(%d).", \
+                     MODULE_NAME, eventId,  eventData.data.wifiStateChange.state);
 #endif
-	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_UNRECOVERABLE_ERROR\n");
+	    LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_UNRECOVERABLE_ERROR");
         }
         break;
     case WIFI_HAL_ERROR_UNKNOWN:
     default:
         if(connCode_prev_state != connCode) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed in %s with WiFi Error Code %d (i.e., WIFI_HAL_ERROR_UNKNOWN). \n", MODULE_NAME,__FUNCTION__, __LINE__, connStr, connCode );
+            LOG_ERR("[%s] Failed in %s with WiFi Error Code %d (i.e., WIFI_HAL_ERROR_UNKNOWN).", MODULE_NAME, connStr, connCode );
 #ifdef ENABLE_IARM
             notify = true;
             /* Event Id & Code */
             eventId = IARM_BUS_WIFI_MGR_EVENT_onError;
             eventData.data.wifiError.code = WIFI_UNKNOWN;
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Notification on 'onError (%d)' with state as \'UNKNOWN\'(%d).\n", \
-                     MODULE_NAME,__FUNCTION__, __LINE__,eventId,  eventData.data.wifiError.code);
+            LOG_ERR("[%s] Notification on 'onError (%d)' with state as \'UNKNOWN\'(%d).", \
+                     MODULE_NAME, eventId,  eventData.data.wifiError.code);
 #endif
-	    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_UNKNOWN\n");
+	    LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:DISCONNECTED,WIFI_HAL_ERROR_UNKNOWN");
         }
         break;
     }
@@ -1600,10 +1599,10 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,
                                      (IARM_EventId_t) eventId,
                                      (void *)&eventData, sizeof(eventData));
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast Event id \'%d\'. \n", MODULE_NAME,__FUNCTION__, __LINE__, eventId);
+        LOG_INFO("[%s] Broadcast Event id \'%d\'. ", MODULE_NAME, eventId);
     }
 #endif
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
 }
 
 /*Connect using SSID Selection */
@@ -1616,11 +1615,11 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     IARM_Bus_NMgr_WiFi_EventId_t eventId = IARM_BUS_WIFI_MGR_EVENT_onWIFIStateChanged;
 #endif
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     set_WiFiConnectionType((WiFiConnectionTypeCode_t)conType);
     securityMode=(wifiSecurityMode_t)ap_security_mode;
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d\n",
-             MODULE_NAME,__FUNCTION__, __LINE__, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
+    LOG_INFO("[%s] ssidIndex %d; ap_SSID : %s; ap_security_mode : %d; saveSSID = %d",
+             MODULE_NAME, ssidIndex, ap_SSID, (int)ap_security_mode, saveSSID );
     if(saveSSID)
     {
         set_WiFiStatusCode(WIFI_CONNECTING);
@@ -1629,13 +1628,13 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
 #endif
     }
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR,"[%s:%s:%d] connecting to ssid %s with passphrase %s \n",
-            MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID, ap_security_KeyPassphrase);
+    LOG_DBG("[%s] connecting to ssid %s with passphrase %s ",
+            MODULE_NAME, ap_SSID, ap_security_KeyPassphrase);
     ret=wifi_connectEndpoint(ssidIndex, ap_SSID, securityMode, ap_security_WEPKey, ap_security_PreSharedKey, ap_security_KeyPassphrase, saveSSID,eapIdentity,carootcert,clientcert,privatekey);
     if(ret)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in connecting to ssid %s\n",
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_SSID);
+        LOG_ERR("[%s] Error in connecting to ssid %s",
+                 MODULE_NAME, ap_SSID);
 #ifdef ENABLE_IARM
         eventData.data.wifiStateChange.state = WIFI_FAILED;
         WiFi_IARM_Bus_BroadcastEvent(IARM_BUS_NM_SRV_MGR_NAME,  (IARM_EventId_t) eventId, (void *)&eventData, sizeof(eventData));
@@ -1646,13 +1645,13 @@ bool connect_withSSID(int ssidIndex, char *ap_SSID, SsidSecurity ap_security_mod
     {
         ret = true;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return ret;
 }
 
 bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter..", MODULE_NAME);
 #ifndef ENABLE_XCAM_SUPPORT
     wifi_neighbor_ap_t *ssid_ap_array = NULL;
     UINT ssid_ap_array_size = 0;
@@ -1668,15 +1667,15 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
 
     bool ret = wifi_getSpecificSSIDInfo (SSID, band, &ssid_ap_array, &ssid_ap_array_size);
 
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] wifi_get wifi_getSpecificSSIDInfo returned %d, neighbor_ap_array_size %d\n",
-                    MODULE_NAME, __FUNCTION__, __LINE__, ret, ssid_ap_array_size);
+    LOG_INFO("[%s] wifi_get wifi_getSpecificSSIDInfo returned %d, neighbor_ap_array_size %d",
+                    MODULE_NAME, ret, ssid_ap_array_size);
 
     if ((RETURN_OK != ret ) && ((NULL == ssid_ap_array) || (0 == ssid_ap_array_size)))
         return false;
 
     cJSON *rootObj = cJSON_CreateObject();
     if (NULL == rootObj) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to create root json object.\n",  MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] \'Failed to create root json object.",  MODULE_NAME);
         return false;
     }
 
@@ -1688,7 +1687,7 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
 
     cJSON_AddItemToObject(rootObj, "getAvailableSSIDsWithName", array_obj=cJSON_CreateArray());
 
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n*********** Start: SSID Scan List **************** \n");
+    LOG_DBG( "\n*********** Start: SSID Scan List **************** \n");
     for (int index = 0; index < ssid_ap_array_size; index++ )
     {
         ssid = ssid_ap_array[index].ap_SSID;
@@ -1697,8 +1696,8 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
             signalStrength = ssid_ap_array[index].ap_SignalStrength;
             frequency = strtod(ssid_ap_array[index].ap_OperatingFrequencyBand, NULL);
 
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s] [%d] => SSID: %s | SignalStrength: %d | Frequency: %f | EncryptionMode: %s\n",
-                             MODULE_NAME, __FUNCTION__, index, ssid, signalStrength, frequency, ssid_ap_array[index].ap_EncryptionMode );
+           LOG_DBG( "[%s] [%d] => SSID: %s | SignalStrength: %d | Frequency: %f | EncryptionMode: %s",
+                             MODULE_NAME, index, ssid, signalStrength, frequency, ssid_ap_array[index].ap_EncryptionMode );
 
             if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
             {
@@ -1716,7 +1715,7 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
             cJSON_AddNumberToObject(array_element, "frequency", frequency);
         }
     }
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n***********End: SSID Scan List **************** \n\n");
+   LOG_DBG( "\n***********End: SSID Scan List **************** \n\n");
 
 
     char *out = cJSON_PrintUnformatted(rootObj);
@@ -1731,40 +1730,40 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
 
     if(ssid_ap_array)
     {
-        RDK_LOG( RDK_LOG_DEBUG,LOG_NMGR, "[%s:%s:%d] malloc allocated = %d \n", MODULE_NAME,__FUNCTION__, __LINE__ , malloc_usable_size(ssid_ap_array));
+        LOG_DBG("[%s] malloc allocated = %d ", MODULE_NAME, malloc_usable_size(ssid_ap_array));
         free(ssid_ap_array);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return true;
 #else    // ENABLE_XCAM_SUPPORT
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  LOG_TRACE("[%s] Exit", MODULE_NAME);
   return false;
 #endif   // ENABLE_XCAM_SUPPORT
 }
 
 bool scan_Neighboring_WifiAP(char *buffer)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter..\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter..", MODULE_NAME);
 #ifdef ENABLE_LOST_FOUND
 
     if((isWifiConnected()) && (isLAFCurrConnectedssid == true) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
+        LOG_ERR("Failed to  Disconnect in wifi_disconnectEndpoint()");
     }
 #endif //ENABLE_LOST_FOUND
     wifi_neighbor_ap_t *neighbor_ap_array = NULL;
     UINT neighbor_ap_array_size = 0;
     bool ret = wifi_getNeighboringWiFiDiagnosticResult (0, &neighbor_ap_array, &neighbor_ap_array_size);
 
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] wifi_getNeighboringWiFiDiagnosticResult returned %d, neighbor_ap_array_size %d\n",
-            MODULE_NAME, __FUNCTION__, __LINE__, ret, neighbor_ap_array_size);
+    LOG_INFO("[%s] wifi_getNeighboringWiFiDiagnosticResult returned %d, neighbor_ap_array_size %d",
+            MODULE_NAME, ret, neighbor_ap_array_size);
 
     if ((RETURN_OK != ret ) && ((NULL == neighbor_ap_array) || (0 == neighbor_ap_array_size)))
         return false;
 
     cJSON *rootObj = cJSON_CreateObject();
     if (NULL == rootObj) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to create root json object.\n",  MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] \'Failed to create root json object.",  MODULE_NAME);
         return false;
     }
 
@@ -1776,7 +1775,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
 
     cJSON_AddItemToObject(rootObj, "getAvailableSSIDs", array_obj=cJSON_CreateArray());
 
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n*********** Start: SSID Scan List **************** \n");
+    LOG_DBG( "\n*********** Start: SSID Scan List **************** \n");
     for (int index = 0; index < neighbor_ap_array_size; index++ )
     {
         ssid = neighbor_ap_array[index].ap_SSID;
@@ -1785,8 +1784,8 @@ bool scan_Neighboring_WifiAP(char *buffer)
             signalStrength = neighbor_ap_array[index].ap_SignalStrength;
             frequency = strtod(neighbor_ap_array[index].ap_OperatingFrequencyBand, NULL);
 
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s] [%d] => SSID: %s | SignalStrength: %d | Frequency: %f | EncryptionMode: %s\n",
-                     MODULE_NAME, __FUNCTION__, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
+            LOG_DBG("[%s] [%d] => SSID: %s | SignalStrength: %d | Frequency: %f | EncryptionMode: %s",
+                     MODULE_NAME, index, ssid, signalStrength, frequency, neighbor_ap_array[index].ap_EncryptionMode );
 
             if(0 == strcmp(wifiHALVer,WIFI_HAL_VERSION))
             {
@@ -1804,7 +1803,7 @@ bool scan_Neighboring_WifiAP(char *buffer)
             cJSON_AddNumberToObject(array_element, "frequency", frequency);
         }
     }
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n***********End: SSID Scan List **************** \n\n");
+    LOG_DBG( "\n***********End: SSID Scan List **************** \n\n");
 
 
     char *out = cJSON_PrintUnformatted(rootObj);
@@ -1818,22 +1817,22 @@ bool scan_Neighboring_WifiAP(char *buffer)
     if(out) free(out);
 
     if(neighbor_ap_array) {
-        RDK_LOG( RDK_LOG_DEBUG,LOG_NMGR, "[%s:%s:%d] malloc allocated = %d \n", MODULE_NAME,__FUNCTION__, __LINE__ , malloc_usable_size(neighbor_ap_array));
+        LOG_DBG( "[%s] malloc allocated = %d ", MODULE_NAME, malloc_usable_size(neighbor_ap_array));
         free(neighbor_ap_array);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return true;
 }
 
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     bool ret = false;
     wifi_pairedSSIDInfo_t pairedSSIDInfo = {0};
     if (RETURN_OK != wifi_lastConnected_Endpoint (&pairedSSIDInfo))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] Error in getting last connected SSID \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] Error in getting last connected SSID ", MODULE_NAME);
     }
     else
     {
@@ -1845,17 +1844,17 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
         if ((strstr (ConnParams->ssidSession.security, SECURITY_MODE_WPA_PSK) != NULL ) ||
             (strstr (ConnParams->ssidSession.security, SECURITY_MODE_SAE) != NULL ))
         {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_SAE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_TRACE("[%s] SECURITY_MODE_SAE", MODULE_NAME);
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA3_SAE;//Same security_mode for both wpa2 and wpa3
         }
         else if (strcmp (ConnParams->ssidSession.security, SECURITY_MODE_WPA_EAP) == 0)
         {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_EAP \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_TRACE("[%s] SECURITY_MODE_WPA_EAP", MODULE_NAME);
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES;
         }
         else if (ConnParams->ssidSession.security_WEPKey[0]!=NULL)
         {
-           RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] security_WEPKey is %s \n", MODULE_NAME,__FUNCTION__, __LINE__, ConnParams->ssidSession.security_WEPKey );
+           LOG_TRACE("[%s] security_WEPKey is %s", MODULE_NAME, ConnParams->ssidSession.security_WEPKey );
            if ( strlen(ConnParams->ssidSession.security_WEPKey) == 26 || strlen(ConnParams->ssidSession.security_WEPKey) == 13 ){
               ConnParams->ssidSession.security_mode = NET_WIFI_SECURITY_WEP_128;
            }
@@ -1865,17 +1864,15 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
         }
         else
         {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_NONE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_TRACE("[%s] SECURITY_MODE_WPA_NONE", MODULE_NAME);
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_NONE;
         }
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,
-                "[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s security_mode is %d\n",
-                MODULE_NAME, __FUNCTION__, __LINE__,
-                ConnParams->ssidSession.ssid, ConnParams->ssidSession.passphrase,
+        LOG_TRACE("[%s] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s security_mode is %d",
+                MODULE_NAME, ConnParams->ssidSession.ssid, ConnParams->ssidSession.passphrase,
                 ConnParams->ssidSession.bssid, ConnParams->ssidSession.security,ConnParams->ssidSession.security_mode);
         ret = true;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return ret;
 }
 #endif
@@ -1902,7 +1899,7 @@ bool isWiFiCapable()
 void *wifiConnStatusThread(void* arg)
 {
     int ret = 0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     wifi_sta_stats_t stats;
     WiFiStatusCode_t wifiStatusCode;
     char wifiStatusAsString[MAX_WIFI_STATUS_STRING];
@@ -1913,20 +1910,20 @@ void *wifiConnStatusThread(void* arg)
     pthread_cond_wait(&condGo, &mutexGo);
     pthread_mutex_unlock(&mutexGo);
 
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] ***** Monitor activated by signal ***** \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_DBG("[%s] ***** Monitor activated by signal ***** ", MODULE_NAME);
 
     while (!bShutdownWifi) {
         wifiStatusCode = get_WiFiStatusCode();
 
         if (get_WiFiStatusCodeAsString (wifiStatusCode, wifiStatusAsString)) {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:%s\n", wifiStatusAsString);
+            LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:%s", wifiStatusAsString);
         }
         else {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d\n", wifiStatusCode);
+            LOG_ERR("TELEMETRY_WIFI_CONNECTION_STATUS:Unmappable WiFi status code %d", wifiStatusCode);
         }
 
         if (WIFI_CONNECTED == wifiStatusCode) {
-            //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****Start Monitoring ***** \n");
+            //LOG_INFO( "\n *****Start Monitoring ***** \n");
 #if !defined (XHB1) && !defined (XHC3)
             memset(&stats, 0, sizeof(wifi_sta_stats_t));
             wifi_getStats(radioIndex, &stats);
@@ -1934,15 +1931,15 @@ void *wifiConnStatusThread(void* arg)
 #if !defined(ENABLE_XCAM_SUPPORT)
             if((strlen(deviceModel) > 0) && (strlen(deviceMake) > 0))
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND, deviceMake, deviceModel, deviceMACAddr);
+                LOG_INFO("TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND, deviceMake, deviceModel, deviceMACAddr);
             }
             else
 #endif
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s\n", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND);
+                LOG_INFO("TELEMETRY_WIFI_STATS:%s,%s,%d,%d,%d,%d,%d,%s", stats.sta_SSID, stats.sta_BSSID, (int)stats.sta_PhyRate, (int)stats.sta_Noise, (int)stats.sta_RSSI, (int)stats.sta_LastDataDownlinkRate, (int)stats.sta_LastDataUplinkRate, stats.sta_BAND);
             }
 #endif
-            //RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n *****End Monitoring  ***** \n");
+            //LOG_INFO( "\n *****End Monitoring  ***** \n");
 
             /*Telemetry Parameter logging*/
             logs_Period1_Params();
@@ -1959,7 +1956,7 @@ void *wifiConnStatusThread(void* arg)
         pthread_mutex_unlock(&mutexGo);
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return NULL;
 }
 
@@ -1980,18 +1977,18 @@ bool clearSSID_On_Disconnect_AP()
     char *ap_ssid = savedWiFiConnList.ssidSession.ssid;
     if(RETURN_OK != wifi_disconnectEndpoint(1, ap_ssid))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".\n",\
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+        LOG_ERR("[%s] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".",\
+                 MODULE_NAME, ap_ssid);
         ret = false;
     }
     else
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
-                MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+       LOG_INFO("[%s] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  ",\
+                MODULE_NAME, ap_ssid);
 #ifndef ENABLE_XCAM_SUPPORT
         // Clear wpa_supplicant SSID info
         if(wifi_clearSSIDInfo(radioIndex) == RETURN_OK) {
-           RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%s:%d] Successfully cleared SSID info \n", MODULE_NAME,__FUNCTION__, __LINE__ ); 
+          LOG_INFO("[%s] Successfully cleared SSID info", MODULE_NAME);
         }
 #endif // ENABLE_XCAM_SUPPORT
 
@@ -2015,14 +2012,14 @@ bool disconnectFromCurrentSSID()
 
     if(RETURN_OK != wifi_disconnectEndpoint(radioIndex, ap_ssid))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".\n",\
-                 MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+        LOG_ERR("[%s] Failed to  Disconnect in wifi_disconnectEndpoint() for AP : \"%s\".",\
+                 MODULE_NAME, ap_ssid);
         ret = false;
     }
     else
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  \n",\
-                MODULE_NAME,__FUNCTION__, __LINE__, ap_ssid);
+       LOG_INFO("[%s] Successfully called \"wifi_disconnectEndpointd()\" for AP: \'%s\'.  ",\
+                MODULE_NAME, ap_ssid);
     }
     return ret;
 }
@@ -2033,13 +2030,11 @@ bool cancelWPSPairingOperation()
 #if !defined (ENABLE_XCAM_SUPPORT) && !defined (XHB1) && !defined(XHC3)
     if(wifi_cancelWpsPairing() == RETURN_OK)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Successfully Cancelled WPS operation.\n",\
-                MODULE_NAME,__FUNCTION__, __LINE__);
+       LOG_INFO("[%s] Successfully Cancelled WPS operation.", MODULE_NAME);
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to Cancel WPS operation, Looks like no in-progress wps operation.\n",
-                MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] Failed to Cancel WPS operation, Looks like no in-progress wps operation.", MODULE_NAME);
         ret = false;
     }
 #endif //ENABLE_LOST_FOUND
@@ -2051,7 +2046,7 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     int radioIndex = 0;
     wifi_sta_stats_t stats;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     memset(&stats, '\0', sizeof(stats));
 
@@ -2065,12 +2060,11 @@ void getConnectedSSIDInfo(WiFiConnectedSSIDInfo_t *conSSIDInfo)
     strncpy((char *)conSSIDInfo->band,(const char *)stats.sta_BAND,(size_t)BUFF_MIN);
     conSSIDInfo->securityMode = get_wifiSecurityModeFromString(stats.sta_SecMode, stats.sta_Encryption);
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connected SSID info: \n \
+    LOG_DBG("[%s] Connected SSID info: \n \
             [SSID: \"%s\"| BSSID : \"%s\" | PhyRate : \"%f\" | Noise : \"%f\" | SignalStrength(rssi) : \"%f\" | Frequency : \"%d\" Security Mode : \"%d\"] \n",
-            MODULE_NAME,__FUNCTION__, __LINE__,
-            stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI,conSSIDInfo->frequency,conSSIDInfo->securityMode);
+            MODULE_NAME, stats.sta_SSID, stats.sta_BSSID, stats.sta_PhyRate, stats.sta_Noise, stats.sta_RSSI,conSSIDInfo->frequency,conSSIDInfo->securityMode);
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
 }
 
 #endif
@@ -2092,19 +2086,17 @@ void doLnFBackoff()
         if (seconds_remaining_to_wait <= 0)
             seconds_remaining_to_wait = 0;
 
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR,
-                "[%s:%s:%d] last requested backoff = %fs, elapsed after last lnf server contact = %fs, waiting for remaining %fs\n",
-                MODULE_NAME, __FUNCTION__, __LINE__,
-                last_laf_status.backoff, seconds_elapsed_after_last_lnf_server_contact, seconds_remaining_to_wait);
+        LOG_INFO( "[%s] last requested backoff = %fs, elapsed after last lnf server contact = %fs, waiting for remaining %fs",
+                MODULE_NAME, last_laf_status.backoff, seconds_elapsed_after_last_lnf_server_contact, seconds_remaining_to_wait);
 
         usleep (seconds_remaining_to_wait * 1000000); // wait out the remainder of the requested backoff period
     }
     else
     {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] backoff = 0s\n", MODULE_NAME, __FUNCTION__, __LINE__);
+       LOG_INFO("[%s] backoff = 0s", MODULE_NAME);
     }
 
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] backoff wait done.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+   LOG_INFO("[%s] backoff wait done.", MODULE_NAME);
 }
 
 bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
@@ -2118,20 +2110,20 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     int err;
     bool bRet=true;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 #ifdef ENABLE_IARM
     IARM_Bus_MFRLib_GetSerializedData_Param_t param;
 #endif
     ops = (laf_ops_t*) malloc(sizeof(laf_ops_t));
     if(!ops)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] laf_ops malloc failed \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] laf_ops malloc failed ", MODULE_NAME);
         return ENOMEM;
     }
     dev_info = (laf_device_info_t*) malloc(sizeof(laf_device_info_t));
     if(!dev_info)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] laf_device_info malloc failed \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] laf_device_info malloc failed ", MODULE_NAME);
         free(ops);
         return ENOMEM;
     }
@@ -2147,12 +2139,12 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
 
     bRet = getDeviceInfo(dev_info);
     if (bRet == false) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getDeviceInfo failed\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] getDeviceInfo failed", MODULE_NAME);
     }
     /* configure laf */
     err = laf_config_new(&conf, ops, dev_info);
     if(err != 0) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Lost and found client configurtion failed with error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,err );
+        LOG_ERR("[%s] Lost and found client configurtion failed with error code %d ", MODULE_NAME, err );
         bRet=false;
     }
     else
@@ -2160,7 +2152,7 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
         /* initialize laf client */
         err = laf_client_new(&clnt, conf);
         if(err != 0) {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Lost and found client initialization failed with error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,err );
+            LOG_ERR("[%s] Lost and found client initialization failed with error code %d", MODULE_NAME, err );
             bRet=false;
         }
         else
@@ -2171,20 +2163,20 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
             err = laf_start(clnt, &last_laf_status);
             if (err != LAF_NO_RESPONSE_FROM_LNF)
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] lnf server requested backoff = %fs\n",
-                        MODULE_NAME, __FUNCTION__, __LINE__, last_laf_status.backoff);
+                LOG_INFO("[%s] lnf server requested backoff = %fs",
+                        MODULE_NAME, last_laf_status.backoff);
                 clock_gettime(CLOCK_MONOTONIC, &last_lnf_server_contact_time);
             }
 
             if(err != 0) {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in lost and found client, error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,err );
+                LOG_ERR("[%s] Error in lost and found client, error code %d", MODULE_NAME, err );
                 bRet=false;
             }
             if(!bAutoSwitchToPrivateEnabled)
             {
                 if((!bRet) && (bLastLnfSuccess))
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] !AutoSwitchToPrivateEnabled + lastLnfSuccessful + currLnfFailure = clr switch2prv Results \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    LOG_INFO("[%s] !AutoSwitchToPrivateEnabled + lastLnfSuccessful + currLnfFailure = clr switch2prv Results ", MODULE_NAME);
                     clearSwitchToPrivateResults();
                     bLastLnfSuccess=false;
                 }
@@ -2192,7 +2184,7 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
                     bLastLnfSuccess=true;
                 netSrvMgrUtiles::getCurrentTime(currTime,(char *)TIME_FORMAT);
                 if (addSwitchToPrivateResults(err,currTime) != 0) {
-                   RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added Time=%s lnf error=%d to list,length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,currTime,err,g_list_length(lstLnfPvtResults));
+                   LOG_INFO( "[%s] Added Time=%s lnf error=%d to list,length of list = %d", MODULE_NAME,currTime,err,g_list_length(lstLnfPvtResults));
                 }
             }
         }
@@ -2206,7 +2198,7 @@ bool triggerLostFound(LAF_REQUEST_TYPE lafRequestType)
     if(clnt)
         laf_client_destroy(clnt);
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return bRet;
 }
 bool getmacaddress(gchar* ifname,GString *data)
@@ -2215,11 +2207,11 @@ bool getmacaddress(gchar* ifname,GString *data)
     int ioRet;
     struct ifreq ifr;
     unsigned char *mac;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ERROR opening socket %d \n", MODULE_NAME,__FUNCTION__, __LINE__,fd );
+        LOG_ERR("[%s] ERROR opening socket %d ", MODULE_NAME,fd );
         return false;
     }
     ifr.ifr_addr.sa_family = AF_INET;
@@ -2228,13 +2220,13 @@ bool getmacaddress(gchar* ifname,GString *data)
     if (ioRet < 0)
     {
         close(fd);
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] ERROR in ioctl function to retrieve mac address %d\n", MODULE_NAME,__FUNCTION__, __LINE__,fd );
+        LOG_ERR("[%s] ERROR in ioctl function to retrieve mac address %d", MODULE_NAME, fd );
         return false;
     }
     close(fd);
     mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
     g_string_printf(data,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return true;
 }
 
@@ -2253,7 +2245,7 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
     {
       if(getDeviceActivationState() == false)
       {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Partner ID Missing in url May be not activated \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] Partner ID Missing in url May be not activated ", MODULE_NAME);
       }
       else
       {
@@ -2266,42 +2258,42 @@ bool getDeviceInfo(laf_device_info_t *dev_info)
     }
     if(getMfrData(mfrSerialNum,mfrType))
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] mfrSerialNum = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrSerialNum->str,mfrType );
+        LOG_TRACE("[%s] mfrSerialNum = %s mfrType = %d", MODULE_NAME,mfrSerialNum->str,mfrType );
         STRCPY_S(dev_info->serial_num, sizeof(dev_info->serial_num), mfrSerialNum->str);
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getting serial num from mfr failed \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] getting serial num from mfr failed ", MODULE_NAME);
         bRet = false;
         goto out;
     }
     mfrType = mfrSERIALIZED_TYPE_DEVICEMAC;
     if(getMfrData(deviceMacAddr,mfrType))
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] deviceMacAddr = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,deviceMacAddr->str,mfrType );
+        LOG_TRACE("[%s] deviceMacAddr = %s mfrType = %d ", MODULE_NAME, deviceMacAddr->str,mfrType);
         STRCPY_S(dev_info->mac, sizeof(dev_info->mac), deviceMacAddr->str);
 
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getting device mac addr from mfr failed \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] getting device mac addr from mfr failed ", MODULE_NAME);
         bRet = false;
         goto out;
     }
     mfrType = mfrSERIALIZED_TYPE_MODELNAME;
     if(getMfrData(mfrModelName,mfrType))
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] mfrModelName = %s mfrType = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,mfrModelName->str,mfrType );
+        LOG_TRACE("[%s] mfrModelName = %s mfrType = %d ", MODULE_NAME, mfrModelName->str,mfrType );
         STRCPY_S(dev_info->model, sizeof(dev_info->model), mfrModelName->str);
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getting model name from mfr failed \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] getting model name from mfr failed ", MODULE_NAME);
         bRet = false;
         goto out;
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] dummy auth token update \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    LOG_TRACE("[%s] dummy auth token update ", MODULE_NAME);
     memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
     STRCPY_S(dev_info->auth_token, sizeof(dev_info->auth_token), "xact_token");
 
@@ -2321,57 +2313,55 @@ char* getlfatfilename()
 {
     static char *lfat_file = NULL;
     lfat_file =  getenv("LFAT_TOKEN_FILE");
-    RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%d]lfat file name=%s\n", __FUNCTION__, __LINE__, lfat_file);
+    LOG_INFO("lfat file name=%s", lfat_file);
     return lfat_file;
 }
 
 int get_token_length(unsigned int &tokenlength)
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    LOG_ENTRY_EXIT;
     FILE* fp_token;
     int tokensize;
     char* tokenfilename = getlfatfilename();
     fp_token = fopen(tokenfilename,"rb");
     if(NULL == fp_token) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_token_length - Error in opening lfat token file\n");
+        LOG_ERR("get_token_length - Error in opening lfat token file");
         return EBADF;
     }else{
         fseek(fp_token, 0L, SEEK_END);
         tokensize = ftell(fp_token);
         fseek(fp_token, 0, SEEK_SET);
         tokenlength = tokensize;
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "get_token_length - token size is - %d\n",tokenlength);
+        LOG_DBG("get_token_length - token size is - %d",tokenlength);
         if(NULL != fp_token){
             fclose(fp_token);
             fp_token = NULL;
         }
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
     return 0;
 }
 
 int get_laf_token(char* token,unsigned int tokenlength)
 {
+    LOG_ENTRY_EXIT;
     char* tokenfilename = getlfatfilename();
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
     FILE* fp_token;
     fp_token = fopen(tokenfilename,"rb");
     if(NULL == fp_token) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Error in opening lfat token file");
+        LOG_ERR("get_laf_token - Error in opening lfat token file");
         return EBADF;
     }else{
         if(NULL != token)
         {
             fread(token,tokenlength,1,fp_token);
         }else {
-            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"get_laf_token - Token NULL");
+            LOG_ERR("get_laf_token - Token NULL");
         }
         if(NULL != fp_token){
             fclose(fp_token);
             fp_token = NULL;
         }
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
     return 0;
 }
 #endif // ENABLE_XCAM_SUPPORT or XHB1 or XHC3
@@ -2383,7 +2373,7 @@ int getMfrDeviceInfo(mfrSerializedType_t stdatatype, char* data)
 
         if(NULL == data)
         {
-                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Accessing ivalid memory locatio\n", MODULE_NAME, __FUNCTION__, __LINE__);
+                LOG_ERR("[%s] Accessing ivalid memory locatio", MODULE_NAME);
                 return 1;
         }
 
@@ -2398,7 +2388,7 @@ int getMfrDeviceInfo(mfrSerializedType_t stdatatype, char* data)
         }
         else
         {
-                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error retriving required device info.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+                LOG_ERR("[%s] Error retriving required device info.", MODULE_NAME);
                 return 1;
         }
         return 0;
@@ -2419,50 +2409,50 @@ bool getDeviceInfo( laf_device_info_t *dev_info )
         strncpy(dev_info->serial_num, xcam_dev_info.serial_number, MAX_DEV_SERIAL_LEN-1);
         strncpy(dev_info->mac, xcam_dev_info.mac_addr, MAX_DEV_MAC_LEN);
         strncpy(dev_info->model, xcam_dev_info.model, MAX_DEV_MODEL_LEN);
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] serial_no=%s\n", MODULE_NAME, __FUNCTION__, __LINE__, dev_info->serial_num);
+        LOG_INFO("[%s] serial_no=%s", MODULE_NAME, dev_info->serial_num);
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] rdkc_get_device_basic_info failed\n", MODULE_NAME, __FUNCTION__, __LINE__);
+        LOG_ERR("[%s] rdkc_get_device_basic_info failed", MODULE_NAME);
         return ret;
     }
 #elif defined(XHB1) || defined(XHC3)
     if(1 == getMfrDeviceInfo(mfrSERIALIZED_TYPE_SERIALNUMBER, dev_info->serial_num))
     {
-       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error reteiving device serial number.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+       LOG_ERR("[%s] Error reteiving device serial number.", MODULE_NAME);
     }
     if(1 == getMfrDeviceInfo(mfrSERIALIZED_TYPE_MODELNAME, dev_info->model))
     {
-       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error reteiving device model.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+       LOG_ERR("[%s] Error reteiving device model", MODULE_NAME);
     }
 
     if(1 == getMfrDeviceInfo(mfrSERIALIZED_TYPE_DEVICEMAC, dev_info->mac))
     {
-      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d]Error reteiving device MAC.\n", MODULE_NAME, __FUNCTION__, __LINE__);
+      LOG_ERR("[%s] Error reteiving device MAC.", MODULE_NAME);
     }
 #endif
 #if defined(ENABLE_XCAM_SUPPORT) || defined(XHB1) || defined(XHC3)
     int get_result = getSetFileContent(partnerIdFile, "get", dev_info->partnerId);
     if (get_result)
-      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error reteiving partnerId \n", MODULE_NAME, __FUNCTION__, __LINE__);
+      LOG_ERR("[%s] Error reteiving partnerId", MODULE_NAME);
     else
     {
       dev_info->partnerId[strcspn(dev_info->partnerId, "\n")] = 0;
-      RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] PartnerID obtained is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__, dev_info->partnerId);
+      LOG_DBG("[%s] PartnerID obtained is : %s", MODULE_NAME, dev_info->partnerId);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] auth token update for xcam\n", MODULE_NAME,__FUNCTION__, __LINE__);
+    LOG_TRACE( "[%s] auth token update for xcam", MODULE_NAME);
     memset(dev_info->auth_token, 0, MAX_AUTH_TOKEN_LEN+1);
     readtoken = get_token_length(tokenlength);
     if(readtoken != 0) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "getDeviceInfo - Error in token read \n");
+        LOG_DBG("getDeviceInfo - Error in token read ");
         return false;
     }
     readtoken = get_laf_token(dev_info->auth_token,tokenlength);
     if(readtoken != 0 ) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - Token read error\n", MODULE_NAME, __FUNCTION__, __LINE__);
+        LOG_ERR("[%s] getDeviceInfo - Token read error", MODULE_NAME);
         return false;
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] getDeviceInfo - token is : %s\n", MODULE_NAME, __FUNCTION__, __LINE__,dev_info->auth_token);
+    LOG_DBG("[%s] getDeviceInfo - token is : %s", MODULE_NAME, dev_info->auth_token);
     ret = true;
 #endif // ENABLE_XCAM_SUPPORT, XHC3 and XHB1 defined
     return ret;
@@ -2479,15 +2469,15 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
     int ssidIndex=1;
     bool notify = false;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     if (laf_is_lnfssid(wificred->ssid) && (true == isLAFCurrConnectedssid) && (WIFI_CONNECTED == get_WifiRadioStatus()))
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already connected to LF ssid Ignoring the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] Already connected to LF ssid Ignoring the request", MODULE_NAME);
         return 0;
     }
     if(bStopLNFWhileDisconnected)
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already WPS flow has intiated so skipping the request the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] Already WPS flow has intiated so skipping the request the request", MODULE_NAME);
         return EPERM;
     }
     if (laf_is_lnfssid(wificred->ssid))
@@ -2502,15 +2492,15 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         {
           if((strcmp(wificred->ssid, savedWiFiConnList.ssidSession.ssid) != 0) && (strcmp(wificred->passphrase, savedWiFiConnList.ssidSession.passphrase) != 0))
           {
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Lnf response status Credentials changed : BOTH \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+           LOG_INFO("[%s] Lnf response status Credentials changed : BOTH", MODULE_NAME);
           }
           else if(strcmp(wificred->ssid, savedWiFiConnList.ssidSession.ssid) != 0)
           {
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Lnf response status Credentials changed : SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+           LOG_INFO("[%s] Lnf response status Credentials changed : SSID", MODULE_NAME);
           }
           else if(strcmp(wificred->passphrase, savedWiFiConnList.ssidSession.passphrase) != 0)
           {
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Lnf response status Credentials changed : KeyPassphrase \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+           LOG_INFO("[%s] Lnf response status Credentials changed : KeyPassphrase", MODULE_NAME);
           }
         }
     }
@@ -2520,7 +2510,7 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
          setLNFState(LNF_IN_PROGRESS);
          if((bLNFConnect == true) && (RETURN_OK != wifi_disconnectEndpoint(1, wifiConnData.ssid)))
          {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed to  Disconnect in wifi_disconnectEndpoint()", __FUNCTION__, __LINE__);
+            LOG_ERR("Failed to  Disconnect in wifi_disconnectEndpoint()");
          }
         retVal=connect_withSSID(ssidIndex, wificred->ssid, (SsidSecurity)wificred->security_mode, NULL, wificred->psk, wificred->passphrase, (int)(!bLNFConnect),wificred->identity,wificred->carootcert,wificred->clientcert,wificred->privatekey,bLNFConnect ? WIFI_CON_LNF : WIFI_CON_PRIVATE);
     }
@@ -2529,24 +2519,22 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
 #endif
     if(false == retVal)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s failed \n",
-                MODULE_NAME, __FUNCTION__, __LINE__, wificred->ssid);
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] connect with ssid %s failed (passphrase %s)\n",
-                MODULE_NAME, __FUNCTION__, __LINE__, wificred->ssid, wificred->passphrase );
+        LOG_ERR("[%s] connect with ssid %s failed ", MODULE_NAME, wificred->ssid);
+        LOG_DBG("[%s] connect with ssid %s failed (passphrase %s)", MODULE_NAME, wificred->ssid, wificred->passphrase );
         return EPERM;
     }
     while(get_WifiRadioStatus() != WIFI_CONNECTED && retry <= confProp.wifiProps.lnfRetryCount) {
         retry++; //max wait for 180 seconds
         if(bStopLNFWhileDisconnected)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already WPS flow has intiated so skipping the request the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_INFO( "[%s] Already WPS flow has intiated so skipping the request the request", MODULE_NAME);
             return EPERM;
         }
         sleep(1);
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Device not connected to wifi. waiting to connect... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_TRACE("[%s] Device not connected to wifi. waiting to connect...", MODULE_NAME);
     }
     if(retry > confProp.wifiProps.lnfRetryCount) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Waited for %d seconds. Failed to connect. Abort \n", MODULE_NAME,__FUNCTION__, __LINE__, confProp.wifiProps.lnfRetryCount);
+        LOG_ERR("[%s] Waited for %d seconds. Failed to connect. Abort ", MODULE_NAME, confProp.wifiProps.lnfRetryCount);
         return EPERM;
     }
 
@@ -2556,15 +2544,15 @@ int laf_wifi_connect(laf_wifi_ssid_t* const wificred)
         setLNFState(CONNECTED_PRIVATE);
         notify = true;
 //        sleep(10); //waiting for default route before bouncing the xre connection
-//        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connecting private ssid. Bouncing xre connection.\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+//        LOG_INFO( "[%s] Connecting private ssid. Bouncing xre connection.", MODULE_NAME);
 //#ifdef ENABLE_IARM
 //        if(false == setHostifParam(XRE_REFRESH_SESSION ,hostIf_BooleanType ,(void *)&notify))
 //        {
-//            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] refresh xre session failed .\n", MODULE_NAME,__FUNCTION__, __LINE__);
+//            LOG_ERR("[%s] refresh xre session failed ", MODULE_NAME);
 //        }
 //#endif
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return 0;
 }
 
@@ -2575,15 +2563,15 @@ int laf_wifi_disconnect(void)
     bool retVal=false;
     int radioIndex = 1;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     if ( false == isLAFCurrConnectedssid )
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected to private ssid Ignoring the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] Connected to private ssid Ignoring the request ", MODULE_NAME);
         return 0;
     }
     if(bStopLNFWhileDisconnected)
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already WPS flow has intiated so skipping the request the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] Already WPS flow has intiated so skipping the request the request", MODULE_NAME);
         return EPERM;
     }
 #ifdef USE_RDK_WIFI_HAL
@@ -2592,26 +2580,26 @@ int laf_wifi_disconnect(void)
 #endif
     setLNFState(LNF_IN_PROGRESS);
     if(retVal == false) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Tried to disconnect before connect and it failed \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Tried to disconnect before connect and it failed ", MODULE_NAME);
         return EPERM;
     }
 
     while(get_WifiRadioStatus() != WIFI_DISCONNECTED && retry <= 30) {
         if(bStopLNFWhileDisconnected)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Already WPS flow has intiated so skipping the request the request \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_INFO("[%s] Already WPS flow has intiated so skipping the request the request", MODULE_NAME);
             return EPERM;
         }
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Device is connected to wifi. waiting to disconnect... \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_TRACE("[%s] Device is connected to wifi. waiting to disconnect...", MODULE_NAME);
         retry++; //max wait for 180 seconds
         sleep(1);
     }
     if(retry > 30) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Waited for 30seconds. Failed to disconnect. Abort \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Waited for 30seconds. Failed to disconnect. Abort", MODULE_NAME);
         return EPERM;
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return 0;
 }
 
@@ -2649,7 +2637,7 @@ void log_message(laf_loglevel_t level, char const* function, int line, char cons
 void setLNFState(WiFiLNFStatusCode_t status)
 {
     if(gWifiLNFStatus != status)
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] LNF Status changed to %d\n", MODULE_NAME,__FUNCTION__, __LINE__, status );
+        LOG_TRACE("[%s] LNF Status changed to %d", MODULE_NAME, status );
 
     gWifiLNFStatus = status;
 }
@@ -2658,7 +2646,7 @@ static void signalStartLAF()
 {
     pthread_mutex_lock(&mutexLAF);
     startLAF = true;
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Signal to start LAF private SSID \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_DBG("[%s] Signal to start LAF private SSID ", MODULE_NAME);
     pthread_cond_signal(&condLAF);
     pthread_mutex_unlock(&mutexLAF);
 }
@@ -2671,7 +2659,7 @@ void *lafConnPrivThread(void* arg)
     LAF_REQUEST_TYPE reqType;
     bool lnfReturnStatus=false;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n",MODULE_NAME, __FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter",MODULE_NAME);
 
     while (true) {
         pthread_mutex_lock(&mutexLAF);
@@ -2683,16 +2671,16 @@ void *lafConnPrivThread(void* arg)
         startLAF = false;
         pthread_mutex_unlock(&mutexLAF);
         {
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "\n[%s:%s:%d] Starting the LAF Connect private SSID \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+           LOG_DBG("[%s] Starting the LAF Connect private SSID",MODULE_NAME);
             if(gWifiLNFStatus != CONNECTED_LNF)
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n [%s:%s:%d] WifiLNFStatus = %d .Setting LNF state as in progress. \n",MODULE_NAME, __FUNCTION__, __LINE__,gWifiLNFStatus );
+                LOG_INFO("[%s] WifiLNFStatus = %d .Setting LNF state as in progress.",MODULE_NAME, gWifiLNFStatus );
                 setLNFState(LNF_IN_PROGRESS);
             }
             if(bPrivConnectionLost)
             {
                 bPrivConnectionLost=false;
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "\n[%s:%s:%d] Wait for 10 sec before starting lost and found \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+                LOG_INFO("[%s] Wait for 10 sec before starting lost and found ", MODULE_NAME );
                 sleep(10);
             }
             do
@@ -2700,7 +2688,7 @@ void *lafConnPrivThread(void* arg)
 #ifdef ENABLE_XCAM_SUPPORT
                 if(rdkc_get_wifi_interface_status() == 3)
                 {
-                  RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Camera is connected to Y-CABLE. Aborting LNF \n",__FUNCTION__, __LINE__ );
+                  LOG_INFO("Camera is connected to Y-CABLE. Aborting LNF ");
                   setLNFState(LNF_UNITIALIZED);
                   break;
                 }
@@ -2724,14 +2712,14 @@ void *lafConnPrivThread(void* arg)
                 }
                 if (true == bStopLNFWhileDisconnected)
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
+                    LOG_INFO("stopLNFWhileDisconnected pressed coming out of LNF");
                     setLNFState(LNF_UNITIALIZED);
                     break;
                 }
 
                 if((gWifiAdopterStatus == WIFI_CONNECTED) && (false == isLAFCurrConnectedssid))
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] connection status %d is LAF current ssid % \n", __FUNCTION__, __LINE__,gWifiAdopterStatus,isLAFCurrConnectedssid );
+                    LOG_INFO("connection status %d is LAF current ssid %d ", gWifiAdopterStatus, isLAFCurrConnectedssid );
                     setLNFState(CONNECTED_PRIVATE);
                     break;
                 }
@@ -2741,8 +2729,7 @@ void *lafConnPrivThread(void* arg)
                 doLnFBackoff();
                 if ((gWifiLNFStatus == CONNECTED_PRIVATE) && (gWifiAdopterStatus == WIFI_CONNECTED))
                 {
-                    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected to Private SSID already. Aborting requested LNF.\n",
-                            MODULE_NAME, __FUNCTION__, __LINE__);
+                   LOG_INFO("[%s] Connected to Private SSID already. Aborting requested LNF.", MODULE_NAME);
                     pthread_mutex_unlock(&mutexTriggerLAF);
                     break;
                 }
@@ -2758,7 +2745,7 @@ void *lafConnPrivThread(void* arg)
                 {
                     if (true == bStopLNFWhileDisconnected)
                     {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", __FUNCTION__, __LINE__ );
+                        LOG_INFO("stopLNFWhileDisconnected pressed coming out of LNF" );
                         setLNFState(LNF_UNITIALIZED);
                         break;
                     }
@@ -2767,21 +2754,21 @@ void *lafConnPrivThread(void* arg)
                     retVal=lastConnectedSSID(&savedWiFiConnList);
                     if (retVal && savedWiFiConnList.ssidSession.ssid[0] != '\0')
                     {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Trying Manual Connect with ssid %s security %d since not able to connect through LNF \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode);
+                        LOG_INFO("[%s] Trying Manual Connect with ssid %s security %d since not able to connect through LNF",MODULE_NAME, savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode);
                         retVal=connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid,savedWiFiConnList.ssidSession.security_mode, NULL, savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.passphrase,true,NULL,NULL,NULL,NULL,WIFI_CON_PRIVATE);
                         if(false == retVal)
                         {
-                            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] connect with ssid %s  failed \n",MODULE_NAME, __FUNCTION__, __LINE__,savedWiFiConnList.ssidSession.ssid );
+                            LOG_ERR("[%s] connect with ssid %s  failed ", MODULE_NAME, savedWiFiConnList.ssidSession.ssid );
                         }
                     }
                     else
                     {
-                        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Failed to get previous SSID, Manual connect failed.  \n",MODULE_NAME, __FUNCTION__, __LINE__ );
+                        LOG_ERR("[%s] Failed to get previous SSID, Manual connect failed. ", MODULE_NAME);
                     }
                     if (last_laf_status.backoff == 0.0f)
                     {
                         last_laf_status.backoff = (float)confProp.wifiProps.lnfRetryInSecs;
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Added default lnf back off time %fs \n",MODULE_NAME, __FUNCTION__, __LINE__,last_laf_status.backoff );
+                        LOG_INFO( "[%s] Added default lnf back off time %fs ",MODULE_NAME,last_laf_status.backoff );
                     }
                 }
                 else
@@ -2789,14 +2776,14 @@ void *lafConnPrivThread(void* arg)
                     if (LAF_REQUEST_CONNECT_TO_LFSSID == reqType)
                     {
                         setLNFState(CONNECTED_LNF);
-                        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Connected to LNF\n",MODULE_NAME, __FUNCTION__, __LINE__ );
+                        LOG_TRACE("[%s] Connected to LNF",MODULE_NAME);
                     }
                     else
                     {
                         if (gWifiLNFStatus == CONNECTED_PRIVATE)
                         {
                             setLNFState(CONNECTED_PRIVATE);
-                            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] pressed coming out of LNF since box is connected to private \n", __FUNCTION__, __LINE__ );
+                            LOG_INFO("pressed coming out of LNF since box is connected to private ");
                         }
                     }
                     break;
@@ -2806,13 +2793,13 @@ void *lafConnPrivThread(void* arg)
             bIsStopLNFWhileDisconnected=true;
         }
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
 }
 void *lafConnThread(void* arg)
 {
     int ret = 0;
     bool lnfReturnStatus=false;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     setLNFState(LNF_IN_PROGRESS);
     while (false == bDeviceActivated) {
         bLnfActivationLoop=true;
@@ -2824,7 +2811,7 @@ void *lafConnThread(void* arg)
                 if (false == isLAFCurrConnectedssid)
                 {
                     setLNFState(CONNECTED_PRIVATE);
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected through non LAF path\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    LOG_INFO("[%s] Connected through non LAF path", MODULE_NAME);
                     bIsStopLNFWhileDisconnected=true;
                     bLnfActivationLoop=false;
                     return NULL;
@@ -2833,7 +2820,7 @@ void *lafConnThread(void* arg)
             }
             if (true == bStopLNFWhileDisconnected)
             {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_INFO("[%s] stopLNFWhileDisconnected pressed coming out of LNF", MODULE_NAME);
                 bIsStopLNFWhileDisconnected=true;
                 bLnfActivationLoop=false;
                 setLNFState(LNF_UNITIALIZED);
@@ -2844,7 +2831,7 @@ void *lafConnThread(void* arg)
             unsigned int tokenlength=0;
             readtoken = get_token_length(tokenlength);
             if(readtoken != 0) {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] LNF TOKEN ERROR \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_ERR("[%s] LNF TOKEN ERROR", MODULE_NAME);
                 setLNFState(CONNECTED_PRIVATE);
                 break;
             }
@@ -2853,8 +2840,7 @@ void *lafConnThread(void* arg)
             doLnFBackoff();
             if (gWifiLNFStatus == CONNECTED_PRIVATE)
             {
-                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Connected to Private SSID already. Aborting requested LNF.\n",
-                        MODULE_NAME, __FUNCTION__, __LINE__);
+                LOG_INFO("[%s] Connected to Private SSID already. Aborting requested LNF.", MODULE_NAME);
                 pthread_mutex_unlock(&mutexTriggerLAF);
                 break;
             }
@@ -2868,7 +2854,7 @@ void *lafConnThread(void* arg)
 
                 if (true == bStopLNFWhileDisconnected)
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                    LOG_INFO("[%s] stopLNFWhileDisconnected pressed coming out of LNF ", MODULE_NAME);
                     bIsStopLNFWhileDisconnected=true;
                     bLnfActivationLoop=false;
                     return NULL;
@@ -2879,7 +2865,7 @@ void *lafConnThread(void* arg)
             else
             {
                 setLNFState(CONNECTED_LNF);
-                RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Connection to LAF success\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_DBG("[%s] Connection to LAF success", MODULE_NAME);
                 break;
             }
         }
@@ -2887,12 +2873,12 @@ void *lafConnThread(void* arg)
         sleep(1);
         if((gWifiLNFStatus != CONNECTED_PRIVATE) && (false == isLAFCurrConnectedssid) && (gWifiAdopterStatus == WIFI_CONNECTED))
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] isLAFCurrConnectedssid = %d gWifiAdopterStatus = %d\n", MODULE_NAME,__FUNCTION__, __LINE__,isLAFCurrConnectedssid,gWifiAdopterStatus );
+            LOG_INFO("[%s] isLAFCurrConnectedssid = %d gWifiAdopterStatus = %d", MODULE_NAME,isLAFCurrConnectedssid,gWifiAdopterStatus );
             gWifiLNFStatus=CONNECTED_PRIVATE;
         }
         if (true == bStopLNFWhileDisconnected)
         {
-            RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] stopLNFWhileDisconnected pressed coming out of LNF \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            LOG_INFO("[%s] stopLNFWhileDisconnected pressed coming out of LNF ", MODULE_NAME);
             bLnfActivationLoop=false;
             return NULL;
         }
@@ -2904,7 +2890,7 @@ void *lafConnThread(void* arg)
         bPrivConnectionLost=false;
         lnfConnectPrivCredentials();
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n",MODULE_NAME, __FUNCTION__, __LINE__ );
+    LOG_TRACE( "[%s] Exit",MODULE_NAME);
     pthread_exit(NULL);
 }
 
@@ -2920,7 +2906,7 @@ static void* startLAFIfNecessary(void* arg)
         but defineltly not LF SSID. - No need to trigger LNF*/
     /* Here, 'getDeviceActivationState == true'*/
     if((! laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid)) &&  (WIFI_CONNECTED == get_WifiRadioStatus())) {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Now connected to Private SSID %s\n", MODULE_NAME,__FUNCTION__, __LINE__ , savedWiFiConnList.ssidSession.ssid);
+       LOG_DBG("[%s] Now connected to Private SSID %s", MODULE_NAME, savedWiFiConnList.ssidSession.ssid);
     }
     else {
 #ifdef ENABLE_IARM
@@ -2936,7 +2922,7 @@ static void* startLAFIfNecessary(void* arg)
 
 void connectToLAF()
 {
-    RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_DBG("[%s] Enter", MODULE_NAME );
     pthread_attr_t attr;
     if((getDeviceActivationState() == false)
 #ifdef ENABLE_IARM
@@ -2959,7 +2945,7 @@ void connectToLAF()
             //signal to monitor wifi status
             pthread_mutex_lock(&mutexGo);
             if(0 == pthread_cond_signal(&condGo)) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_INFO("[%s] Broadcast to monitor.", MODULE_NAME);
             }
             pthread_mutex_unlock(&mutexGo);
         } else {
@@ -2970,7 +2956,7 @@ void connectToLAF()
         //signal to monitor wifi status
         pthread_mutex_lock(&mutexGo);
         if(0 == pthread_cond_signal(&condGo)) {
-          RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Broadcast to monitor. \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+          LOG_INFO("[%s] Broadcast to monitor.", MODULE_NAME);
         }
         pthread_mutex_unlock(&mutexGo);
 #endif
@@ -2993,17 +2979,17 @@ void lafConnectToPrivate()
 bool getLAFssid()
 {
     char lafSsid[SSID_SIZE];
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     memset(lafSsid, 0, SSID_SIZE);
     laf_get_lfssid(lafSsid);
     if(lafSsid)
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] lfssid is %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,lafSsid);
+        LOG_TRACE("[%s] lfssid is %s", MODULE_NAME, lafSsid);
         return true;
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lfssid is empty \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] lfssid is empty ", MODULE_NAME);
         return false;
     }
 }
@@ -3011,17 +2997,17 @@ bool getLAFssid()
 bool isLAFCurrConnectedssid()
 {
     bool retVal=false;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     if(laf_is_lnfssid(savedWiFiConnList.ssidSession.ssid))
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] LAF is the current connected ssid \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_TRACE("[%s] LAF is the current connected ssid ", MODULE_NAME);
         retVal=true;
     }
     else
     {
         retVal=false;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return retVal;
 
 }
@@ -3032,14 +3018,14 @@ bool getDeviceActivationState()
     char scriptOutput[BUFFER_SIZE_SCRIPT_OUTPUT] = {'\0'};
     unsigned int count=0;
     std::string str;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     while(deviceID && !deviceID[0])
     {
         if (access(SCRIPT_FILE_TO_GET_DEVICE_ID, F_OK ) != -1)
         {
             if (!netSrvMgrUtiles::getCommandOutput(SCRIPT_FILE_TO_GET_DEVICE_ID, scriptOutput, sizeof (scriptOutput)))
             {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in running device id script. \n", MODULE_NAME,__FUNCTION__, __LINE__);
+                LOG_ERR("[%s] Error in running device id script.", MODULE_NAME);
                 return bDeviceActivated;
             }
             g_stpcpy(deviceID,scriptOutput);
@@ -3048,7 +3034,7 @@ bool getDeviceActivationState()
         {
             if(! confProp.wifiProps.authServerURL)
             {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Authserver URL is NULL \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+                LOG_ERR("[%s] Authserver URL is NULL", MODULE_NAME);
                 return bDeviceActivated;
             }
             str.assign(confProp.wifiProps.authServerURL,strlen(confProp.wifiProps.authServerURL));
@@ -3060,7 +3046,7 @@ bool getDeviceActivationState()
         sleep(5);
         count++;
     }
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] device id string is %s \n", MODULE_NAME,__FUNCTION__, __LINE__ ,deviceID);
+    LOG_INFO( "[%s] device id string is %s", MODULE_NAME,deviceID);
     gchar **tokens = g_strsplit_set(deviceID,"{}:,\"", -1);
     guint tokLength = g_strv_length(tokens);
     guint loopvar=0;
@@ -3089,14 +3075,14 @@ bool getDeviceActivationState()
                 g_stpcpy(partnerID, g_strstrip(tokens[loopvar+3]));
                 if(partnerID[0] != '\0')
                 {
-                  RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] partner id is %s \n", MODULE_NAME,__FUNCTION__, __LINE__,partnerID);
+                  LOG_INFO("[%s] partner id is %s", MODULE_NAME, partnerID);
                 }
             }
         }
       }
     if(tokens)
         g_strfreev(tokens);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return bDeviceActivated;
 #else
     return true;
@@ -3109,14 +3095,14 @@ bool isWifiConnected()
 
 void lnfConnectPrivCredentials()
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     if(bLnfActivationLoop)
     {
-        RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] Still in LnF Activation Loop so discarding getting private credentials \n",MODULE_NAME,__FUNCTION__, __LINE__ );
+       LOG_DBG( "[%s] Still in LnF Activation Loop so discarding getting private credentials",MODULE_NAME);
         return;
     }
     signalStartLAF();
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
 }
 #endif // ENABLE_LOST_FOUND
 
@@ -3125,11 +3111,11 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
 {
     IARM_Result_t ret = IARM_RESULT_IPCCORE_FAIL;
     bool retValue=false;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     HOSTIF_MsgData_t param = {0};
 
     if(NULL == name || value == NULL) {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d]  Null pointer caught for Name/Value \n", MODULE_NAME,__FUNCTION__ ,__LINE__ );
+        LOG_ERR("[%s]  Null pointer caught for Name/Value", MODULE_NAME );
         return retValue;
     }
 
@@ -3162,14 +3148,14 @@ bool setHostifParam (char *name, HostIf_ParamType_t type, void *value)
                         (void *)&param,
                         sizeof(param));
     if(ret != IARM_RESULT_SUCCESS) {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] Error executing Set parameter call from tr69Client, error code \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_ERR("[%s] Error executing Set parameter call from tr69Client, error code",MODULE_NAME);
     }
     else
     {
-        RDK_LOG(RDK_LOG_DEBUG,LOG_NMGR,"[%s:%s:%d] sent iarm message to set hostif parameter\n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_DBG("[%s] sent iarm message to set hostif parameter",MODULE_NAME);
         retValue=true;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return retValue;
 }
 #endif // ENABLE_IARM
@@ -3193,22 +3179,22 @@ bool connectToMfrWifiCredentials()
     bool retVal=false;
     IARM_BUS_MFRLIB_API_WIFI_Credentials_Param_t param = {0};
 
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     param.requestType=WIFI_GET_CREDENTIALS;
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
         if (param.wifiCredentials.iSecurityMode == -1){
-        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials having no security mode \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_INFO("[%s] IARM success in retrieving the stored wifi credentials having no security mode ",MODULE_NAME);
         retVal = connect_withSSID(ssidIndex, param.wifiCredentials.cSSID, NET_WIFI_SECURITY_WPA_PSK_AES, NULL, param.wifiCredentials.cPassword, param.wifiCredentials.cPassword, true, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
         }
         else{
-        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials having the security mode %d\n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.iSecurityMode );
+        LOG_INFO("[%s] IARM success in retrieving the stored wifi credentials having the security mode %d",MODULE_NAME,param.wifiCredentials.iSecurityMode );
         retVal = connect_withSSID(ssidIndex, param.wifiCredentials.cSSID, (SsidSecurity)param.wifiCredentials.iSecurityMode, NULL, param.wifiCredentials.cPassword, param.wifiCredentials.cPassword, true, NULL, NULL, NULL, NULL, WIFI_CON_PRIVATE);
         }
     }
     else
     {
-        RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM failure in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_INFO("[%s] IARM failure in retrieving the stored wifi credentials", MODULE_NAME);
     }
     return retVal;
 }
@@ -3220,34 +3206,34 @@ bool storeMfrWifiCredentials(void)
 #ifdef USE_RDK_WIFI_HAL
 #ifdef ENABLE_IARM
     IARM_BUS_MFRLIB_API_WIFI_Credentials_Param_t param = {0};
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     retVal=lastConnectedSSID(&savedWiFiConnList);
     if(retVal == false)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "\n[%s:%s:%d] Last connected ssid fetch failure \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_ERR("[%s] Last connected ssid fetch failure", MODULE_NAME);
         return retVal;
     }
     else
     {
         retVal=false;
-        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] fetched ssid details  %s \n",MODULE_NAME,__FUNCTION__,__LINE__,savedWiFiConnList.ssidSession.ssid);
+        LOG_TRACE("[%s] fetched ssid details  %s ",MODULE_NAME,savedWiFiConnList.ssidSession.ssid);
     }
     param.requestType=WIFI_GET_CREDENTIALS;
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
-        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_TRACE("[%s] IARM success in retrieving the stored wifi credentials ",MODULE_NAME);
         if ((strcmp (param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid) == 0) &&
                 (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0) &&
                 (param.wifiCredentials.iSecurityMode == savedWiFiConnList.ssidSession.security_mode || param.wifiCredentials.iSecurityMode == -1) )
         {
-            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Same ssid info not storing it stored ssid %s new ssid %s \n",
-                    MODULE_NAME, __FUNCTION__, __LINE__, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
+            LOG_INFO("[%s] Same ssid info not storing it stored ssid %s new ssid %s",
+                    MODULE_NAME, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
             return true;
         }
         else
         {
-            RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] ssid info is different continue to store ssid %s new ssid %s \n",
-                    MODULE_NAME, __FUNCTION__, __LINE__, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
+            LOG_INFO("[%s] ssid info is different continue to store ssid %s new ssid %s",
+                    MODULE_NAME, param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid);
         }
     }
     memset(&param,0,sizeof(param));
@@ -3257,37 +3243,37 @@ bool storeMfrWifiCredentials(void)
     param.wifiCredentials.iSecurityMode = savedWiFiConnList.ssidSession.security_mode;
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
     {
-        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in storing wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_TRACE("[%s] IARM success in storing wifi credentials",MODULE_NAME);
         memset(&param,0,sizeof(param));
         param.requestType=WIFI_GET_CREDENTIALS;
         if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_Credentials,(void *)&param,sizeof(param)))
         {
-            RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in retrieving the stored wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+            LOG_TRACE("[%s] IARM success in retrieving the stored wifi credentials ",MODULE_NAME);
             if ((strcmp (param.wifiCredentials.cSSID, savedWiFiConnList.ssidSession.ssid) == 0) &&
                     (strcmp (param.wifiCredentials.cPassword, savedWiFiConnList.ssidSession.passphrase) == 0) &&
                     (param.wifiCredentials.iSecurityMode == savedWiFiConnList.ssidSession.security_mode || param.wifiCredentials.iSecurityMode == -1) )
             {
                 retVal=true;
-                RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] Successfully stored the credentails and verified stored ssid %s current ssid %s and security_mode %d\n",MODULE_NAME,__FUNCTION__,__LINE__,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid,param.wifiCredentials.iSecurityMode);
+                LOG_INFO("[%s] Successfully stored the credentails and verified stored ssid %s current ssid %s and security_mode %d",MODULE_NAME,param.wifiCredentials.cSSID,savedWiFiConnList.ssidSession.ssid,param.wifiCredentials.iSecurityMode);
             }
             else
             {
-                RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] failure in storing  wifi credentials   \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+                LOG_ERR("[%s] failure in storing  wifi credentials",MODULE_NAME);
             }
 
         }
         else
         {
-            RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] IARM error in retrieving stored wifi credentials mfr error code %d \n",MODULE_NAME,__FUNCTION__,__LINE__,param.returnVal );
+            LOG_ERR("[%s] IARM error in retrieving stored wifi credentials mfr error code %d ",MODULE_NAME,param.returnVal );
         }
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] IARM error in storing wifi credentials mfr error code \n",MODULE_NAME,__FUNCTION__,__LINE__ ,param.returnVal);
+        LOG_ERR("[%s] IARM error in storing wifi credentials mfr error code ",MODULE_NAME ,param.returnVal);
     }
 #endif // ENABLE_IARM
 #endif // USE_RDK_WIFI_HAL
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
     return retVal;
 }
 
@@ -3296,18 +3282,18 @@ bool eraseMfrWifiCredentials(void)
 {
     bool retVal=false;
 #ifdef USE_RDK_WIFI_HAL
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 #ifdef ENABLE_IARM
     if(IARM_RESULT_SUCCESS == IARM_Bus_Call(IARM_BUS_MFRLIB_NAME,IARM_BUS_MFRLIB_API_WIFI_EraseAllData,0,0))
     {
-        RDK_LOG(RDK_LOG_TRACE1,LOG_NMGR,"[%s:%s:%d] IARM success in erasing wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_TRACE("[%s] IARM success in erasing wifi credentials ",MODULE_NAME);
         retVal=true;
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%s:%d] failure in erasing  wifi credentials \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+        LOG_ERR("[%s] failure in erasing  wifi credentials ",MODULE_NAME);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME);
 #endif
 #endif
     return retVal;
@@ -3317,7 +3303,7 @@ bool eraseMfrWifiCredentials(void)
 void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
 {
     int radioIndex = 0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 #ifdef USE_RDK_WIFI_HAL
     wifi_sta_stats_t stats;
     memset(&stats, '\0', sizeof(stats));
@@ -3343,16 +3329,16 @@ void getEndPointInfo(WiFi_EndPoint_Diag_Params *endPointInfo)
         endPointInfo->enable = enable;
     }
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] \n Profile : \"EndPoint.1.\": \n \
-    		[Enable : \"%d\"| Status : \"%s\" | SSIDReference : \"%s\" ] \n",
-            MODULE_NAME,__FUNCTION__, __LINE__, endPointInfo->enable, endPointInfo->status, endPointInfo->SSIDReference);
+    LOG_DBG("[%s] \n Profile : \"EndPoint.1.\": \n \
+            [Enable : \"%d\"| Status : \"%s\" | SSIDReference : \"%s\" ]",
+            MODULE_NAME, endPointInfo->enable, endPointInfo->status, endPointInfo->SSIDReference);
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%s:%d] \n Profile : \"EndPoint.1.Stats.\": \n \
-    		[SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ] \n",
-            MODULE_NAME,__FUNCTION__, __LINE__, endPointInfo->stats.signalStrength, endPointInfo->stats.retransmissions,
+    LOG_DBG("[%s] \n Profile : \"EndPoint.1.Stats.\": \n \
+            [SignalStrength : \"%d\"| Retransmissions : \"%d\" | LastDataUplinkRate : \"%d\" | LastDataDownlinkRate : \" %d\" ]",
+            MODULE_NAME,endPointInfo->stats.signalStrength, endPointInfo->stats.retransmissions,
             endPointInfo->stats.lastDataDownlinkRate, endPointInfo->stats.lastDataUplinkRate);
 #endif // USE_RDK_WIFI_HAL
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
 }
 
 
@@ -3380,7 +3366,7 @@ bool getRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
        param->postAssnAPcontrolThresholdLevel = out_param.postAssnAPctrlThreshold;
        param->postAssnAPcontrolTimeframe = out_param.postAssnAPctrlTimeframe;
        param->roaming80211kvrEnable = out_param.roam80211kvrEnable;
-       RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]\n", MODULE_NAME,param->roamingEnable,param->preassnBestThreshold,param->preassnBestDelta);
+       LOG_DBG("[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]", MODULE_NAME,param->roamingEnable,param->preassnBestThreshold,param->preassnBestDelta);
        retStatus = true;
     } else if(status == -1) {
         param->status = ROAM_PARAM_FAILURE;
@@ -3417,7 +3403,7 @@ bool setRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
    if(status == 0) {
        param->status = ROAM_PARAM_SUCCESS;
        retStatus = true;
-       RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]\n", MODULE_NAME,in_param.roamingEnable,in_param.preassnBestThreshold,in_param.preassnBestDelta);
+       LOG_DBG("[%s] Successfully set Roaming param- [roamingEnable=%d,preassnBestThreshold=%d,preassnBestDelta=%d]", MODULE_NAME,in_param.roamingEnable,in_param.preassnBestThreshold,in_param.preassnBestDelta);
    } else if(status == -1)
         param->status = ROAM_PARAM_FAILURE;
      else if(status == -2)
@@ -3431,12 +3417,12 @@ bool setRoamingConfigInfo(WiFi_RoamingCtrl_t *param)
 bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params)
 {
     int radioIndex=0;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     wifi_radioTrafficStats_t *trafficStats =(wifi_radioTrafficStats_t *) malloc(sizeof(wifi_radioTrafficStats_t));
     if(trafficStats == NULL)
     {
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s]Malloc Memory allocation failure\n", MODULE_NAME,__FUNCTION__);
+        LOG_TRACE( "[%s]Malloc Memory allocation failure", MODULE_NAME);
         return false;
     }
     printf("malloc allocated = %d ", malloc_usable_size(trafficStats));
@@ -3458,17 +3444,17 @@ bool getRadioStats(WiFi_Radio_Stats_Diag_Params *params)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] HAL wifi_getRadioTrafficStats FAILURE \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] HAL wifi_getRadioTrafficStats FAILURE", MODULE_NAME);
     }
     free(trafficStats);
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return true;
 }
 
 void logs_Period1_Params()
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     if(NULL != wifiParams_Tele_Period1.paramlist)
     {
         WiFi_EndPoint_Diag_Params endPointInfo;
@@ -3482,37 +3468,37 @@ void logs_Period1_Params()
         {
             /* Device.WiFi.EndPoint.{i}.Stats.LastDataDownlinkRate*/
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "LastDataDownlinkRate")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, endPointInfo.stats.lastDataDownlinkRate);
+                LOG_INFO("%s:%lu ",  (char *)iter->data, endPointInfo.stats.lastDataDownlinkRate);
             }
             /* Device.WiFi.EndPoint.{i}.Stats.LastDataUplinkRate */
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "LastDataUplinkRate ")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, endPointInfo.stats.lastDataUplinkRate);
+                LOG_INFO("%s:%lu ",  (char *)iter->data, endPointInfo.stats.lastDataUplinkRate);
             }
 
             /* Device.WiFi.EndPoint.{i}.Stats.Retransmissions*/
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Retransmissions")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, endPointInfo.stats.retransmissions);
+                LOG_INFO("%s:%lu ",  (char *)iter->data, endPointInfo.stats.retransmissions);
             }
 
             /*Device.WiFi.Endpoint.{i}.Stats.SignalStrength*/
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "SignalStrength")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, endPointInfo.stats.signalStrength);
+                LOG_INFO("%s:%d ",  (char *)iter->data, endPointInfo.stats.signalStrength);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Channel")) {
                 unsigned long output_ulong = 0;
                 int radioIndex = 0;
                 if (wifi_getRadioChannel(radioIndex, &output_ulong) == RETURN_OK) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n", (char *)iter->data , output_ulong);
+                    LOG_INFO("%s:%lu ", (char *)iter->data , output_ulong);
                 }
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.FCSErrorCount")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.fcsErrorCount);
+                LOG_INFO("%s:%u ",  (char *)iter->data, params.fcsErrorCount);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.Noise")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.noiseFloor);
+                LOG_INFO("%s:%u ",  (char *)iter->data, params.noiseFloor);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "TransmitPower"))
@@ -3520,24 +3506,24 @@ void logs_Period1_Params()
                 INT output_INT = 0;
                 int radioIndex = 0;
                 if (wifi_getRadioTransmitPower( radioIndex,  &output_INT) == RETURN_OK) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n", (char *)iter->data , output_INT);
+                    LOG_INFO("%s:%d ", (char *)iter->data , output_INT);
                 }
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsReceived")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.errorsReceived);
+                LOG_INFO( "%s:%u ",  (char *)iter->data, params.errorsReceived);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.ErrorsSent")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%u \n",  (char *)iter->data, params.errorsSent);
+                LOG_INFO("%s:%u ",  (char *)iter->data, params.errorsSent);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsReceived")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, params.packetsReceived);
+                LOG_INFO( "%s:%lu ",  (char *)iter->data, params.packetsReceived);
             }
 
             if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Stats.PacketsSent")) {
-                RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%lu \n",  (char *)iter->data, params.packetsSent);
+                LOG_INFO("%s:%lu ",  (char *)iter->data, params.packetsSent);
             }
 
             iter = g_list_next(iter);
@@ -3545,7 +3531,7 @@ void logs_Period1_Params()
 
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
+    LOG_TRACE("Exit");
 }
 
 
@@ -3556,10 +3542,10 @@ void logs_Period2_Params()
     static time_t lastExec_t;
     double diff_t;
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    LOG_ENTRY_EXIT;
 
     time(&start_t);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] print_flag : %d\n", __FUNCTION__, __LINE__, print_flag);
+    LOG_TRACE("print_flag : %d", print_flag);
     if(print_flag)
     {
         if(NULL != wifiParams_Tele_Period2.paramlist)
@@ -3577,35 +3563,35 @@ void logs_Period2_Params()
             GList *iter = g_list_first(wifiParams_Tele_Period2.paramlist);
             while(iter)
             {
-                RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d]%s \n",__FUNCTION__, __LINE__, (char *)iter->data);
+                LOG_TRACE("%s", (char *)iter->data);
                 /* Device.WiFi.Endpoint.{i}.NumberOfEntries*/
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "NumberOfEntries")) {
                     int noOfEndpoint = 1;
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%d \n",  (char *)iter->data, noOfEndpoint);
+                    LOG_INFO( "%s:%d",  (char *)iter->data, noOfEndpoint);
                 }
 
                 if((g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.1.Profile.1.SSID"))
                         || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.SSID.1.SSID"))
                         || (g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.EndPoint.1.SSIDReference")))
                 {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, currSsidInfo.ssidSession.ssid);
+                    LOG_INFO("%s:%s",  (char *)iter->data, currSsidInfo.ssidSession.ssid);
                 }
 
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "BSSID")) {
-                    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, bssid_string);
+                    LOG_INFO("%s:%s",  (char *)iter->data, bssid_string);
                 }
 
                 /* Device.WiFi.EndPoint.{i}.Profile.{i}.SSID*/
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Name")) {
                     memset(output_string,0, BUFF_MAX);
                     if(wifi_getSSIDName(ssidIndex, output_string) == RETURN_OK) {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, output_string);
+                        LOG_INFO("%s:%s",  (char *)iter->data, output_string);
                     }
                 }
 
                 if(g_strrstr ((const gchar *)iter->data, (const gchar *) "Device.WiFi.SSID.1.MACAddress")) {
                     if(gWifiMacAddress[0] != '\0') {
-                        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "%s:%s \n",  (char *)iter->data, gWifiMacAddress);
+                        LOG_INFO("%s:%s",  (char *)iter->data, gWifiMacAddress);
                     }
                 }
 
@@ -3624,7 +3610,6 @@ void logs_Period2_Params()
         print_flag = false;
     }
 
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 }
 
 
@@ -3669,14 +3654,14 @@ int laf_get_lfat(laf_lfat_t *lfat)
     http_err_code = getLfatUrl.gethttpcode();
 
     if((http_err_code != 200) || (strlen(retStr ) <= 1)) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "get lfat from auth service failed with error code %d ", http_err_code);
+        LOG_ERR("get lfat from auth service failed with error code %d", http_err_code);
         if(http_err_code == 0)
             http_err_code = 404;
         return http_err_code;
     }
 
     /* parse json response */
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "Response from authservice to get lfat %s", retStr);
+    LOG_DBG("Response from authservice to get lfat %s", retStr);
     response = cJSON_Parse(retStr);
     RDK_ASSERT_NOT_NULL(response);
     RDK_ASSERT_NOT_NULL(cJSON_GetObjectItem(response, "version"));
@@ -3696,7 +3681,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
 #else // ENABLE_XCAM_SUPPORT or XHB1 or XHC3
 int laf_get_lfat(laf_lfat_t *lfat)
 {
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+	LOG_ENTRY_EXIT;
 	int ret=0;
 	unsigned int tokenlength=0;
         FILE *fd = NULL;
@@ -3707,7 +3692,7 @@ int laf_get_lfat(laf_lfat_t *lfat)
 
 	ret = get_token_length(tokenlength);
 	if(ret != 0) {
-		RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "laf_get_lfat - Error in token read \n");
+		LOG_ERR("laf_get_lfat - Error in token read");
 		return ret;
 	}
 	lfat->token = (char *) malloc(tokenlength+1);
@@ -3716,8 +3701,8 @@ int laf_get_lfat(laf_lfat_t *lfat)
 	ret = get_laf_token(lfat->token,tokenlength);
 	lfat->len = tokenlength;
 	lfat->token[tokenlength] = '\0';
-	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token size is - %d\n",lfat->len);
-	RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "laf_get_lfat - token is - %s\n",lfat->token);
+	LOG_DBG("laf_get_lfat - token size is - %d", lfat->len);
+	LOG_DBG("laf_get_lfat - token is - %s", lfat->token);
 
         //Read lfat version and ttl from /mnt/ramdisk/env/.lnf_conf
         if (0 == access(LFAT_CONF_FILE, F_OK)) {
@@ -3739,22 +3724,20 @@ int laf_get_lfat(laf_lfat_t *lfat)
             }else{
               lfat->ttl = 31536000;
             }
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %s\n",version, ttl);
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %ld\n",lfat->version, lfat->ttl);
+            LOG_INFO("lfat_version : %s, lfat_ttl : %s",version, ttl);
+            LOG_INFO("lfat_version : %s, lfat_ttl : %ld",lfat->version, lfat->ttl);
             fclose(fd);
           }else{
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Unable to open lfat_conf file\n");
+            LOG_INFO("Unable to open lfat_conf file");
           }
         }
         else //If .lnf_conf file is not present
-        { 
-          // Read from netsrvmgr.conf 
+        {
+          // Read from netsrvmgr.conf
           STRCPY_S(lfat->version, sizeof(lfat->version), confProp.wifiProps.lfatVersion);
           lfat->ttl = confProp.wifiProps.lfatTTL;
-          RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "lfat_version : %s, lfat_ttl : %ld\n",lfat->version, lfat->ttl);
+          LOG_INFO("lfat_version : %s, lfat_ttl : %ld",lfat->version, lfat->ttl);
         }
-
-	RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
 	return ret;
 }
 #endif // ENABLE_XCAM_SUPPORT
@@ -3783,7 +3766,7 @@ int laf_set_lfat(laf_lfat_t* const lfat)
     http_err_code = setLfatUrl.gethttpcode();
 
     if(http_err_code != 200) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "set lfat to auth service failed with error code %d message %s", http_err_code);
+        LOG_ERR("set lfat to auth service failed with error code %d message", http_err_code);
         cJSON_Delete(req_payload);
         if(data)
             free(data);
@@ -3801,19 +3784,19 @@ int laf_set_lfat(laf_lfat_t* const lfat)
 #else // ENABLE_XCAM_SUPPORT or XHB1 or XHC3
 int laf_set_lfat(laf_lfat_t* const lfat)
 {
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+  LOG_ENTRY_EXIT;
   char* tokenfilename = getlfatfilename();
   if(NULL != lfat->token){
-      RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "Updating lfat token after token expiry/recovery\n");
+     LOG_INFO("Updating lfat token after token expiry/recovery");
       int result = getSetFileContent(tokenfilename, "set", lfat->token);
-      RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "tokenfilename : %s lfat->token : %s", tokenfilename, lfat->token);
+      LOG_DBG("tokenfilename : %s lfat->token : %s", tokenfilename, lfat->token);
       if (result)
       {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "Error setting lfat token\n");
+        LOG_ERR("Error setting lfat token");
         return -1;
       }
   }else {
-       RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,  "LFAT Token is Null");
+       LOG_ERR( "LFAT Token is Null");
        return -1;
   }
   return 0;
@@ -3825,25 +3808,25 @@ bool addSwitchToPrivateResults(int lnfError,char *currTime)
   bool ret = false;
   guint lstLnfPvtResultsLength=0;
   WiFiLnfSwitchPrivateResults_t *WiFiLnfSwitchPrivateResultsData=NULL;
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  LOG_TRACE("[%s] Enter", MODULE_NAME);
   WiFiLnfSwitchPrivateResultsData = g_new0(WiFiLnfSwitchPrivateResults_t,1);
   if(NULL == WiFiLnfSwitchPrivateResultsData) {
-    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to allocate memory \n",  MODULE_NAME,__FUNCTION__, __LINE__);
+    LOG_ERR("[%s] \'Failed to allocate memory", MODULE_NAME);
   }
-  else { 
+  else {
     WiFiLnfSwitchPrivateResultsData->lnfError = (unsigned char)lnfError;
     g_stpcpy((gchar*)WiFiLnfSwitchPrivateResultsData->currTime,currTime);
     lstLnfPvtResults=g_list_append(lstLnfPvtResults,WiFiLnfSwitchPrivateResultsData);
     lstLnfPvtResultsLength=g_list_length(lstLnfPvtResults);
     if ((lstLnfPvtResults != NULL)&&(lstLnfPvtResultsLength > 0)) {
-         RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Time = %s lnf error = %d length of list = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError,g_list_length(lstLnfPvtResults));
+         LOG_INFO("[%s] Time = %s lnf error = %d length of list = %d ", MODULE_NAME,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError,g_list_length(lstLnfPvtResults));
          ret = true;
     }
     else {
-         RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] Error in added Time and lnf error to list, error code %d \n", MODULE_NAME,__FUNCTION__, __LINE__,ret );
+         LOG_ERR("[%s] Error in added Time and lnf error to list, error code %d", MODULE_NAME, ret );
     }
-  }  
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  }
+  LOG_TRACE("[%s] Exit", MODULE_NAME );
   return ret;
 }
 
@@ -3855,10 +3838,10 @@ bool convertSwitchToPrivateResultsToJson(char *buffer)
   char *out = NULL;
   char privateResultsLength=0;
   WiFiLnfSwitchPrivateResults_t *WiFiLnfSwitchPrivateResultsData=NULL;
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  LOG_TRACE("[%s] Enter", MODULE_NAME);
   rootObj = cJSON_CreateObject();
   if(NULL == rootObj) {
-    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%s:%d] \'Failed to create root json object.\n",  MODULE_NAME,__FUNCTION__, __LINE__);
+    LOG_ERR("[%s] Failed to create root json object.", MODULE_NAME);
     return false;
   }
   cJSON_AddItemToObject(rootObj, "results", array_obj=cJSON_CreateArray());
@@ -3871,7 +3854,7 @@ bool convertSwitchToPrivateResultsToJson(char *buffer)
     cJSON_AddItemToArray(array_obj,array_element=cJSON_CreateObject());
     cJSON_AddStringToObject(array_element, "timestamp",(const char*)WiFiLnfSwitchPrivateResultsData->currTime);
     cJSON_AddNumberToObject(array_element, "result", WiFiLnfSwitchPrivateResultsData->lnfError);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Time = %s lnf error = %d \n", MODULE_NAME,__FUNCTION__, __LINE__,WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError );
+    LOG_TRACE("[%s] Time = %s lnf error = %d ", MODULE_NAME, WiFiLnfSwitchPrivateResultsData->currTime,WiFiLnfSwitchPrivateResultsData->lnfError );
     element = g_list_next(element);
     privateResultsLength--;
   }
@@ -3879,18 +3862,18 @@ bool convertSwitchToPrivateResultsToJson(char *buffer)
 
   if(out) {
     strncpy(buffer, out, strlen(out)+1);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Buffer = %s \n", MODULE_NAME,__FUNCTION__, __LINE__,buffer );
+    LOG_TRACE("[%s] Buffer = %s", MODULE_NAME,buffer );
   }
   if(rootObj) {
     cJSON_Delete(rootObj);
   }
   if(out) free(out);
-  RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+  LOG_TRACE("[%s] Exit", MODULE_NAME );
   return true;
 }
 bool clearSwitchToPrivateResults()
 {
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
     if((lstLnfPvtResults) && (g_list_length(lstLnfPvtResults) != 0))
     {
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
@@ -3901,9 +3884,9 @@ bool clearSwitchToPrivateResults()
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] switch to private results list is empty \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] switch to private results list is empty ", MODULE_NAME);
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return true;
 }
 #endif // ENABLE_LOST_FOUND
@@ -3912,47 +3895,47 @@ bool shutdownWifi()
 {
     bool result=true;
     bShutdownWifi= true;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Enter\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Enter", MODULE_NAME);
 
     pthread_mutex_lock(&mutexGo);
     if(0 == pthread_cond_signal(&condGo)) {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signalling wifiStatusMonitorThread to exit cond wait \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] Signalling wifiStatusMonitorThread to exit cond wait", MODULE_NAME);
     }
     pthread_mutex_unlock(&mutexGo);
 
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] calling pthread_join wifiStatusMonitorThread\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_INFO("[%s] calling pthread_join wifiStatusMonitorThread", MODULE_NAME);
     pthread_join (wifiStatusMonitorThread, NULL);
 
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
     pthread_mutex_lock(&mutexAPDetails);
     bsignalAPDetailsReady = true;
     if(0 == pthread_cond_signal(&condAPDetails)) {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Signalling apDetailsCollectionThread to exit cond wait \n", MODULE_NAME, __FUNCTION__, __LINE__ );
+        LOG_INFO("[%s] Signalling apDetailsCollectionThread to exit cond wait", MODULE_NAME);
     }
     pthread_mutex_unlock(&mutexAPDetails);
 
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] calling pthread_cancel apDetailsCollectionThread \n", MODULE_NAME, __FUNCTION__, __LINE__);
+    LOG_INFO("[%s] calling pthread_cancel apDetailsCollectionThread", MODULE_NAME);
     if ((apDetailsCollectionThread) && (pthread_cancel(apDetailsCollectionThread) == -1 )) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] apDetailsCollectionThread cancel failed! \n", MODULE_NAME, __FUNCTION__, __LINE__);
+        LOG_ERR("[%s] apDetailsCollectionThread cancel failed!", MODULE_NAME);
         result = false;
     }
 #endif
 
 #ifdef ENABLE_LOST_FOUND
     if ((lafConnectThread) && (pthread_cancel(lafConnectThread) == -1 )) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lafConnectThread cancel failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] lafConnectThread cancel failed!", MODULE_NAME);
         result=false;
     }
     if ((lafConnectToPrivateThread) && (pthread_cancel(lafConnectToPrivateThread) == -1 )) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%s:%d] lafConnectToPrivateThread failed! \n", MODULE_NAME,__FUNCTION__, __LINE__);
+        LOG_ERR("[%s] lafConnectToPrivateThread failed!", MODULE_NAME);
         result=false;
     }
 #endif
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d] Start WiFi Uninitialization \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    LOG_INFO("[%s] Start WiFi Uninitialization", MODULE_NAME);
 #ifdef USE_RDK_WIFI_HAL
     wifi_uninit();
 #endif
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%s:%d]  WiFi Uninitialization done \n", MODULE_NAME,__FUNCTION__, __LINE__);
+    LOG_INFO("[%s]  WiFi Uninitialization done", MODULE_NAME);
     gWifiAdopterStatus = WIFI_UNINSTALLED;
 #ifdef ENABLE_LOST_FOUND
     condLAF = PTHREAD_COND_INITIALIZER;
@@ -3971,7 +3954,7 @@ bool shutdownWifi()
     memset(&gSsidList,0,sizeof gSsidList);
     memset(&savedWiFiConnList,0,sizeof savedWiFiConnList);
     memset(&wifiConnData,0,sizeof wifiConnData);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
+    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return result;
 }
 

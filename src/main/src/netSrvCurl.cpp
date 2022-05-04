@@ -21,23 +21,26 @@
 #include <curl/curl.h>
 #include <glib.h>
 #include "netSrvCurl.h"
+#include "netsrvmgrUtiles.h"
 
 CurlObject::CurlObject(std::string url,char *data)
 {
+    LOG_ENTRY_EXIT;
+
     CURLcode res;
     char errbuf[CURL_ERROR_SIZE];
-    long http_code;
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    long http_code; 
+
     curl_handle = curl_easy_init();
     if(!curl_handle)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): curl failed in init  \n",__FUNCTION__);
+        LOG_ERR("curl failed in init");
     }
     errbuf[0] = 0;
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR , "%s(): curl url is %s  \n",__FUNCTION__,url.c_str());
+    LOG_DBG("curl url is %s", url.c_str());
     res=curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
     if(CURLE_OK != res)
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s:%d] : curl failed with curl error %d  \n",__FUNCTION__,__LINE__,res);
+        LOG_ERR("curl failed with curl error %d",res);
     if(data != NULL)
     {
       curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, data);
@@ -48,14 +51,14 @@ CurlObject::CurlObject(std::string url,char *data)
     errbuf[0] = 0;
     res=curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, &CurlObject::curlwritefunc);
     if(CURLE_OK != res)
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s:%d] : curl failed with curl error %d  \n",__FUNCTION__,__LINE__,res);
+        LOG_ERR("curl failed with curl error %d ", res);
     res=curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &curlDataBuffer);
     if(CURLE_OK != res)
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s:%d] : curl failed with curl error %d  \n",__FUNCTION__,__LINE__,res);
+        LOG_ERR("curl failed with curl error %d", res);
     res=curl_easy_perform(curl_handle);
     if(CURLE_OK != res)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s:%d] : curl failed with curl error %d  \n",__FUNCTION__,__LINE__,res);
+        LOG_ERR("curl failed with curl error %d ",res);
         {
             size_t len = strlen(errbuf);
             fprintf(stderr, "\nlibcurl: (%d) ", res);
@@ -68,11 +71,10 @@ CurlObject::CurlObject(std::string url,char *data)
     }
     curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &http_code);
     if(http_code != 200)
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): curl failed with http error %d  \n",__FUNCTION__,http_code);
+        LOG_ERR("curl failed with http error %d",http_code);
     //Set member variable so that we can access the http code
     m_httpcode = http_code;
     curl_easy_cleanup(curl_handle);
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n", __FUNCTION__, __LINE__ );
 
 }
 
@@ -84,14 +86,14 @@ int CurlObject::curlwritefunc(char *data, size_t size, size_t nmemb, std::string
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): curl buffer NULL  \n",__FUNCTION__);
+        LOG_ERR("curl buffer NULL");
 
     }
     return result;
 }
 
 gchar* CurlObject::getCurlData() {
-    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR , "%s(): Authservice url output %s  \n",__FUNCTION__,curlDataBuffer.c_str());
+    LOG_DBG("Authservice url output %s ",curlDataBuffer.c_str());
     return g_strdup(curlDataBuffer.c_str());
 }
 

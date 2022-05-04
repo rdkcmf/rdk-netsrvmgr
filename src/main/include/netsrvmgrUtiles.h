@@ -53,16 +53,29 @@
 
 /** @} */  //END OF GROUP NETSRVMGR_TYPES
 
+/**
+ * @brief NETSRVMGR_LOG_TYPE
+ * @{
+ */
+#define LOG_ERR(fmt, ...)   RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...)  RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s:%d] " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...)  RDK_LOG(RDK_LOG_WARN, LOG_NMGR, "[%s:%d] " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOG_DBG(fmt, ...)   RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d] " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOG_TRACE(fmt, ...) RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOG_FATAL(fmt, ...) RDK_LOG(RDK_LOG_FATAL, LOG_NMGR, "[%s:%d] " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
+/** @} */  //END OF NET_LOG_TYPE
+
 class EntryExitLogger
 {
     const char* func;
-    const char* file;
+    const int line;
 public:
-    EntryExitLogger (const char* func, const char* file);
+    EntryExitLogger (const char* func, const int line);
     ~EntryExitLogger ();
 };
 
-#define LOG_ENTRY_EXIT EntryExitLogger entry_exit_logger (__FUNCTION__, __FILE__)
+#define LOG_ENTRY_EXIT EntryExitLogger entry_exit_logger (__FUNCTION__, __LINE__)
 
 #ifdef USE_TELEMETRY_2_0
 

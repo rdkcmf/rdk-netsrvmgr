@@ -1,5 +1,6 @@
 #include "StunClient.h"
 #include "NetworkMgrMain.h"
+#include "netsrvmgrUtiles.h"
 #include <assert.h>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -83,7 +84,7 @@ namespace details {
 #ifdef __cpp_exceptions
     throw std::runtime_error(buff);
 #else
-    RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "%s\n", buff);
+    LOG_ERR("%s", buff);
 #endif
   }
 
@@ -349,7 +350,7 @@ bool client::bind(
       dirty = true;
     }
 
-    RDK_LOG (RDK_LOG_WARN, LOG_NMGR, "stun::client::bind enter: server=%s port=%u iface=%s ipv6=%u timeout=%u cache_timeout=%u dirty=%u\n",
+    LOG_WARN( "stun::client::bind enter: server=%s port=%u iface=%s ipv6=%u timeout=%u cache_timeout=%u dirty=%u",
         hostname.c_str(), port, interface.c_str(), proto == stun::protocol::af_inet6, bind_timeout, cache_timeout, dirty);
     verbose("client::bind enter: server=%s port=%u iface=%s ipv6=%u timeout=%u cache_timeout=%u dirty=%u\n",
         hostname.c_str(), port, interface.c_str(), proto == stun::protocol::af_inet6, bind_timeout, cache_timeout, dirty);
@@ -360,21 +361,21 @@ bool client::bind(
     {
         auto time_in_cache = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - m_last_cache_time);
-        
-        RDK_LOG (RDK_LOG_DEBUG, LOG_NMGR, "stun::client::bind cache time=%ld\n", time_in_cache.count());
+
+        LOG_DBG("stun::client::bind cache time=%ld", time_in_cache.count());
         verbose("client::bind cache time=%ld\n", time_in_cache.count());
 
         if(time_in_cache.count() < m_cache_timeout)
         {
             result = m_last_result;
-        
-            RDK_LOG (RDK_LOG_DEBUG, LOG_NMGR, "stun::client::bind returning cached result: %s\n", result.public_ip.c_str());
+
+            LOG_DBG("stun::client::bind returning cached result: %s", result.public_ip.c_str());
             verbose("client::bind returning cached result: %s\n", result.public_ip.c_str());
             return true;
         }
         else
         {
-            RDK_LOG (RDK_LOG_DEBUG, LOG_NMGR, "stun::client::bind cached result expired\n");
+            LOG_DBG("stun::client::bind cached result expired");
             verbose("client::client::bind cached result expired\n");
         }
     }
@@ -392,11 +393,11 @@ bool client::bind(
         std::chrono::milliseconds wait_time(interval_wait_time);
         for (int i = 0; i < num_attempts && total_time < m_bind_timeout; ++i)
         {
-            RDK_LOG (RDK_LOG_DEBUG, LOG_NMGR, "stun::client::bind sending bind request\n");
+            LOG_DBG("stun::client::bind sending bind request");
             verbose("client::bind sending bind request\n");
-            
+
             std::unique_ptr<stun::message> binding_response = send_binding_request(wait_time);
-            
+
             total_time += interval_wait_time;/*FXIME should do a clock delta and not use wait_time which is the max*/
             /*do a multiple of 2 sleep -- FIXIME should use cond variable so user to cancel this*/
             if (i > 0)
@@ -416,25 +417,25 @@ bool client::bind(
                 if (mapped_address)
                 {
                     sockaddr_storage addr = stun::attributes::mapped_address(*mapped_address).addr();
-                    
+
                     result.public_ip = m_last_result.public_ip = stun::sockaddr_to_string(addr);
 
                     m_last_cache_time = std::chrono::steady_clock::now();
 
-                    RDK_LOG (RDK_LOG_DEBUG, LOG_NMGR, "stun::client::bind success: public_ip=%s\n", result.public_ip.c_str());
+                    LOG_DBG("stun::client::bind success: public_ip=%s", result.public_ip.c_str());
                     verbose("client::bind success: public_ip=%s\n", result.public_ip.c_str());
-                    
+
                     ret_ok = true;
-                } 
+                }
                 else
                 {
-                    RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "stun::client::bind failed: ip missing from binding response\n");
+                    LOG_ERR("stun::client::bind failed: ip missing from binding response");
                     verbose("client::bind failed: ip missing from binding response\n");
                 }
             }
             else
             {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "stun::client::bind failed: no response received from server\n");
+                LOG_ERR("stun::client::bind failed: no response received from server");
                 verbose("client::bind failed: no response received from server\n");
             }
         }
@@ -442,7 +443,7 @@ bool client::bind(
 #ifdef __cpp_exceptions
     catch (std::exception const & err)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "stun fail: %s\n", err.what());
+        LOG_ERR("stun fail: %s", err.what());
         verbose("client::bind failed: %s\n", err.what());
     }
 #endif

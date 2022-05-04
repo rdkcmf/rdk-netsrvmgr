@@ -149,7 +149,7 @@ static bool getDhcpServerIP();
 
 void NetworkMgr_SignalHandler (int sigNum)
 {
-    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "%s(): Received signal %d \n",__FUNCTION__, sigNum);
+    LOG_ERR("Received signal %d", sigNum);
     signal(sigNum, SIG_DFL );
 #ifdef USE_RDK_WIFI_HAL
     /* Telemetry Parameter list*/
@@ -172,7 +172,7 @@ static bool breakpadDumpCallback(const google_breakpad::MinidumpDescriptor& desc
                         void* context,
                         bool succeeded)
 {
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]breakpadDumpCallback: Netsrvmgr crashed ---- Dump path: %s\n", __FUNCTION__, __LINE__,descriptor.path());
+    LOG_INFO("breakpadDumpCallback: Netsrvmgr crashed ---- Dump path: %s", descriptor.path());
     return true;
 }
 #endif
@@ -199,7 +199,7 @@ static bool split (const std::string &str, char delimiter, std::vector<std::stri
         tokens.push_back (token);
     if (min_expected_tokens > 0 && tokens.size () < min_expected_tokens)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: Unexpected number of tokens. Arguments received = %s\n", __FUNCTION__, __LINE__, str.c_str ());
+        LOG_ERR("Unexpected number of tokens. Arguments received = %s", str.c_str ());
         return false;
     }
     return true;
@@ -209,7 +209,7 @@ static bool split (const std::string &str, char delimiter, std::vector<std::stri
 
 static void eventInterfaceEnabledStatusChanged(const std::string& interface, bool enabled)
 {
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, enabled=%d\n", __FUNCTION__, __LINE__, interface.c_str(), enabled);
+    LOG_INFO("interface=%s, enabled=%d", interface.c_str(), enabled);
 
     IARM_BUS_NetSrvMgr_Iface_EventInterfaceEnabledStatus_t e;
     snprintf(e.interface, sizeof(e.interface), "%s", interface.c_str());
@@ -217,13 +217,13 @@ static void eventInterfaceEnabledStatusChanged(const std::string& interface, boo
 
     if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_ENABLED_STATUS, &e, sizeof(e)))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+        LOG_ERR("IARM Bus Error!");
     }
 }
 
 static void eventInterfaceConnectionStatusChanged(const std::string& interface, bool connected)
 {
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, connected=%d\n", __FUNCTION__, __LINE__, interface.c_str(), connected);
+    LOG_INFO("interface=%s, connected=%d", interface.c_str(), connected);
 
     IARM_BUS_NetSrvMgr_Iface_EventInterfaceConnectionStatus_t e;
     snprintf(e.interface, sizeof(e.interface), "%s", interface.c_str());
@@ -231,14 +231,13 @@ static void eventInterfaceConnectionStatusChanged(const std::string& interface, 
 
     if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_CONNECTION_STATUS, &e, sizeof(e)))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+        LOG_ERR("IARM Bus Error!");
     }
 }
 
 static void eventInterfaceIPAddressStatusChanged (const std::string& interface, const std::string& ip_address, bool is_ipv6, bool acquired)
 {
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: interface=%s, ip_address=%s, is_ipv6=%d, acquired=%d\n",
-            __FUNCTION__, __LINE__, interface.c_str(), ip_address.c_str(), is_ipv6, acquired);
+    LOG_INFO("interface=%s, ip_address=%s, is_ipv6=%d, acquired=%d", interface.c_str(), ip_address.c_str(), is_ipv6, acquired);
 
     IARM_BUS_NetSrvMgr_Iface_EventInterfaceIPAddress_t e;
     snprintf(e.interface, sizeof(e.interface), "%s", interface.c_str());
@@ -248,21 +247,21 @@ static void eventInterfaceIPAddressStatusChanged (const std::string& interface, 
 
     if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_INTERFACE_IPADDRESS, &e, sizeof(e)))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+        LOG_ERR("IARM Bus Error!");
     }
 
     if (!is_ipv6)
     {
         if (getDhcpServerIP())
         {
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Updated the DHCP Server IP Address: [%s] \n", gDhcpServerIP.c_str());
+            LOG_INFO("Updated the DHCP Server IP Address: [%s]", gDhcpServerIP.c_str());
         }
     }
 }
 
 static void eventDefaultInterfaceChanged(const std::string& oldInterface, const std::string& newInterface)
 {
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: oldInterface=%s, newInterface=%s\n", __FUNCTION__, __LINE__, oldInterface.c_str(), newInterface.c_str());
+    LOG_INFO("oldInterface=%s, newInterface=%s", oldInterface.c_str(), newInterface.c_str());
 
     IARM_BUS_NetSrvMgr_Iface_EventDefaultInterface_t e;
     snprintf(e.oldInterface, sizeof(e.oldInterface), "%s", oldInterface.c_str());
@@ -270,7 +269,7 @@ static void eventDefaultInterfaceChanged(const std::string& oldInterface, const 
 
     if (IARM_RESULT_SUCCESS != IARM_Bus_BroadcastEvent (IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_NETWORK_MANAGER_EVENT_DEFAULT_INTERFACE, &e, sizeof(e)))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d]: IARM Bus Error!\n", __FUNCTION__, __LINE__);
+        LOG_ERR("IARM Bus Error!");
     }
 }
 
@@ -291,7 +290,7 @@ static void detectDefaultInterfaceChange()
 static void linkCallback(std::string args)
 {
     // Message Format: interface up/down/add/delete
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Arguments received = %s\n", __FUNCTION__, __LINE__, args.c_str());
+    LOG_INFO("Arguments received = %s", args.c_str());
     std::vector<std::string> tokens;
     if (split(args, ' ', tokens, 2) == false)
         return;
@@ -312,7 +311,7 @@ static void linkCallback(std::string args)
 static void addressCallback(std::string args)
 {
     // Message Format: add/delete ipv4/ipv6 interface address global/local
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Arguments received = %s\n", __FUNCTION__, __LINE__, args.c_str());
+    LOG_INFO("Arguments received = %s", args.c_str());
     std::vector<std::string> tokens;
     if (split(args, ' ', tokens, 5) == false)
         return;
@@ -334,7 +333,7 @@ const int MAX_DEFAULT_ROUTES_PER_INTERFACE = 20;
 static void defaultRouteCallback(std::string args)
 {
     // Message Format: family interface destinationip gatewayip preferred_src metric add/delete
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d]: Arguments received = %s\n", __FUNCTION__, __LINE__, args.c_str());
+    LOG_INFO(" Arguments received = %s", args.c_str());
     std::vector<std::string> tokens;
     if (split(args, ' ', tokens, 7) == false)
         return;
@@ -497,10 +496,10 @@ bool isFeatureEnabled(const char* feature)
     RFC_ParamData_t param = {0};
     if (WDMP_SUCCESS != getRFCParameter("netsrvmgr", feature, &param))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] getRFCParameter for %s failed.\n", __FUNCTION__, feature);
+        LOG_ERR("getRFCParameter for %s failed.", feature);
         return false;
     }
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] name = %s, type = %d, value = %s\n", __FUNCTION__, param.name, param.type, param.value);
+    LOG_INFO( "name = %s, type = %d, value = %s", param.name, param.type, param.value);
     return (strcmp(param.value, "true") == 0);
 }
 
@@ -512,12 +511,12 @@ bool validate_interface_can_be_disabled (const char* interface)
     char activeInterface[INTERFACE_SIZE];
     if (!netSrvMgrUtiles::getRouteInterfaceType (activeInterface))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Cannot determine the active interface\n", __FUNCTION__);
+        LOG_ERR("Cannot determine the active interface");
         return false;
     }
     if (strcmp (interface, activeInterface) == 0)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Cannot disable the active interface '%s'\n", __FUNCTION__, activeInterface);
+        LOG_ERR("Cannot disable the active interface '%s'", activeInterface);
         return false;
     }
     return true;
@@ -528,7 +527,7 @@ bool validate_interface_can_be_disabled (const char* interface)
 // pni_controller.service determines, enables and configures the interface to make active (wifi/ethernet)
 static void launch_pni_controller ()
 {
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] systemctl restart pni_controller.service\n", __FUNCTION__);
+    LOG_INFO( "systemctl restart pni_controller.service");
     system("systemctl restart pni_controller.service");
 }
 
@@ -597,32 +596,31 @@ NetworkMedium* createNetworkMedium(NetworkMedium::NetworkType _type)
 
 static bool read_ConfigProps()
 {
+    LOG_ENTRY_EXIT;
     bool status = false;
     GKeyFile *key_file = NULL;
     GError *error = NULL;
     gsize length = 0;
     gdouble double_value = 0;
     guint group = 0, key = 0;
-    static char *ethIfName=NULL;
-
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+    static char *ethIfName=NULL; 
 
     if(configProp_FilePath[0] == '\0')
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed to read NETSRVMGR Configuration file \n", __FUNCTION__, __LINE__);
+       LOG_ERR("Failed to read NETSRVMGR Configuration file");
         return false;
     }
 
     key_file = g_key_file_new();
 
     if(!key_file) {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed to g_key_file_new() \n", __FUNCTION__, __LINE__);
+        LOG_ERR("Failed to g_key_file_new()");
         return false;
     }
 
     if(!g_key_file_load_from_file(key_file, configProp_FilePath, G_KEY_FILE_KEEP_COMMENTS, &error))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Failed with \"%s\"", __FUNCTION__, __LINE__, error->message);
+        LOG_ERR("Failed with \"%s\"", error->message);
         return false;
     }
     else
@@ -635,14 +633,14 @@ static bool read_ConfigProps()
 
         for(group = 0; group < groups_id; group++)
         {
-            RDK_LOG( RDK_LOG_DEBUG, LOG_NMGR, "[%s:%d]Group %u/%u: \t%s\n", __FUNCTION__, __LINE__, group, groups_id - 1, groups[group]);
+            LOG_DBG("Group %u/%u: \t%s", group, groups_id - 1, groups[group]);
             if(0 == strncasecmp(WIFI_CONFIG, groups[group], strlen(groups[group])))
             {
                 keys = g_key_file_get_keys(key_file, groups[group], &num_keys, &error);
                 for(key = 0; key < num_keys; key++)
                 {
                     value = g_key_file_get_value(key_file,	groups[group],	keys[key],	&error);
-                    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[ \t\tkey %u/%u: \t%s => %s]\n", key, num_keys - 1, keys[key], value);
+                   LOG_DBG("[ \t\tkey %u/%u: \t%s => %s]", key, num_keys - 1, keys[key], value);
                     if(0 == strncasecmp(MAX_TIMEOUT_ON_DISCONNECT, keys[key], strlen(keys[key])))
                     {
                         confProp.wifiProps.max_timeout = atoi(value);
@@ -709,7 +707,7 @@ static bool read_ConfigProps()
                 {
                     value = g_key_file_get_value(key_file,	groups[group],	keys[key],	&error);
 
-                    RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR, "[ \t\tkey %u/%u: \t%s => %s]\n", key, num_keys - 1, keys[key], value);
+                    LOG_DBG("[ \t\tkey %u/%u: \t%s => %s]", key, num_keys - 1, keys[key], value);
 
                     if(0 == strncasecmp(STUN_SERVER, keys[key], strlen(keys[key])))
                     {
@@ -745,7 +743,7 @@ static bool read_ConfigProps()
                 if(!confProp.stunProps.cache_timeout)
                     confProp.stunProps.cache_timeout = STUN_DEFAULT_CACHE_TIMEOUT;
 
-                RDK_LOG(RDK_LOG_WARN, LOG_NMGR, "stun config: server=%s port=%u iface=%s ipv6=%u bind_timeout=%u cache_timeout=%u\n",
+                LOG_WARN("stun config: server=%s port=%u iface=%s ipv6=%u bind_timeout=%u cache_timeout=%u",
                     confProp.stunProps.server,
                     confProp.stunProps.port,
                     confProp.stunProps.interface,
@@ -759,15 +757,13 @@ static bool read_ConfigProps()
     }
     if(key_file) g_key_file_free(key_file);
 
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
     return true;
 }
 
 /*Read Telemetry Parameter configurations*/
 void Read_Telemetery_Param_File()
 {
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
-
+    LOG_ENTRY_EXIT;
     gchar *contents = NULL;
     gsize length = 0;
     GError *error = NULL;
@@ -775,21 +771,18 @@ void Read_Telemetery_Param_File()
     gboolean fstatus =  g_file_get_contents ((const gchar *) TELEMETRY_LOGGING_PARAM_FILE, &contents, &length, &error);
 
     if(!fstatus) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR , "[%s()] Failed to read \"%s\" file using g_file_get_contents() due to %s(%d) \n",
-                __FUNCTION__, TELEMETRY_LOGGING_PARAM_FILE, error->message, error->code);
+       LOG_ERR("Failed to read \"%s\" file using g_file_get_contents() due to %s(%d)",
+                TELEMETRY_LOGGING_PARAM_FILE, error->message, error->code);
         return;
     }
     else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"[%s]Successfully read \"%s\". The file Contents are \"%s\" with length (%d).\n ",\
-                __FUNCTION__, TELEMETRY_LOGGING_PARAM_FILE,  contents, (int)length);
+        LOG_DBG("Successfully read \"%s\". The file Contents are \"%s\" with length (%d).", TELEMETRY_LOGGING_PARAM_FILE, contents, (int)length);
     }
 
     if(contents)  {
         parse_telemetry_logging_configuration(contents);
         g_free(contents);
     }
-
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
 }
 
 /*Print parameters in list*/
@@ -803,7 +796,7 @@ static void printf_list_info(GList *list)
     GList *iter = g_list_first(list);
     while(iter)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR ,"[%s] Parameter Name :  \"%s\"\n", __FUNCTION__, (char *)iter->data);
+        LOG_INFO("Parameter Name : \"%s\"", (char *)iter->data);
         iter = g_list_next(iter);
     }
 }
@@ -811,11 +804,11 @@ static void printf_list_info(GList *list)
 
 bool parse_telemetry_logging_configuration(gchar *string)
 {
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+    LOG_ENTRY_EXIT;
 
     if(NULL == string)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR ,"[%s:%d] Failed due to NULL request buffer.\n", __FUNCTION__, __LINE__);
+        LOG_ERR("Failed due to NULL request buffer");
         return false;
     }
 
@@ -832,7 +825,6 @@ bool parse_telemetry_logging_configuration(gchar *string)
 
 #endif // USE_RDK_WIFI_HAL
 
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
     return true;
 }
 
@@ -840,13 +832,13 @@ bool update_telemetryParams_list(gchar *input_buffer, telemetryParams *telemery_
 {
     cJSON *request_msg = NULL;
 
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Entering... \n",__FUNCTION__);
+    LOG_ENTRY_EXIT;
 
     request_msg = cJSON_Parse(input_buffer);
 
     if (!request_msg)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "[%s] Failed to parse json buffer with \"%s\"\n",cJSON_GetErrorPtr());
+        LOG_ERR("Failed to parse json buffer with \"%s\"", cJSON_GetErrorPtr());
         return false;
     }
     else
@@ -862,7 +854,7 @@ bool update_telemetryParams_list(gchar *input_buffer, telemetryParams *telemery_
         for ( item = 0; item < arrSize; item++) {
             param_item = cJSON_GetArrayItem(param_list_obj, item);
             if(!param_item) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR ,"[%s]Failed in cJSON_GetArrayItem() \n", __FUNCTION__);
+                LOG_ERR("Failed in cJSON_GetArrayItem()");
             }
             else {
                 telemery_params->paramlist = g_list_prepend(telemery_params->paramlist, g_strdup(param_item->valuestring));
@@ -874,18 +866,16 @@ bool update_telemetryParams_list(gchar *input_buffer, telemetryParams *telemery_
         cJSON_Delete(request_msg);
     }
 
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
     return true;
 }
 
 void teleParamList_free (gpointer val)
 {
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
+    LOG_ENTRY_EXIT;
     if(val) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_NMGR,"[%s] :\"%s\"\n", __FUNCTION__, (gchar *)val);
+        LOG_DBG("\"%s\"", (gchar *)val);
         g_free (val);
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR , "[%s()] Exiting... \n",__FUNCTION__);
 }
 
 #ifdef ENABLE_IARM
@@ -903,12 +893,12 @@ IARM_Result_t getActiveInterface(void *arg)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Route Found.\n", __FUNCTION__, __LINE__);
+        LOG_ERR("No Route Found");
         if(netSrvMgrUtiles::currentActiveInterface(devName))
         {
             if(!netSrvMgrUtiles::readDevFile(devName))
             {
-                RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Active interface type failed for %s  \n", __FUNCTION__, __LINE__,devName);
+                LOG_ERR("Get Active interface type failed for %s", devName);
             }
             else
             {
@@ -917,11 +907,11 @@ IARM_Result_t getActiveInterface(void *arg)
         }
         else
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No Active Interface.\n", __FUNCTION__, __LINE__);
+            LOG_ERR(" No Active Interface.");
         }
     }
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Current Active Interface : [%s].\n", __FUNCTION__, __LINE__,param->activeIface);
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_ACTIVE_INTERFACE:%s\n",param->activeIface);
+    LOG_INFO("Current Active Interface : [%s].", param->activeIface);
+    LOG_INFO("TELEMETRY_NETWORK_MANAGER_ACTIVE_INTERFACE:%s", param->activeIface);
     return ret;
 }
 
@@ -936,9 +926,9 @@ IARM_Result_t getNetworkInterfaces(void *arg)
     if(count)
         g_stpcpy(param->allNetworkInterfaces,devName);
     else
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] list of Network Interface is empty.\n", __FUNCTION__, __LINE__);
+       LOG_ERR("list of Network Interface is empty");
     param->interfaceCount=count;
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] list of Network Interface : [%s].\n", __FUNCTION__, __LINE__,param->allNetworkInterfaces);
+    LOG_INFO("list of Network Interface : [%s]", param->allNetworkInterfaces);
     return ret;
 }
 
@@ -976,19 +966,18 @@ IARM_Result_t getInterfaceList(void *arg)
     list->size = interfaces.size();
     if (list->size > (sizeof(list->interfaces)/sizeof(list->interfaces[0])))
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Size of list is larger than allocated size. Size returned = %d\n",
-                __FUNCTION__, __LINE__,list->size);
+        LOG_INFO(" Size of list is larger than allocated size. Size returned = %d", list->size);
         return IARM_RESULT_IPCCORE_FAIL;
     }
     for (int i = 0; i < list->size; i++)
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Before Copying name=%s, mac=%s, flags=0x%08x\n",
-                __FUNCTION__, __LINE__, interfaces[i].m_if_name.c_str(), interfaces[i].m_if_macaddr.c_str(), interfaces[i].m_if_flags);
+        LOG_INFO("Before Copying name=%s, mac=%s, flags=0x%08x",
+                interfaces[i].m_if_name.c_str(), interfaces[i].m_if_macaddr.c_str(), interfaces[i].m_if_flags);
         snprintf(list->interfaces[i].name, sizeof(list->interfaces[i].name), "%s", interfaces[i].m_if_name.c_str());
         snprintf(list->interfaces[i].mac, sizeof(list->interfaces[i].mac), "%s", interfaces[i].m_if_macaddr.c_str());
         list->interfaces[i].flags = interfaces[i].m_if_flags;
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] name=%s, mac=%s, flags=0x%08x\n",
-                __FUNCTION__, __LINE__, list->interfaces[i].name, list->interfaces[i].mac, list->interfaces[i].flags);
+        LOG_INFO("name=%s, mac=%s, flags=0x%08x",
+                list->interfaces[i].name, list->interfaces[i].mac, list->interfaces[i].flags);
     }
     return IARM_RESULT_SUCCESS;
 }
@@ -1053,38 +1042,38 @@ IARM_Result_t getIPSettings(void *arg)
 
 IARM_Result_t getSTBip(void *arg)
 {
-        IARM_Result_t ret = IARM_RESULT_SUCCESS;
-        char stbip[MAX_IP_ADDRESS_LEN];
-        bool isIpv6=false;
-        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
-        if(netSrvMgrUtiles::getSTBip(stbip,&isIpv6))
-        {
-           STRCPY_S(param->activeIfaceIpaddr, sizeof(param->activeIfaceIpaddr), stbip);
-           RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
-        }
-        else
-           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
-        return ret;
+    LOG_ENTRY_EXIT;
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    char stbip[MAX_IP_ADDRESS_LEN];
+    bool isIpv6=false;
+    IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+
+    if(netSrvMgrUtiles::getSTBip(stbip,&isIpv6))
+    {
+        STRCPY_S(param->activeIfaceIpaddr, sizeof(param->activeIfaceIpaddr), stbip);
+        LOG_INFO("stb ipaddress : [%s]", stbip);
+    }
+    else
+        LOG_ERR("stb ipaddress not found");
+    return ret;
 }
 
 IARM_Result_t getSTBip_family(void *arg)
 {
-        IARM_Result_t ret = IARM_RESULT_SUCCESS;
-        char stbip[MAX_IP_ADDRESS_LEN];
-        IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Enter\n", __FUNCTION__, __LINE__ );
+    LOG_ENTRY_EXIT;
+    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    char stbip[MAX_IP_ADDRESS_LEN];
+    IARM_BUS_NetSrvMgr_Iface_EventData_t *param = (IARM_BUS_NetSrvMgr_Iface_EventData_t *)arg;
+
 
 	if (netSrvMgrUtiles::getSTBip_family(stbip,param->ipfamily))
 	{
-           STRCPY_S(param->activeIfaceIpaddr, sizeof(param->activeIfaceIpaddr), stbip);
-           RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] stb ipaddress : [%s].\n", __FUNCTION__, __LINE__,stbip);
+        STRCPY_S(param->activeIfaceIpaddr, sizeof(param->activeIfaceIpaddr), stbip);
+        LOG_INFO("stb ipaddress : [%s]", stbip);
 	}
-        else
-           RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit\n",__FUNCTION__, __LINE__ );
-        return ret;
+    else
+        LOG_ERR("stb ipaddress not found");
+    return ret;
 }
 
 IARM_Result_t isConnectedToInternet(void *arg)
@@ -1105,7 +1094,7 @@ IARM_Result_t setConnectivityTestEndpoints(void *arg)
 IARM_Result_t isAvailable(void *arg)
 {
     LOG_ENTRY_EXIT;
-    RDK_LOG(RDK_LOG_INFO,LOG_NMGR,"[%s:%s:%d] IARM_BUS_NETSRVMGR_API_isAvailable is called \n",MODULE_NAME,__FUNCTION__,__LINE__ );
+    LOG_INFO("[%s] IARM_BUS_NETSRVMGR_API_isAvailable is called", MODULE_NAME);
     return IARM_RESULT_SUCCESS;
 }
 #ifdef ENABLE_STUN_CLIENT
@@ -1163,13 +1152,12 @@ bool getDefaultInterface(std::string &interface, std::string &gateway)
     if (NetLinkIfc::get_instance()->getDefaultRoute(true, interface, gateway) || // ipv6 default route exists
         NetLinkIfc::get_instance()->getDefaultRoute(false, interface, gateway))  // ipv4 default route exists
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] default route interface = %s gateway = %s\n",
-                __FUNCTION__, __LINE__, interface.c_str(), gateway.c_str());
+        LOG_INFO("default route interface = %s gateway = %s", interface.c_str(), gateway.c_str());
         return true;
     }
     else
     {
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] no default route\n", __FUNCTION__, __LINE__);
+        LOG_INFO("no default route");
         interface.clear();
         gateway.clear();
         return false;
@@ -1180,7 +1168,7 @@ bool getDefaultInterface(std::string &interface, std::string &gateway)
 bool setDefaultInterface (const char* interface, bool persist)
 {
     LOG_ENTRY_EXIT;
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s], persist = [%d]\n", __FUNCTION__, interface, persist);
+    LOG_INFO("interface = [%s], persist = [%d]", interface, persist);
 
 #ifdef USE_RDK_WIFI_HAL
     if (strcmp (interface, "ETHERNET") == 0)
@@ -1195,33 +1183,33 @@ bool setDefaultInterface (const char* interface, bool persist)
         const char* RFC_PNI_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.PreferredNetworkInterface.Enable";
         if (isFeatureEnabled(RFC_PNI_ENABLE) == false)
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. RFC %s is not set.\n", __FUNCTION__, RFC_PNI_ENABLE);
+            LOG_ERR("[%s] failed. RFC %s is not set.", RFC_PNI_ENABLE);
             return false;
         }
         bool enabled;
         if (isInterfaceEnabled(interface, enabled) && !enabled) // even if this check is not done here, pni_controller will not use wifi if "/tmp/wifi_disallowed" exists
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is disabled.\n", __FUNCTION__, interface);
+            LOG_ERR("failed. interface [%s] is disabled", interface);
             return false;
         }
         mark("pni_wifi", persist); // touch marker file that says "WIFI is the preferred network interface"
         launch_pni_controller();
         return true;
 #else
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. Build configuration DISABLE_PNI is set.\n", __FUNCTION__);
+        LOG_ERR("failed. Build configuration DISABLE_PNI is set");
         return false;
 #endif // DISABLE_PNI
     }
 #else
     if (strcmp (interface, "ETHERNET") == 0)
     {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] nothing to do. interface [%s] is always the default interface.\n", __FUNCTION__, interface);
+        LOG_INFO("nothing to do. interface [%s] is always the default interface.", interface);
         return true;
     }
 #endif // #ifdef USE_RDK_WIFI_HAL
     else
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is invalid.\n", __FUNCTION__, interface);
+        LOG_ERR("failed. interface [%s] is invalid", interface);
         return false;
     }
 }
@@ -1229,7 +1217,7 @@ bool setDefaultInterface (const char* interface, bool persist)
 bool isInterfaceEnabled(const char* interface, bool& enabled)
 {
     LOG_ENTRY_EXIT;
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s]\n", __FUNCTION__, interface);
+    LOG_INFO("interface = [%s]", interface);
 
     std::string interface_name;
     if (strcmp (interface, "ETHERNET") == 0)
@@ -1244,7 +1232,7 @@ bool isInterfaceEnabled(const char* interface, bool& enabled)
 #endif // USE_RDK_WIFI_HAL
     else
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] interface [%s] is invalid\n", __FUNCTION__, interface);
+        LOG_ERR("interface [%s] is invalid", interface);
         return false;
     }
 #ifdef ENABLE_NLMONITOR
@@ -1255,31 +1243,31 @@ bool isInterfaceEnabled(const char* interface, bool& enabled)
         if (i.m_if_name == interface_name)
         {
             enabled = ((i.m_if_flags & IFF_UP) != 0);
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enabled = [%d]\n", __FUNCTION__, interface, enabled);
+            LOG_INFO("interface = [%s] enabled = [%d]", interface, enabled);
             return true;
         }
     }
 #endif // ifdef ENABLE_NLMONITOR
-    RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] interface = [%s] enabled = [NA]\n", __FUNCTION__, interface);
+    LOG_ERR("interface = [%s] enabled = [NA]", interface);
     return false;
 }
 
 bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
 {
     LOG_ENTRY_EXIT;
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface = [%s] enable = [%d] persist = [%d]\n", __FUNCTION__, interface, enabled, persist);
+    LOG_INFO("interface = [%s] enable = [%d] persist = [%d]", interface, enabled, persist);
 
 #ifndef USE_RDK_WIFI_HAL
     if (strcmp (interface, "ETHERNET") == 0)
     {
         if (enabled)
         {
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] nothing to do. interface [%s] is always enabled.\n", __FUNCTION__, interface);
+            LOG_INFO("nothing to do. interface [%s] is always enabled", interface);
             return true;
         }
         else
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] cannot be disabled.\n", __FUNCTION__, interface);
+            LOG_ERR("failed. interface [%s] cannot be disabled", interface);
             return false;
         }
     }
@@ -1321,14 +1309,14 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
         }
         else
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] cannot be disabled.\n", __FUNCTION__, interface);
+            LOG_ERR("failed. interface [%s] cannot be disabled.", interface);
             return false;
         }
     }
 #endif // ifndef USE_RDK_WIFI_HAL
     else
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed. interface [%s] is invalid.\n", __FUNCTION__, interface);
+        LOG_ERR("failed. interface [%s] is invalid.", interface);
         return false;
     }
 }
@@ -1342,7 +1330,7 @@ bool getDNSip (const unsigned int family, char *primaryDNS, char *secondaryDNS)
     std::ifstream f("/etc/resolv.dnsmasq");
     if (!f.is_open())
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "DNS file is not present [%s:%d]  \n", __FUNCTION__, __LINE__);
+        LOG_ERR("DNS file is not present");
         return false;
     }
     for (int i = 0; i < 2 && std::getline (f, line); )
@@ -1368,7 +1356,7 @@ static bool getDhcpServerIP()
     std::ifstream f(NETSRVMGR_DHCP_SERVERIP_PATH);
     if (!f.is_open())
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "DHCP SERVER IP file is not present [%s:%d]  \n", __FUNCTION__, __LINE__);
+        LOG_INFO("DHCP SERVER IP file is not present");
         return false;
     }
 
@@ -1376,7 +1364,7 @@ static bool getDhcpServerIP()
     struct in_addr ipv4address;
     if (inet_pton(AF_INET, line.c_str(), &ipv4address) <= 0)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid ipaddress [%s]\n", __FUNCTION__, line.c_str());
+        LOG_ERR("invalid ipaddress [%s]", line.c_str());
         f.close();
         return false;
     }
@@ -1446,9 +1434,9 @@ void ipv4_reconfigure_interface (const char* interface)
         return;
     char command[128];
     snprintf (command, sizeof(command), "/lib/rdk/pni_controller.sh ipv4_reconfigure_interface %s", interface);
-    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
+    LOG_INFO("Executing command [%s]", command);
     int status = system(command);
-    RDK_LOG(RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
+    LOG_INFO("Exit code [%d] from command [%s]", status, command);
 }
 
 bool valid_ipv4_netmask (uint32_t mask)
@@ -1465,8 +1453,8 @@ bool valid_ipv4_netmask (uint32_t mask)
 bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
 {
     LOG_ENTRY_EXIT;
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface [%s], ipversion [%s], autoconfig [%d], ipaddress [%s], netmask [%s], gateway [%s], primarydns [%s], secondarydns [%s]\n",
-            __FUNCTION__, param->interface, param->ipversion, param->autoconfig, param->ipaddress, param->netmask, param->gateway, param->primarydns, param->secondarydns);
+    LOG_INFO("interface [%s], ipversion [%s], autoconfig [%d], ipaddress [%s], netmask [%s], gateway [%s], primarydns [%s], secondarydns [%s]",
+            param->interface, param->ipversion, param->autoconfig, param->ipaddress, param->netmask, param->gateway, param->primarydns, param->secondarydns);
 
     std:string secondarydns = param->secondarydns;
     const char* RFC_MANUALIP_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable";
@@ -1478,33 +1466,33 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     }
     else if (0 != strcasecmp(param->interface, "ETHERNET"))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] unsupported interface [%s].\n", __FUNCTION__, param->interface);
+        LOG_ERR("unsupported interface [%s]", param->interface);
         return false;
     }
 
     const char *interface = ethernet ? getenv("ETHERNET_INTERFACE") : getenv("WIFI_INTERFACE");
     if (interface == NULL)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to identify interface\n", __FUNCTION__);
+        LOG_ERR("failed to identify interface");
         return false;
     }
 
     const char* ip_settings_file = ethernet ? "/opt/persistent/ip.eth0.0" : "/opt/persistent/ip.wifi.0";
     bool autoconfig = ( access(ip_settings_file, F_OK) != 0 );
 
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface: [%s], autoconfig: current [%d] requested [%d]\n", __FUNCTION__, interface, autoconfig, param->autoconfig);
+    LOG_INFO("interface: [%s], autoconfig: current [%d] requested [%d]", interface, autoconfig, param->autoconfig);
 
     if (param->autoconfig)
     {
         param->isSupported = true;
         if (autoconfig)
         {
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] already in autoconfig mode. \n", __FUNCTION__);
+            LOG_INFO("already in autoconfig mode.");
             return true;
         }
         else if (0 != remove(ip_settings_file))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] remove(%s) returned errno %d (%s)\n", __FUNCTION__, ip_settings_file, errno, strerror(errno));
+            LOG_ERR("remove(%s) returned errno %d (%s)", ip_settings_file, errno, strerror(errno));
             return false;
         }
         ipv4_reconfigure_interface (interface);
@@ -1514,14 +1502,14 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] RFC for manual IP settings is not enabled\n", __FUNCTION__);
+            LOG_ERR("RFC for manual IP settings is not enabled");
             param->isSupported = false;
             return false;
         }
 
         if (0 != strcasecmp(param->ipversion, "ipv4"))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] unsupported ipversion [%s].\n", __FUNCTION__, param->ipversion);
+            LOG_ERR("unsupported ipversion [%s]", param->ipversion);
             param->isSupported = false;
             return false;
         }
@@ -1529,41 +1517,41 @@ bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         struct in_addr ipv4address;
         if (!inet_pton(AF_INET, param->ipaddress, &ipv4address))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid ipaddress [%s]\n", __FUNCTION__, param->ipaddress);
+            LOG_ERR("invalid ipaddress [%s]", param->ipaddress);
             return false;
         }
         if (!inet_pton(AF_INET, param->netmask, &ipv4address) || !valid_ipv4_netmask(ntohl(ipv4address.s_addr)))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid netmask [%s]\n", __FUNCTION__, param->netmask);
+            LOG_ERR("invalid netmask [%s]", param->netmask);
             return false;
         }
         if (!inet_pton(AF_INET, param->gateway, &ipv4address))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid gateway [%s]\n", __FUNCTION__, param->gateway);
+            LOG_ERR("invalid gateway [%s]", param->gateway);
             return false;
         }
         if (!inet_pton(AF_INET, param->primarydns, &ipv4address))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid primarydns [%s]\n", __FUNCTION__, param->primarydns);
+            LOG_ERR("invalid primarydns [%s]", param->primarydns);
             return false;
         }
         if (!secondarydns.empty())
         {
             if (!inet_pton(AF_INET, param->secondarydns, &ipv4address))
             {
-                RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] invalid secondarydns [%s]\n", __FUNCTION__, param->secondarydns);
+                LOG_ERR("invalid secondarydns [%s]", param->secondarydns);
                 return false;
             }
         }
         IARM_BUS_NetSrvMgr_Iface_Settings_t current_ip_settings = {};
         if (!autoconfig && ip_settings_file_read(ip_settings_file, current_ip_settings) && ip_settings_compare(current_ip_settings, *param))
         {
-            RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] provided config is same as the current config\n", __FUNCTION__);
+            LOG_INFO("provided config is same as the current config");
             return true;
         }
         if (!ip_settings_file_write(ip_settings_file, *param))
         {
-            RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to save the new config. enabling dhcp\n", __FUNCTION__);
+            LOG_ERR("failed to save the new config. enabling dhcp");
             remove(ip_settings_file);
             ipv4_reconfigure_interface (interface);
             return false;
@@ -1586,7 +1574,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     const char* RFC_MANUALIP_ENABLE = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Network.ManualIPSettings.Enable";
     if (isFeatureEnabled(RFC_MANUALIP_ENABLE) == false)
     {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "ManualIPSettings RFC is disabled\n");
+        LOG_INFO("Manual IP settings RFC is disabled");
     }
     param->errCode = NETWORK_IPADDRESS_ACQUIRED;
     if (0 == strcasecmp (param->interface, "WIFI") )
@@ -1606,7 +1594,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     //If interface param is not provided, use currently active interface
     else if (!netSrvMgrUtiles::currentActiveInterface(interface))
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No routable  interface found.\n", __FUNCTION__, __LINE__);
+        LOG_ERR("No routable  interface found.");
         param->errCode = NETWORK_NO_ROUTE_INTERFACE;
         return false;
     }
@@ -1623,14 +1611,14 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         struct stat stat_buf;
         param->autoconfig = (access( "/opt/persistent/ip.wifi.0", F_OK ) != 0 ) ? true :(stat("/opt/persistent/ip.wifi.0", &stat_buf) == 0 ? stat_buf.st_size == 0 :false);
     }
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "interface [%s] \n", interface);
+    LOG_INFO("interface [%s]", interface);
 
     /*To get ipaddress based on interface and family input paramter*/
     if (strcasecmp (param->ipversion, "IPV6") == 0)
     {
         if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET6, param->ipaddress, param->netmask))
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipv6 ipaddress not found.\n", __FUNCTION__, __LINE__);
+            LOG_ERR("stb ipv6 ipaddress not found");
             param->errCode = NETWORK_IPADDRESS_NOTFOUND;
             return true;
         }
@@ -1640,7 +1628,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
         is_ipv6=false;
         if(!netSrvMgrUtiles::getInterfaceConfig(interface, AF_INET, param->ipaddress, param->netmask))
         {
-            RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipv4 ipaddress not found.\n", __FUNCTION__, __LINE__);
+            LOG_ERR("stb ipv4 ipaddress not found.");
             param->errCode = NETWORK_IPADDRESS_NOTFOUND;
             return true;
         }
@@ -1656,7 +1644,7 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     }
     else
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] stb ipaddress not found.\n", __FUNCTION__, __LINE__);
+        LOG_ERR("stb ipaddress not found");
         param->errCode = NETWORK_IPADDRESS_NOTFOUND;
         return true;
     }
@@ -1665,11 +1653,11 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     if(NetLinkIfc::get_instance()->getDefaultRoute(is_ipv6, inter, gateway))
     {
         snprintf(param->gateway, sizeof(param->gateway), "%s", gateway.c_str());
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway [%s] \n", param->gateway);
+        LOG_INFO("Default Gateway [%s]", param->gateway);
     }
     else
     {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "Default Gateway not present [%s:%d] \n", __FUNCTION__, __LINE__);
+        LOG_INFO("Default Gateway not present ");
         param->errCode = NETWORK_NO_DEFAULT_ROUTE;
     }
 
@@ -1682,19 +1670,19 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     {
         snprintf(param->dhcp_server, sizeof(param->dhcp_server), "");
     }
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "DHCP Server IP Address [%s] \n", param->dhcp_server);
+    LOG_INFO("DHCP Server IP Address [%s]", param->dhcp_server);
 
     /* To get Primary and Secondary DNS */
     if (getDNSip(is_ipv6 ? AF_INET6 : AF_INET,primaryDNSaddr, secondaryDNSaddr))
     {
         STRCPY_S(param->primarydns, sizeof(param->primarydns), primaryDNSaddr);
         STRCPY_S(param->secondarydns, sizeof(param->secondarydns), secondaryDNSaddr);
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Primary DNS %s \n", __FUNCTION__, __LINE__, param->primarydns);
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Secondary DNS %s \n", __FUNCTION__, __LINE__, param->secondarydns);
+        LOG_INFO("Primary DNS %s", param->primarydns);
+        LOG_INFO("Secondary DNS %s", param->secondarydns);
     }
     else
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR," No DNS ip is confiured [%s:%d]  \n", __FUNCTION__, __LINE__);
+        LOG_INFO("No DNS ip is confiured");
         param->errCode = NETWORK_DNS_NOT_CONFIGURED; //DNS file is not present
     }
     return true;
@@ -1704,16 +1692,16 @@ bool isConnectedToInternet(bool& connectivity)
 {
     LOG_ENTRY_EXIT;
     const char* command = "/lib/rdk/pni_controller.sh test_connectivity";
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
+    LOG_INFO("Executing command [%s]", command);
     FILE *fp = popen (command, "r");
     if (fp == NULL)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] popen error %d (%s)\n", __FUNCTION__, errno, strerror(errno));
+        LOG_ERR("popen error %d (%s)", errno, strerror(errno));
         return false;
     }
     int pclose_status = pclose (fp);
     int status = WEXITSTATUS (pclose_status);
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
+    LOG_INFO("Exit code [%d] from command [%s]", status, command);
     connectivity = (status == 0);
     return true;
 }
@@ -1727,18 +1715,18 @@ bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints)
         endpoints_string.append(endpoint.c_str());
         endpoints_string.push_back(' ');
     }
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__, endpoints_string.c_str());
+    LOG_INFO( "%s", endpoints_string.c_str());
     std::replace(endpoints_string.begin(), endpoints_string.end(), ' ', '\n');
     FILE *f = fopen("/opt/persistent/connectivity_test_endpoints", "w");
     if (f == NULL)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] fopen error %d (%s)\n", __FUNCTION__, errno, strerror(errno));
+        LOG_ERR("fopen error %d (%s)", errno, strerror(errno));
         return false;
     }
     fprintf(f, "%s", endpoints_string.c_str());
     if (0 != fclose(f))
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] fclose error %d (%s)\n", __FUNCTION__, errno, strerror(errno));
+        LOG_ERR("fclose error %d (%s)", errno, strerror(errno));
         return false;
     }
     return true;
@@ -1748,12 +1736,12 @@ bool setInterfaceState (std::string interface_name, bool enabled)
 {
     if (interface_name.empty())
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] no interface name\n", __FUNCTION__);
+        LOG_ERR("no interface name");
         return false;
     }
     char command[64];
     snprintf (command, sizeof(command), "ip link set dev %s %s", interface_name.c_str(), enabled ? "up" : "down");
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s\n", __FUNCTION__, command);
+    LOG_INFO("%s", command);
     system (command);
     return true;
 }
@@ -1787,7 +1775,7 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
         {
             if(!netSrvMgrUtiles::currentActiveInterface(activeInterface))
             {
-                RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No routable  interface found.\n", __FUNCTION__, __LINE__);
+                LOG_ERR("No routable  interface found");
                 return false;
             }
         }
@@ -1795,13 +1783,13 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
     }
     else
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] failed to identify interface\n", __FUNCTION__);
+        LOG_ERR("failed to identify interface");
         return false;
     }
 
     if (!param->ipv6)
         interface += ":0";
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] interface value: %s\n", __FUNCTION__, interface.c_str());
+    LOG_INFO("interface value: %s", interface.c_str());
     std::string     iface   (param->interface[0]     ? interface          : confProp.stunProps.interface);
 
     stun::bind_result result;
@@ -1827,11 +1815,11 @@ bool setWifiEnabled (bool newState)
 
     LOG_ENTRY_EXIT;
 
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] WiFi state: current [%d] requested [%d]\n", __FUNCTION__, bWiFiEnabled, newState);
+    LOG_INFO("WiFi state: current [%d] requested [%d]", bWiFiEnabled, newState);
 
     if (!bWiFiEnabled == !newState)
     {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Already in requested state. Nothing to do.\n", __FUNCTION__);
+        LOG_INFO("Already in requested state. Nothing to do.");
         return true;
     }
 
@@ -1839,12 +1827,12 @@ bool setWifiEnabled (bool newState)
     if (bWiFiEnabled)
     {
         WiFiNetworkMgr::getInstance()->Start();
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_ENABLE_WIFI.\n");
+        LOG_INFO("TELEMETRY_NETWORK_MANAGER_ENABLE_WIFI.");
     }
     else
     {
         WiFiNetworkMgr::getInstance()->Stop();
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "TELEMETRY_NETWORK_MANAGER_DISABLE_WIFI.\n");
+        LOG_INFO("TELEMETRY_NETWORK_MANAGER_DISABLE_WIFI.");
     }
     return true;
 }

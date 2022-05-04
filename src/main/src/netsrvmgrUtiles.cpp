@@ -72,15 +72,15 @@
         strcpy(dest, source);
 #endif
 
-EntryExitLogger::EntryExitLogger (const char* func, const char* file) :
-        func (func), file (file)
+EntryExitLogger::EntryExitLogger (const char* func, const int line) :
+        func (func), line (line)
 {
-    RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "Entry: %s [%s]\n", func, file);
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Entry\n", func, line);
 }
 
 EntryExitLogger::~EntryExitLogger ()
 {
-    RDK_LOG (RDK_LOG_TRACE1, LOG_NMGR, "Exit: %s [%s]\n", func, file);
+    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit \n", func, line);
 }
 
 #ifdef USE_TELEMETRY_2_0
@@ -94,14 +94,14 @@ void telemetry_event_s(char* marker, char* value)
 {
     T2ERROR t2error = t2_event_s(marker, value);
     if (t2error != T2ERROR_SUCCESS)
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "t2_event_s(\"%s\", \"%s\") returned error code %d \n", marker, value, t2error);
+        LOG_ERR("t2_event_s(\"%s\", \"%s\") returned error code %d", marker, value, t2error);
 }
 
 void telemetry_event_d(char* marker, int value)
 {
     T2ERROR t2error = t2_event_d(marker, value);
     if (t2error != T2ERROR_SUCCESS)
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR, "t2_event_d(\"%s\", %d) returned error code %d \n", marker, value, t2error);
+        LOG_ERR("t2_event_d(\"%s\", %d) returned error code %d", marker, value, t2error);
 }
 
 #endif // #ifdef USE_TELEMETRY_2_0
@@ -127,12 +127,11 @@ bool netSrvMgrUtiles::getMacAddress_IfName(const char *ifName_in, char macAddres
     int sd;
     unsigned char *mac = NULL;
     bool ret = false;
-
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    LOG_ENTRY_EXIT;
 
     if(NULL == ifName_in)
     {
-        RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d] Failed, due to NULL for interface name (\'ifName_in\') .\n", __FUNCTION__, __LINE__);
+       LOG_TRACE("Failed, due to NULL for interface name (\'ifName_in\') .");
         return ret;
     }
 
@@ -144,19 +143,19 @@ bool netSrvMgrUtiles::getMacAddress_IfName(const char *ifName_in, char macAddres
             mac = (unsigned char *) ifr.ifr_hwaddr.sa_data;
             if(mac) {
                 snprintf( macAddress_out, MAC_ADDR_BUFF_LEN, "%.2X:%.2X:%.2X:%.2X:%.2X:%.2X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-                RDK_LOG(RDK_LOG_DEBUG,LOG_NMGR,"[%s:%d]The Mac address is \'%s\' (for provided interface %s).\n", __FUNCTION__, __LINE__, macAddress_out, ifName_in );
+                LOG_DBG("The Mac address is \'%s\' (for provided interface %s).", macAddress_out, ifName_in );
                 ret = true;
             }
         }
         else {
-            RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed in ioctl() with  \'%s\'..\n", __FUNCTION__, __LINE__, strerror (errno) );
+            LOG_ERR("Failed in ioctl() with  \'%s\'..", strerror (errno));
         }
         close(sd);
     }
     else {
-        RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed to create socket() with \'%s\' return as \'%d\'.\n", __FUNCTION__, __LINE__, sd, strerror (errno) );
+        LOG_ERR("Failed to create socket() with \'%s\' return as \'%d\'.", sd, strerror (errno) );
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+
     return ret;
 }
 
@@ -186,27 +185,27 @@ void netSrvMgrUtiles::triggerDhcpLease(const char* operation, const char* interf
     snprintf (command, sizeof(command), "%s %s %s 2>&1",
             TRIGGER_DHCP_LEASE_FILE, operation, interface ? interface : "");
 
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Executing command [%s]\n", __FUNCTION__, command);
+    LOG_INFO("Executing command [%s]", command);
 
     char scriptLogOutputLine[256];
 
     FILE *fp = popen (command, "r");
     if (fp == NULL)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] Failed to execute command [%s]\n", __FUNCTION__, command);
+        LOG_ERR("Failed to execute command [%s]", command);
         return;
     }
 
     // log script output at INFO level
     while (fgets (scriptLogOutputLine, sizeof (scriptLogOutputLine), fp) != NULL)
     {
-        RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] %s", __FUNCTION__, scriptLogOutputLine);
+       LOG_INFO("%s", scriptLogOutputLine);
     }
 
     int pclose_status = pclose (fp);
     int status = WEXITSTATUS (pclose_status);
 
-    RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s] Exit code [%d] from command [%s]\n", __FUNCTION__, status, command);
+    LOG_INFO("Exit code [%d] from command [%s]", status, command);
 }
 
 void netSrvMgrUtiles::triggerDhcpRenew(const char* interface)
@@ -237,7 +236,7 @@ static bool getIPv6RouteInterface (char *devname)
             if ((strcmp (dst, gw) == 0) && (strcmp (devname, "sit0") != 0) && (strcmp (devname, "lo") != 0))
             {
 //                readDevFile(devname);
-                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v6 %s  \n", __FUNCTION__, __LINE__, devname);
+                LOG_INFO( "active interface v6 %s", devname);
                 route_found = true;
                 break;
             }
@@ -262,7 +261,7 @@ static bool getIPv4RouteInterface (char *devname)
             {
                 STRCPY_S(devname, INTERFACE_SIZE, ptr);
 //                readDevFile(devname);
-                RDK_LOG (RDK_LOG_INFO, LOG_NMGR, "[%s:%d] active interface v4 %s  \n", __FUNCTION__, __LINE__, devname);
+                LOG_INFO("ctive interface v4 %s", devname);
                 route_found = true;
                 break;
             }
@@ -277,25 +276,24 @@ bool netSrvMgrUtiles::getRouteInterface(char* devname)
     LOG_ENTRY_EXIT;
     if (getIPv6RouteInterface (devname) || getIPv4RouteInterface (devname))
         return true;
-    RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] No Route Found\n", __FUNCTION__, __LINE__);
+    LOG_INFO("No Route Found");
     return false;
 }
 
 bool netSrvMgrUtiles::getRouteInterfaceType(char* devname)
 {
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+    LOG_ENTRY_EXIT;
     if(!getRouteInterface(devname))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Route interface failure  \n", __FUNCTION__, __LINE__);
+       LOG_ERR("Get Route interface failure");
         return false;
     }
     if(!readDevFile(devname))
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Get Route interface type failure  \n", __FUNCTION__, __LINE__);
+       LOG_ERR("Get Route interface type failure");
         return false;
     }
-    RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Route interface type %s  \n", __FUNCTION__, __LINE__,devname);
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
+    LOG_TRACE("Route interface type %s", devname);
     return true;
 }
 
@@ -309,11 +307,11 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
     const gchar* deviceFile = "//etc/device.properties";
     if(!deviceName)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] device name is null  \n", __FUNCTION__, __LINE__);
+       LOG_ERR("device name is null");
     }
     else if (g_file_get_contents (deviceFile, &devfilebuffer, NULL, &error) == false)
     {
-        RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] No contents in device properties  \n", __FUNCTION__, __LINE__);
+       LOG_ERR("No contents in device properties");
         if (!error) g_error_free (error);
     }
     else
@@ -322,7 +320,7 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
         g_free (devfilebuffer);
         guint toklength = g_strv_length(tokens);
         guint loopvar=0;
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Interface Name  %s  \n", __FUNCTION__, __LINE__,deviceName);
+        LOG_INFO("Interface Name  %s", deviceName);
         for (loopvar=0; loopvar<toklength; loopvar++)
         {
             if (g_strrstr(g_strstrip(tokens[loopvar]), "ETHERNET_INTERFACE") && ((g_strcmp0(g_strstrip(tokens[loopvar+1]),deviceName)) == 0))
@@ -354,13 +352,14 @@ bool netSrvMgrUtiles::readDevFile(char *deviceName)
             }
         }
         g_strfreev (tokens);
-        RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] Network Type  %s  \n", __FUNCTION__, __LINE__,deviceName);
+        LOG_INFO("Network Type  %s", deviceName);
     }
     return result;
 }
 
 char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
 {
+    LOG_ENTRY_EXIT;
     struct ifaddrs *ifAddrStruct,*tmpAddrPtr;
     bool firstInterface=false;
     char count=0;
@@ -368,14 +367,13 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
     getifaddrs(&ifAddrStruct);
     tmpAddrPtr = ifAddrStruct;
     GString *device = g_string_new(NULL);
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
 
     while (tmpAddrPtr)
     {
         if (tmpAddrPtr->ifa_addr && (strcmp(tmpAddrPtr->ifa_name,"sit0") != 0) && (strcmp(tmpAddrPtr->ifa_name,"lo") != 0))
 	{
 	    g_stpcpy(tempInterface,tmpAddrPtr->ifa_name);
-               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] 1 interface [%s].  \n", __FUNCTION__, __LINE__,tempInterface);
+            LOG_INFO("1 interface [%s].", tempInterface);
 	    if((readDevFile(tempInterface)) && (!g_strrstr(device->str,tempInterface)))
 	    {
 	       if(firstInterface)
@@ -387,7 +385,7 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
 	         firstInterface=true;
                }
                g_string_append_printf(device,"%s",tempInterface);
-               RDK_LOG( RDK_LOG_INFO, LOG_NMGR, "[%s:%d] interface [%s] interface List [%s]  \n", __FUNCTION__, __LINE__,tempInterface,device->str);
+               LOG_INFO("interface [%s] interface List [%s]", tempInterface,device->str);
 	       count++;
 	    }
 	}
@@ -396,28 +394,26 @@ char netSrvMgrUtiles::getAllNetworkInterface(char* devAllInterface)
     freeifaddrs(ifAddrStruct);
     STRCPY_S(devAllInterface, INTERFACE_LIST, device->str);
     g_string_free(device,TRUE);
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return count;
 }
 
 bool netSrvMgrUtiles::getCurrentTime(char* currTime, const char *timeFormat)
 {
+  LOG_ENTRY_EXIT;
   time_t cTime;
   struct tm *tmp;
-  RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
   time(&cTime);
   tmp=localtime(&cTime);
   if(tmp == NULL)
   {
-    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Error getting local time  \n", __FUNCTION__, __LINE__);
+   LOG_ERR("Error getting local time ");
     return false;
   }
   if(strftime(currTime,MAX_TIME_LENGTH,timeFormat,tmp) == 0)
   {
-    RDK_LOG( RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] strftime failed in getting time format format %s  \n", __FUNCTION__, __LINE__,timeFormat);
+   LOG_ERR("strftime failed in getting time format format %s", timeFormat);
     return false;
   }
-  RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
   return true;
 }
 
@@ -429,7 +425,7 @@ bool netSrvMgrUtiles::checkInterfaceActive(char *interfaceName)
     bool ret=false;
     if(!interfaceName)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Device doesnt support Ethernet !!!! \n", __FUNCTION__, __LINE__);
+        LOG_INFO("Device doesnt support Ethernet !!!!");
         return ret;
     }
     sprintf(buffer,INTERFACE_STATUS_FILE_PATH,interfaceName);
@@ -439,12 +435,12 @@ bool netSrvMgrUtiles::checkInterfaceActive(char *interfaceName)
         fscanf(file,"%s",buffer);
         if(NULL != strcasestr(buffer,ETHERNET_UP_STATUS))
         {
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] TELEMETRY_NETWORK_MANAGER_ETHERNET_MODE \n", __FUNCTION__, __LINE__);
+            LOG_INFO("TELEMETRY_NETWORK_MANAGER_ETHERNET_MODE");
             ret=true;
         }
         else
         {
-            RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] TELEMETRY_NETWORK_MANAGER_WIFI_MODE \n", __FUNCTION__, __LINE__);
+           LOG_INFO("TELEMETRY_NETWORK_MANAGER_WIFI_MODE");
         }
         fclose(file);
     }
@@ -463,8 +459,8 @@ bool loadKeyFile (const char* filename, GKeyFile* keyFile)
     g_key_file_load_from_file (keyFile, filename, G_KEY_FILE_NONE, &err);
     if (err != NULL)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] error loading '%s' (error domain=%d code=%d message=%s)\n",
-                __FUNCTION__, filename, err->domain, err->code, err->message);
+        LOG_ERR("error loading '%s' (error domain=%d code=%d message=%s)",
+                filename, err->domain, err->code, err->message);
         g_error_free (err);
         ret = false;
     }
@@ -484,8 +480,8 @@ bool writeKeyFile (const char* filename, GKeyFile* keyFile)
     g_file_set_contents (filename, contents, -1, &err);
     if (err != NULL)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s] error writing '%s' (error domain=%d code=%d message=%s)\n",
-                __FUNCTION__, filename, err->domain, err->code, err->message);
+        LOG_ERR("error writing '%s' (error domain=%d code=%d message=%s)",
+                filename, err->domain, err->code, err->message);
         g_error_free (err);
         ret = false;
     }
@@ -504,7 +500,7 @@ bool netSrvMgrUtiles::getInterfaceConfig(const char *ifName, const unsigned int 
     NetLinkIfc::get_instance()->getIpaddr(ifName,family,ipAddr);
     if(ipAddr.empty())
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No ipaddress on interface %s\n", __FUNCTION__, __LINE__,ifName);
+        LOG_ERR("No ipaddress on interface %s", ifName);
         return false;
     }
     else
@@ -517,23 +513,23 @@ bool netSrvMgrUtiles::getInterfaceConfig(const char *ifName, const unsigned int 
        {
           if(netSrvMgrUtiles::check_global_v6_ula_address(s))
           {
-             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ULA V6 IP. \n", __FUNCTION__, __LINE__);
+             LOG_INFO("skipping ULA V6 IP. ");
              continue;
           }
           if(((ipAddr.size()) > 1) && (netSrvMgrUtiles::check_global_v6_based_macaddress(s,macAddrStr)))
           {
-             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ip addr %s since it is based on mac %s \n", __FUNCTION__, __LINE__,s.c_str(),macAddrStr.c_str());
+             LOG_INFO("skipping ip addr %s since it is based on mac %s", s.c_str(), macAddrStr.c_str());
              continue;
           }
           std::string tempStr = s.substr(0, s.find("/", 0)); //remove /64 in ip  2601:a40:300:164:aa11:fcff:fefd:1e8d/64
           if (chk_ipaddr_linklocal(tempStr.c_str(),family))
           {
-             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
+             LOG_INFO("skipping link local ip");
              continue;
           }
           if (family == AF_INET && isIPv4AddressScopeDocumentation(tempStr))
           {
-             RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping reserved ip %s\n", __FUNCTION__, __LINE__, tempStr.c_str());
+             LOG_INFO("skipping reserved ip %s", tempStr.c_str());
              continue;
           }
           STRCPY_S(interfaceIp, INET6_ADDRSTRLEN, tempStr.c_str());
@@ -542,16 +538,14 @@ bool netSrvMgrUtiles::getInterfaceConfig(const char *ifName, const unsigned int 
     /* To get Net Mask */
     netSrvMgrUtiles::getNetMask_IfName(ifName,family,netMask);
 #else
-    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ENABLE_NLMONITOR not set \n", __FUNCTION__, __LINE__);
+    LOG_ERR("ENABLE_NLMONITOR not set");
 #endif
     return true;
 }
 
 bool netSrvMgrUtiles::getSTBip(char *stbip,bool *isIpv6)
 {
-
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
-
+    LOG_ENTRY_EXIT;
     bool ret=false;
     *isIpv6 = false;
 
@@ -564,13 +558,12 @@ bool netSrvMgrUtiles::getSTBip(char *stbip,bool *isIpv6)
     {
       ret = true;
     }
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return ret;
 }
 
 bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
 {
-   RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Enter\n", __FUNCTION__, __LINE__);
+   LOG_ENTRY_EXIT;
    bool ret=false;
 #ifdef ENABLE_NLMONITOR
    std::vector<std::string> ipAddr;
@@ -590,7 +583,7 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
    }
    else
    {
-      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] Family [%s] Not recognized.\n", __FUNCTION__, __LINE__,s_family.c_str());
+      LOG_ERR("Family [%s] Not recognized.", s_family.c_str());
       return ret;
    }
 
@@ -599,7 +592,7 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
    {
       if(!netSrvMgrUtiles::currentActiveInterface(interface))
       {
-         RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No routable  interface found.\n", __FUNCTION__, __LINE__);
+         LOG_ERR("[%s:%d] No routable  interface found.");
 	 return ret;
       }
    }
@@ -608,7 +601,7 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
    NetLinkIfc::get_instance()->getIpaddr(ifcStr,i_family,ipAddr);
    if(ipAddr.empty())
    {
-      RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] No ipaddress on interface %s, for Family  %s\n", __FUNCTION__, __LINE__,ifcStr.c_str(),s_family.c_str());
+      LOG_ERR("No ipaddress on interface %s, for Family  %s", ifcStr.c_str(),s_family.c_str());
       return ret;
    }
 
@@ -619,23 +612,23 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
    {
       if(netSrvMgrUtiles::check_global_v6_ula_address(s))
       {
-         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ULA V6 IP. \n", __FUNCTION__, __LINE__);
+        LOG_INFO("skipping ULA V6 IP.");
          continue;
       }
       if(((ipAddr.size()) > 1) && (netSrvMgrUtiles::check_global_v6_based_macaddress(s,macAddrStr)))
       {
-         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping ip addr %s since it is based on mac %s \n", __FUNCTION__, __LINE__,s.c_str(),macAddrStr.c_str());
+        LOG_INFO("skipping ip addr %s since it is based on mac %s", s.c_str(), macAddrStr.c_str());
          continue;
       }
       std::string tempStr = s.substr(0, s.find("/", 0)); //remove /64 in ip  2601:a40:300:164:aa11:fcff:fefd:1e8d/64
       if (chk_ipaddr_linklocal(tempStr.c_str(),i_family))
       {
-         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping link local ip \n", __FUNCTION__, __LINE__);
+        LOG_INFO("skipping link local ip");
 	 continue;
       }
       if (i_family == AF_INET && isIPv4AddressScopeDocumentation(tempStr))
       {
-         RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] skipping reserved ip %s\n", __FUNCTION__, __LINE__, tempStr.c_str());
+        LOG_INFO("skipping reserved ip %s", tempStr.c_str());
          continue;
       }
       STRCPY_S(stbip, MAX_IP_ADDRESS_LEN, tempStr.c_str());
@@ -643,9 +636,8 @@ bool netSrvMgrUtiles::getSTBip_family(char *stbip,char *family)
    }
 
 #else
-    RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ENABLE_NLMONITOR not set \n", __FUNCTION__, __LINE__);
+    LOG_ERR("ENABLE_NLMONITOR not set ");
 #endif
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR,"[%s:%d]Exit\n", __FUNCTION__, __LINE__);
     return ret;
 }
 
@@ -667,7 +659,7 @@ bool netSrvMgrUtiles::chk_ipaddr_linklocal(const char *stbip,unsigned int family
             return IN6_IS_ADDR_LINKLOCAL(&sa6.sin6_addr);
             break;
         default:
-            RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] interface family not supported %d \n", __FUNCTION__, __LINE__,family);
+            LOG_ERR("interface family not supported %d ", family);
             return false;
     }
 }
@@ -693,7 +685,7 @@ bool netSrvMgrUtiles::currentActiveInterface(char *currentInterface)
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] current interface not there \n", __FUNCTION__, __LINE__);
+        LOG_ERR("current interface not there ");
         return false;
     }
     STRCPY_S(currentInterface, INTERFACE_SIZE, ifcStr.c_str());
@@ -709,12 +701,12 @@ bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std:
     LOG_ENTRY_EXIT;
     if((ipv6Addr.empty()) && (macAddr.empty()))
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ipv6 addr or mac addr is empty \n", __FUNCTION__, __LINE__);
+        LOG_ERR("ipv6 addr or mac addr is empty ");
         return false;
     }
     else if (macAddr.size() < 12)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] mac addr is less than 12 \n", __FUNCTION__, __LINE__);
+        LOG_ERR("mac addr is less than 12");
         return false;
     }
     std::string tmpMacAddr(macAddr);//A8:11:FC:FD:1E:8D
@@ -728,7 +720,7 @@ bool netSrvMgrUtiles::check_global_v6_based_macaddress(std::string ipv6Addr,std:
     tmpIpv6Str.erase(std::remove(tmpIpv6Str.begin(), tmpIpv6Str.end(), ':'), tmpIpv6Str.end());//2601a40300164aa11fcfffefd1e8d
     if(tmpIpv6Str.find(tmpMacAddr) != std::string::npos)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] mac %s based global v6 address %s \n", __FUNCTION__, __LINE__,macAddr.c_str(),ipv6Addr.c_str());
+        LOG_INFO("mac %s based global v6 address %s ", macAddr.c_str(),ipv6Addr.c_str());
         return true;
     }
     return false;
@@ -740,14 +732,14 @@ bool netSrvMgrUtiles::check_global_v6_ula_address(std::string ipv6Addr)
     LOG_ENTRY_EXIT;
     if(ipv6Addr.empty())
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_NMGR,"[%s:%d] ipv6 addr is empty \n", __FUNCTION__, __LINE__);
+        LOG_ERR("ipv6 addr is empty");
         return false;
     }
 
     std::string tmpIpv6Str(ipv6Addr);
     if ((tmpIpv6Str.rfind("fd", 0) != std::string::npos) || (tmpIpv6Str.rfind("fc", 0) != std::string::npos))
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] ULA v6 address %s \n", __FUNCTION__, __LINE__,ipv6Addr.c_str());
+       LOG_INFO("ULA v6 address %s ", ipv6Addr.c_str());
         return true;
     }
     return false;
@@ -759,7 +751,7 @@ bool netSrvMgrUtiles::getCommandOutput(const char *command, char *output_buffer,
     FILE *file = popen(command, "r");
     if (!file)
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] command failed %s \n", __FUNCTION__, __LINE__, command);
+        LOG_ERR("command failed %s", command);
         return ret;
     }
     if (fgets(output_buffer, output_buffer_size, file) != NULL)
@@ -768,7 +760,7 @@ bool netSrvMgrUtiles::getCommandOutput(const char *command, char *output_buffer,
     }
     else
     {
-        RDK_LOG (RDK_LOG_ERROR, LOG_NMGR, "[%s:%d] Failed in getting output from command %s \n", __FUNCTION__, __LINE__, command);
+        LOG_ERR("Failed in getting output from command %s", command);
     }
     pclose(file);
     return ret;
@@ -802,19 +794,19 @@ bool netSrvMgrUtiles::getNetMask_IfName(const char *ifName_in,const unsigned int
             if (inet_ntop(family, &ipaddr->sin_addr, address, sizeof(address)) != NULL)
             {
                 STRCPY_S(netMask_out, INET6_ADDRSTRLEN, address);
-                RDK_LOG(RDK_LOG_INFO, LOG_NMGR,"[%s:%d] Netmask %s \n", __FUNCTION__, __LINE__,netMask_out);
+                LOG_INFO("Netmask %s", netMask_out);
                 ret = true;
             }
         }
         else
         {
-            RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed in ioctl() with  \'%s\'..\n", __FUNCTION__, __LINE__, strerror (errno) );
+            LOG_ERR("Failed in ioctl() with  \'%s\'..", strerror (errno) );
         }
         close(sock);
      }
      else
      {
-         RDK_LOG(RDK_LOG_ERROR,LOG_NMGR,"[%s:%d] Failed to create socket() with \'%s\' return as \'%d\'.\n", __FUNCTION__, __LINE__, sock, strerror (errno) );
+         LOG_ERR("Failed to create socket() with \'%s\' return as \'%d\'.", sock, strerror (errno) );
      }
     return ret;
 }
