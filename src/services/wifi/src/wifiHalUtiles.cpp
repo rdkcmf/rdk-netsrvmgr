@@ -1842,25 +1842,16 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
         snprintf (ConnParams->ssidSession.bssid, sizeof(ConnParams->ssidSession.bssid), "%s", pairedSSIDInfo.ap_bssid);
         snprintf (ConnParams->ssidSession.security, sizeof(ConnParams->ssidSession.security), "%s", pairedSSIDInfo.ap_security);
         snprintf (ConnParams->ssidSession.security_WEPKey, sizeof(ConnParams->ssidSession.security_WEPKey), "%s", pairedSSIDInfo.ap_wep_key);
-        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,
-                "[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s \n",
-                MODULE_NAME, __FUNCTION__, __LINE__,
-                ConnParams->ssidSession.ssid, ConnParams->ssidSession.passphrase,
-                ConnParams->ssidSession.bssid, ConnParams->ssidSession.security);
-        if (strcmp (ConnParams->ssidSession.security, SECURITY_MODE_WPA_PSK) == 0 )
+        if ((strstr (ConnParams->ssidSession.security, SECURITY_MODE_WPA_PSK) != NULL ) ||
+            (strstr (ConnParams->ssidSession.security, SECURITY_MODE_SAE) != NULL ))
         {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_PSK \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-            ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_PSK_AES;
+            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_SAE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
+            ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA3_SAE;//Same security_mode for both wpa2 and wpa3
         }
         else if (strcmp (ConnParams->ssidSession.security, SECURITY_MODE_WPA_EAP) == 0)
         {
             RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_EAP \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA2_ENTERPRISE_AES;
-        }
-        else if (strcmp (ConnParams->ssidSession.security, SECURITY_MODE_SAE) == 0)
-        {
-            RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_SAE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
-            ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_WPA3_SAE;
         }
         else if (ConnParams->ssidSession.security_WEPKey[0]!=NULL)
         {
@@ -1877,6 +1868,11 @@ bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
             RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] SECURITY_MODE_WPA_NONE \n", MODULE_NAME,__FUNCTION__, __LINE__ );
             ConnParams->ssidSession.security_mode=NET_WIFI_SECURITY_NONE;
         }
+        RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR,
+                "[%s:%s:%d] last connected  ssid is  %s passphrase is %s  bssid is %s security is %s security_mode is %d\n",
+                MODULE_NAME, __FUNCTION__, __LINE__,
+                ConnParams->ssidSession.ssid, ConnParams->ssidSession.passphrase,
+                ConnParams->ssidSession.bssid, ConnParams->ssidSession.security,ConnParams->ssidSession.security_mode);
         ret = true;
     }
     RDK_LOG( RDK_LOG_TRACE1, LOG_NMGR, "[%s:%s:%d] Exit\n", MODULE_NAME,__FUNCTION__, __LINE__ );
