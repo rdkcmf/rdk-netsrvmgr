@@ -23,29 +23,18 @@ else
     declare "DHCPv4_SERVICE_$WIFI_INTERFACE=udhcpc@${WIFI_INTERFACE}.service"
 fi
 
-ipv4_deconfigure_interface()
-{
-    touch "/tmp/$1.deconfigured"
-    ipv4_deconfigure_dhcpip "$1"
-}
-
 ipv4_deconfigure_dhcpip()
 {
-    [ "$RUN_LINK_LOCAL_SERVICES" == "true" ] && interface="$1:0" || interface="$1"
-    UDHCPC_PID_FILE="/tmp/udhcpc.${interface}.pid"
-    if [ -f "$UDHCPC_PID_FILE" ]; then
-        UDHCPC_PID="$(cat "$UDHCPC_PID_FILE")"
-        log "$1: kill -USR2 $UDHCPC_PID ($UDHCPC_PID_FILE)"
-        kill -USR2 "$UDHCPC_PID"
-    fi
+    DHCPv4_SERVICE=DHCPv4_SERVICE_$1
+    log "$1: systemctl stop ${!DHCPv4_SERVICE}"
+    systemctl stop "${!DHCPv4_SERVICE}"
 }
 
 ipv4_configure_dhcpip()
 {
     DHCPv4_SERVICE=DHCPv4_SERVICE_$1
-    [ -f "/tmp/$1.deconfigured" ] && cmd="restart" || cmd="start"
-    log "$1: systemctl $cmd ${!DHCPv4_SERVICE}"
-    systemctl "$cmd" "${!DHCPv4_SERVICE}"
+    log "$1: systemctl start ${!DHCPv4_SERVICE}"
+    systemctl start "${!DHCPv4_SERVICE}"
 }
 
 ipv4_configure_manualip()
@@ -59,37 +48,38 @@ ipv4_configure_manualip()
     [ ! -s $ip_settings_file ] && return 1
 
     # read ip settings file
-    declare -a keys=()
-    declare -a vals=()
     while IFS='=' read -r key val; do
         [[ $key = '#'* ]] && continue
-        keys+=("$key"); vals+=("$val")
-    done < $ip_settings_file
-
-    for ((i = 0; i < ${#keys[@]}; i++)); do
-        case "${keys[i]}" in
-            "ipaddress")    ip=${vals[i]} ;;
-            "netmask")      mask=${vals[i]} ;;
-            "gateway")      gw=${vals[i]} ;;
-            "primarydns")   dns1=${vals[i]} ;;
-            "secondarydns") dns2=${vals[i]} ;;
+        case "$key" in
+            "ipaddress")    ip="$val" ;;
+            "netmask")      mask="$val" ;;
+            "gateway")      gw="$val" ;;
+            "primarydns")   dns1="$val" ;;
+            "secondarydns") dns2="$val" ;;
         esac
-    done
+    done < $ip_settings_file
 
     ipv4_deconfigure_dhcpip "$1"
 
     # apply ip settings
     [ "$RUN_LINK_LOCAL_SERVICES" == "true" ] && interface="$1:0" || interface="$1"
-    log "ifconfig $interface $ip netmask $mask up"
+    log "$1: ifconfig $interface $ip netmask $mask up"
     ifconfig "$interface" "$ip" netmask "$mask" up
-    log "route add default gw $gw dev $interface"
+    log "$1: route add default gw $gw dev $interface"
     route add default gw "$gw" dev "$interface"
-    log "writing nameservers $dns1, $dns2 to /tmp/resolv.dnsmasq.udhcpc"
+    log "$1: writing nameservers $dns1, $dns2 to /tmp/resolv.dnsmasq.udhcpc"
     cat /dev/null > /tmp/ipsettings.nameservers
     [ -n "$dns1" ] && echo "nameserver $dns1" >> /tmp/ipsettings.nameservers
     [ -n "$dns2" ] && echo "nameserver $dns2" >> /tmp/ipsettings.nameservers
     cp /tmp/ipsettings.nameservers /tmp/resolv.dnsmasq.udhcpc
     return 0
+}
+
+ipv4_deconfigure_interface()
+{
+    ipv4_deconfigure_dhcpip "$1"
+    flush_routes_and_addresses "$1" "-4"
+    # cat /dev/null > /tmp/resolv.dnsmasq.udhcpc
 }
 
 ipv4_configure_interface()
@@ -101,12 +91,8 @@ ipv4_configure_interface()
 
 ipv4_reconfigure_interface()
 {
-    log "$1"
-    touch "/tmp/$1.deconfigured"
-    ip -4 route flush dev "$1" # remove all ipv4 routes configured on passed interface
-    ip -4 route flush cache    # no point, as per https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux ("While IPv4 lost its route cache in Linux 3.6 (commit 5e9965c15ba8) ...")
-    ip -4 addr flush dev "$1"  # addr flush also removes aliases/virtual interfaces
-    # cat /dev/null > /tmp/resolv.dnsmasq.udhcpc
+    log "$1: ipv4_deconfigure_interface"
+    ipv4_deconfigure_interface "$1"
     log "$1: systemctl restart pni_controller.service"
     systemctl restart pni_controller.service
 }
@@ -125,17 +111,17 @@ ipv6_configure_interface()
 
 flush_routes_and_addresses()
 {
-    log "$1"
-    ip route flush dev "$1" # remove all routes configured on passed interface
-    ip route flush cache
-    ip addr flush dev "$1"
+    ip_family="$2"
+    log "$1 (ip_family $ip_family)"
+    ip "$ip_family" route flush dev "$1" # remove all routes of specified "$ip_family" configured on passed interface
+    ip "$ip_family" route flush cache    # for ipv4: no point, as per https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux ("While IPv4 lost its route cache in Linux 3.6 (commit 5e9965c15ba8) ...")
+    ip "$ip_family" addr flush dev "$1"  # for ipv4: addr flush also removes aliases/virtual interfaces
 }
 
 deconfigure_interface()
 {
     ipv4_deconfigure_interface "$1"
     ipv6_deconfigure_interface "$1"
-    flush_routes_and_addresses "$1"
 }
 
 configure_interface()
@@ -146,7 +132,6 @@ configure_interface()
         [ -n "$pid_ll_services" ] && kill "$pid_ll_services"    # kill any previously started instance
         restart_link_local_services "$1" & pid_ll_services="$!" # restart link local services in background
     fi
-    [ -f "/tmp/$1.deconfigured" ] && rm "/tmp/$1.deconfigured"
     [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_DISABLE_CONNECTIVITY_TEST" == "true" ] || test_connectivity "$1" 2 15
 }
 
