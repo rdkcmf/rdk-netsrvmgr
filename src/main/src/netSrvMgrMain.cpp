@@ -37,6 +37,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+#include <curl/curl.h>
+#endif
 
 #ifdef ENABLE_STUN_CLIENT
 #include "StunClient.h"
@@ -134,7 +137,8 @@ static bool setInterfaceEnabled(const char* interface, bool enabled, bool persis
 static bool setInterfaceState(std::string interface_name, bool enabled);
 static bool setIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
 static bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param);
-static bool isConnectedToInternet(bool& connectivity);
+static int testConnectivity(long timeout_ms);
+static std::vector<std::string> getConnectivityTestEndpoints();
 static bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints);
 #ifdef ENABLE_STUN_CLIENT
 static bool getPublicIP(IARM_BUS_NetSrvMgr_Iface_StunRequest_t *param);
@@ -203,6 +207,13 @@ static bool split (const std::string &str, char delimiter, std::vector<std::stri
         return false;
     }
     return true;
+}
+
+static long now ()
+{
+    struct timespec ts;
+    clock_gettime (CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
 }
 
 #ifdef ENABLE_IARM
@@ -1079,8 +1090,12 @@ IARM_Result_t getSTBip_family(void *arg)
 IARM_Result_t isConnectedToInternet(void *arg)
 {
     LOG_ENTRY_EXIT;
-    bool* connectivity = (bool*) arg;
-    return isConnectedToInternet(*connectivity) ? IARM_RESULT_SUCCESS : IARM_RESULT_IPCCORE_FAIL;
+    long timeout_ms = 2000; // using timeout = 2s ( < default IARM call timeout of 5s)
+    LOG_INFO("test_connectivity: : BEGIN timeout = %ldms", timeout_ms);
+    bool connectivity = (testConnectivity(timeout_ms) > 0);
+    LOG_INFO("test_connectivity: : %s", connectivity ? "PASS" : "FAIL");
+    *((bool*) arg) = connectivity;
+    return IARM_RESULT_SUCCESS;
 }
 
 IARM_Result_t setConnectivityTestEndpoints(void *arg)
@@ -1688,22 +1703,136 @@ bool getIPSettings(IARM_BUS_NetSrvMgr_Iface_Settings_t *param)
     return true;
 }
 
-bool isConnectedToInternet(bool& connectivity)
+int testConnectivity (long timeout_ms)
 {
     LOG_ENTRY_EXIT;
-    const char* command = "/lib/rdk/pni_controller.sh test_connectivity";
-    LOG_INFO("Executing command [%s]", command);
-    FILE *fp = popen (command, "r");
-    if (fp == NULL)
+    long deadline = now() + timeout_ms;
+    int connectivity = 0;
+
+    std::vector<std::string> endpoints = getConnectivityTestEndpoints ();
+
+    CURLM *cm = curl_multi_init();
+    if (!cm)
     {
-        LOG_ERR("popen error %d (%s)", errno, strerror(errno));
-        return false;
+        LOG_ERR("curl_multi_init returned NULL");
+        return -1;
     }
-    int pclose_status = pclose (fp);
-    int status = WEXITSTATUS (pclose_status);
-    LOG_INFO("Exit code [%d] from command [%s]", status, command);
-    connectivity = (status == 0);
-    return true;
+
+    std::vector<CURL*> ehs;
+    for (const auto& endpoint : endpoints)
+    {
+        CURL *eh = curl_easy_init();
+        if (!eh)
+        {
+            LOG_ERR("endpoint = <%s> curl_easy_init returned NULL", endpoint.c_str());
+            continue;
+        }
+        curl_easy_setopt(eh, CURLOPT_URL, endpoint.c_str());
+        curl_easy_setopt(eh, CURLOPT_PRIVATE, endpoint.c_str());
+        curl_easy_setopt(eh, CURLOPT_CONNECT_ONLY, 1L);
+        curl_easy_setopt(eh, CURLOPT_TIMEOUT_MS, deadline - now());
+        if (rdk_dbg_enabled("LOG.RDK.NETSRVMGR", RDK_LOG_TRACE2) == TRUE)
+             curl_easy_setopt(eh, CURLOPT_VERBOSE, 1L);
+        curl_multi_add_handle(cm, eh);
+        ehs.push_back(eh);
+    }
+
+    CURLMsg *msg;
+    int running_handles = 1, msgs_left = -1, numfds, repeats = 0;
+    char *endpoint;
+
+    while(1)
+    {
+        curl_multi_perform(cm, &running_handles);
+        while ((msg = curl_multi_info_read(cm, &msgs_left)))
+        {
+            if (msg->msg == CURLMSG_DONE)
+            {
+                if (0 == msg->data.result)
+                    connectivity++;
+                CURL *e = msg->easy_handle;
+                curl_easy_getinfo(e, CURLINFO_PRIVATE, &endpoint);
+                LOG_INFO("endpoint = <%s> error = %d (%s)", endpoint, msg->data.result, curl_easy_strerror(msg->data.result));
+                curl_multi_remove_handle(cm, e);
+                curl_easy_cleanup(e);
+                for (auto &eh : ehs)
+                    if (eh == e)
+                        eh = NULL;
+            }
+        }
+        if (connectivity > 0)
+            break;
+        if (running_handles == 0)
+            break;
+        long waitms = deadline - now();
+        LOG_DBG("waitms = %ld", waitms);
+        if (waitms <= 0)
+            break;
+        curl_multi_wait(cm, NULL, 0, waitms, &numfds);
+        if (numfds == 0)
+        {
+            repeats++;
+            if (repeats > 1)
+                usleep(10*1000); /* sleep 10 ms */
+        }
+        else
+            repeats = 0;
+    }
+
+    for (const auto& eh : ehs)
+    {
+        if (eh)
+        {
+            curl_easy_getinfo(eh, CURLINFO_PRIVATE, &endpoint);
+            LOG_INFO("endpoint = <%s> terminating attempt", endpoint);
+            curl_multi_remove_handle(cm, eh);
+            curl_easy_cleanup(eh);
+        }
+    }
+    curl_multi_cleanup(cm);
+
+    return connectivity;
+}
+
+const int MAX_CONNECTIVITY_TEST_ENDPOINTS = 5;
+
+// returns connectivity test endpoints as a vector of strings
+// endpoints are read from the file /opt/persistent/connectivity_test_endpoints
+// - this file must list endpoints separated by whitespace or newline
+// - if this file is empty or has only spaces/tabs, defaults are populated
+std::vector<std::string> getConnectivityTestEndpoints ()
+{
+    LOG_ENTRY_EXIT;
+    std::vector<std::string> endpoints;
+    const char* filename = "/opt/persistent/connectivity_test_endpoints";
+    std::ifstream ifs(filename);
+    if (ifs.is_open())
+    {
+        for (std::string endpoint; endpoints.size() < MAX_CONNECTIVITY_TEST_ENDPOINTS && ifs >> endpoint;)
+            endpoints.push_back(endpoint);
+        ifs.close();
+    }
+    if (endpoints.size() == 0)
+    {
+        LOG_WARN("no endpoints found. writing default endpoints to %s", filename);
+        if (access("/lib/systemd/system/xre-receiver.service", F_OK) == 0)
+        {
+            endpoints.push_back("xre.ccp.xcal.tv:10601");
+        }
+        else
+        {
+            endpoints.push_back("google.com");
+            endpoints.push_back("espn.com");
+            endpoints.push_back("speedtest.net");
+        }
+        setConnectivityTestEndpoints(endpoints);
+    }
+    std::string endpoints_str;
+    for (const auto& endpoint : endpoints)
+        endpoints_str.append(endpoint).append(" ");
+    LOG_INFO("endpoints = %s", endpoints_str.c_str());
+
+    return endpoints;
 }
 
 bool setConnectivityTestEndpoints(const std::vector<std::string>& endpoints)
