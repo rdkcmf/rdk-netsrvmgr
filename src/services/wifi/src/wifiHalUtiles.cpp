@@ -1717,16 +1717,34 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
     }
    LOG_DBG( "\n***********End: SSID Scan List **************** \n\n");
 
-
+    bool result = false;
+    cJSON *ret_json = NULL;
     char *out = cJSON_PrintUnformatted(rootObj);
-    if (out)
+    if(out)
     {
-        strncpy(buffer, out, strlen(out)+1);
+        /* Parse and check the SSID Scan List is valid JSON */
+        if (NULL == (ret_json = cJSON_Parse (out)))
+        {
+            LOG_ERR("scan_SpecificSSID_WifiAP query returned non-JSON value after cJSON_parse = [%s]. Error = [%s]",out, cJSON_GetErrorPtr());
+            result = false;
+        }
+        else
+        {
+            strncpy(buffer, out, strlen(out)+1);
+            LOG_DBG("[%s] Out = %s", MODULE_NAME,out);
+            LOG_DBG("[%s] Buffer = %s", MODULE_NAME,buffer);
+            result = true;
+            cJSON_Delete(ret_json);
+        }
+        free(out);
+    }
+    else
+    {
+        LOG_ERR("scan_SpecificSSID_WifiAP query return SSID List is NULL");
+        result = false;
     }
 
     if(rootObj) cJSON_Delete(rootObj);
-
-    if(out) free(out);
 
     if(ssid_ap_array)
     {
@@ -1734,7 +1752,7 @@ bool scan_SpecificSSID_WifiAP(char *buffer, const char* SSID, double freq_in)
         free(ssid_ap_array);
     }
     LOG_TRACE("[%s] Exit", MODULE_NAME);
-    return true;
+    return result;
 #else    // ENABLE_XCAM_SUPPORT
   LOG_TRACE("[%s] Exit", MODULE_NAME);
   return false;
@@ -1805,23 +1823,44 @@ bool scan_Neighboring_WifiAP(char *buffer)
     }
     LOG_DBG( "\n***********End: SSID Scan List **************** \n\n");
 
-
+    bool result = false;
+    cJSON *ret_json = NULL;
     char *out = cJSON_PrintUnformatted(rootObj);
-    if (out) {
-        strncpy(buffer, out, strlen(out)+1);
+
+    if(out)
+    {
+        /* Parse and check the SSID Scan List is valid JSON */
+        if (NULL == (ret_json = cJSON_Parse (out)))
+        {
+            LOG_ERR("scan_Neighboring_WifiAP query returned non-JSON value after cJSON_parse = [%s]. Error = [%s]",out, cJSON_GetErrorPtr());
+            result = false;
+        }
+        else
+        {
+            strncpy(buffer, out, strlen(out)+1);
+            LOG_DBG("[%s] Out = %s", MODULE_NAME,out);
+            LOG_DBG("[%s] Buffer = %s", MODULE_NAME,buffer);
+            result = true;
+            cJSON_Delete(ret_json);
+        }
+        free(out);
+    }
+    else
+    {
+        LOG_ERR("scan_Neighboring_WifiAP query return SSID List is NULL");
+        result = false;
     }
 
     if(rootObj) {
         cJSON_Delete(rootObj);
     }
-    if(out) free(out);
 
     if(neighbor_ap_array) {
         LOG_DBG( "[%s] malloc allocated = %d ", MODULE_NAME, malloc_usable_size(neighbor_ap_array));
         free(neighbor_ap_array);
     }
     LOG_TRACE("[%s] Exit", MODULE_NAME );
-    return true;
+    return result;
 }
 
 bool lastConnectedSSID(WiFiConnectionStatus *ConnParams)
