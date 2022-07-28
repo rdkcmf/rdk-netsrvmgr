@@ -1886,6 +1886,15 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
     std:string interface = param->interface;
     char activeInterface[INTERFACE_SIZE];
 
+    long timeout_ms = 2000; // using timeout = 2s ( < default IARM call timeout of 5s)
+    LOG_DBG("BEGIN timeout = %ldms", timeout_ms);
+    bool connectivity = (testConnectivity(timeout_ms) > 0);
+    if (!connectivity)
+    {
+        LOG_ERR("testConnectivity failed: internet not available");
+        return false;
+    }
+
     if (0 == strcasecmp(param->interface, "WIFI"))
     {
         interface = getenvOrDefault("WIFI_INTERFACE", "");
