@@ -132,7 +132,7 @@ configure_interface()
         [ -n "$pid_ll_services" ] && kill "$pid_ll_services"    # kill any previously started instance
         restart_link_local_services "$1" & pid_ll_services="$!" # restart link local services in background
     fi
-    [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_DISABLE_CONNECTIVITY_TEST" == "true" ] || test_connectivity "$1" 2 15
+    [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_DISABLE_CONNECTIVITY_TEST" == "true" ] || test_gateway_connectivity "$1" 1 15
 }
 
 restart_link_local_services()
@@ -146,62 +146,23 @@ ip route add 224.0.0.0/4 dev "$MOCA_INTERFACE"
     systemctl restart xcal-device.service
 }
 
-FILE_CONNECTIVITY_TEST_ENDPOINTS=/opt/persistent/connectivity_test_endpoints
-
-get_connectivity_test_endpoints()
+# usage: test_gateway_connectivity <interface> <timeout seconds> <max tries>
+test_gateway_connectivity()
 {
-    endpoints=""
-    if [ -f "$FILE_CONNECTIVITY_TEST_ENDPOINTS" ]; then
-        while read -r line || [ -n "$line" ]; do
-            endpoints="$endpoints $line"
-        done < $FILE_CONNECTIVITY_TEST_ENDPOINTS
-    fi
-    if [ -z "${endpoints// }" ]; then
-        if [ -f /lib/systemd/system/xre-receiver.service ]; then
-            endpoints="xre.ccp.xcal.tv:10601"
-        else
-            endpoints="google.com espn.com speedtest.net"
-        fi
-        echo "$endpoints" | tr -s ' ' '\n' > "$FILE_CONNECTIVITY_TEST_ENDPOINTS"
-    fi
-    echo "$endpoints"
-}
-
-sigusr1_received()
-{
-    connectivity=true
-    for pid in $(jobs -p); do
-        [ "$pid" != "$pid_ll_services" ] && kill "$pid" 2> /dev/null
-    done
-}
-
-# usage: test_connectivity <interface> <timeout seconds> <max tries>
-test_connectivity()
-{
-    endpoints=$(get_connectivity_test_endpoints)
-    log "$1: BEGIN (endpoints=$endpoints, timeout=${2}s, max tries=$3)"
+    log "$1: BEGIN (timeout=${2}s, max tries=$3)"
     i=0
+    connectivity=false
     while true; do
-        connectivity=false
-        trap sigusr1_received SIGUSR1
-        for endpoint in $endpoints; do
-            endpoint_host=$(echo "$endpoint" | awk -F: '{print $1}')
-            [ -z "$endpoint_host" ] && continue
-            endpoint_port=$(echo "$endpoint" | awk -F: '{print $2}')
-            [ -z "$endpoint_port" ] && endpoint_port=80
-            [ $connectivity == "true" ] && break
-            timeout "$2" bash -c "echo > /dev/tcp/${endpoint_host}/${endpoint_port} && kill -SIGUSR1 $$" 2> /dev/null &
-        done
-        for pid in $(jobs -p); do
-            [ "$pid" != "$pid_ll_services" ] && wait "$pid"
-        done
-        trap - SIGUSR1 # unset trap
+        IPV4_GATEWAY=$(ip -4 r s 0.0.0.0/0 | grep 'default via' | head -n1 | cut -d" " -f3)
+        [ -n "$IPV4_GATEWAY" ] && timeout "$2" ping -c1 "$IPV4_GATEWAY" &> /dev/null && connectivity=true
+        IPV6_GATEWAY=$(ip -6 r s :00/0 | grep 'default via' | head -n1 | cut -d" " -f3)
+        [ -n "$IPV6_GATEWAY" ] && timeout "$2" ping6 -c1 "$IPV6_GATEWAY" &> /dev/null && connectivity=true
         i=$((i+1))
         if [ "$connectivity" == "true" ]; then
-            log "$1: PASS (endpoints=$endpoints, timeout=${2}s, tries=$i)"
+            log "$1: PASS (timeout=${2}s, tries=$i)"
             return 0
         elif [ "$i" -ge "$3" ]; then
-            log "$1: FAIL (endpoints=$endpoints, timeout=${2}s, tries=$i)"
+            log "$1: FAIL (timeout=${2}s, tries=$i)"
             return 1
         fi
         sleep 1
@@ -260,12 +221,6 @@ try_interface()
     log "$1 end, took $(dc "$end" "$begin" - p)s"
     return $result
 }
-
-if [ "$1" == "test_connectivity" ]; then
-    [ -n "$2" ] && timeout_seconds="$2" || timeout_seconds=2 # default timeout to 2s if not specified
-    test_connectivity "" "$timeout_seconds" 1
-    exit $?
-fi
 
 if [ "$1" == "ipv4_reconfigure_interface" ]; then
     ipv4_reconfigure_interface "$2"
