@@ -80,7 +80,6 @@ IARM_Bus_Daemon_SysMode_t sysModeParam;
 
 #ifdef ENABLE_RTMESSAGE
 #include <pthread.h>
-#include "wifi_provider.h"
 pthread_t wifiMsgThread;
 #endif
 
@@ -404,16 +403,6 @@ int  WiFiNetworkMgr::Start()
     } else  {
         LOG_ERR("[%s] Failed in wifi_init(). ", MODULE_NAME);
     }
-
-    #ifdef ENABLE_RTMESSAGE
-      /*int ret = start_dmProvider();
-      if (ret)
-      {
-        LOG_ERR("[%s] Error starting netsrvmgr wifi dm provider!! ", MODULE_NAME);
-      }
-      else
-        LOG_INFO("[%s] Successfully started netsrvmgr wifi dm provider!!", MODULE_NAME);*/
-    #endif
 
     getHALVersion();
     /*Register connect and disconnect call back */
