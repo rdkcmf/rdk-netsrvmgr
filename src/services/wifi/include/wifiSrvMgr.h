@@ -34,8 +34,9 @@ public:
     static bool isReady();
 
     int Init();
-    int Start();
-    int Stop();
+#ifdef USE_RDK_WIFI_HAL
+    bool setWifiEnabled (bool newState);
+#endif // USE_RDK_WIFI_HAL
 #ifdef ENABLE_IARM
     static IARM_Result_t getPairedSSIDInfo(void *arg);
     static IARM_Result_t getAvailableSSIDs(void *arg);
@@ -76,11 +77,15 @@ public:
 #ifdef ENABLE_LOST_FOUND
     static IARM_Result_t getLNFState(void *arg);
 #endif
-#endif
+#endif // ifdef ENABLE_IARM
+
 private:
 
     WiFiNetworkMgr();
     virtual ~WiFiNetworkMgr();
+
+    int Start();
+    int Stop();
 
 #ifndef ENABLE_XCAM_SUPPORT
 /**

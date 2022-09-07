@@ -377,6 +377,36 @@ int  WiFiNetworkMgr::Init()
     return 0;
 }
 
+#ifdef USE_RDK_WIFI_HAL
+bool WiFiNetworkMgr::setWifiEnabled (bool newState)
+{
+    static bool bWiFiEnabled = false; // TODO: assumes WiFi is disabled when netsrvmgr starts. correct assumption?
+
+    LOG_ENTRY_EXIT;
+
+    LOG_INFO("WiFi state: current [%d] requested [%d]", bWiFiEnabled, newState);
+
+    if (!bWiFiEnabled == !newState)
+    {
+        LOG_INFO("Already in requested state. Nothing to do.");
+        return true;
+    }
+
+    bWiFiEnabled = newState; // change WiFi state
+    if (bWiFiEnabled)
+    {
+        WiFiNetworkMgr::getInstance()->Start();
+        LOG_INFO("TELEMETRY_NETWORK_MANAGER_ENABLE_WIFI.");
+    }
+    else
+    {
+        WiFiNetworkMgr::getInstance()->Stop();
+        LOG_INFO("TELEMETRY_NETWORK_MANAGER_DISABLE_WIFI.");
+    }
+    return true;
+}
+#endif // USE_RDK_WIFI_HAL
+
 int  WiFiNetworkMgr::Start()
 {
     LOG_ENTRY_EXIT;
@@ -875,19 +905,18 @@ IARM_Result_t WiFiNetworkMgr::getLNFState(void *arg)
 #endif // ENABLE_LOST_FOUND
 IARM_Result_t WiFiNetworkMgr::setEnabled(void *arg)
 {
-    IARM_Result_t ret = IARM_RESULT_SUCCESS;
+    LOG_ENTRY_EXIT;
+
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
-    bool wifiadapterEnableState = false;
+    bool wifiadapterEnableState = param->data.setwifiadapter.enable;
 
-    LOG_TRACE("[%s] Enter", MODULE_NAME );
+    LOG_INFO("IARM_BUS_WIFI_MGR_API_setEnabled %d", wifiadapterEnableState);
 
-    wifiadapterEnableState = param->data.setwifiadapter.enable;
+#ifdef USE_RDK_WIFI_HAL
+    WiFiNetworkMgr::getInstance()->setWifiEnabled(wifiadapterEnableState);
+#endif // USE_RDK_WIFI_HAL
 
-    LOG_DBG("[%s] IARM_BUS_WIFI_MGR_API_setEnabled to %d", MODULE_NAME, wifiadapterEnableState);
-
-    LOG_TRACE("[%s] Exit", MODULE_NAME );
-
-    return ret;
+    return IARM_RESULT_SUCCESS;
 }
 
 IARM_Result_t WiFiNetworkMgr::connect(void *arg)

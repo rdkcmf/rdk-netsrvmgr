@@ -145,9 +145,6 @@ static bool getPublicIP(IARM_BUS_NetSrvMgr_Iface_StunRequest_t *param);
 #endif
 #endif // if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
 
-#ifdef USE_RDK_WIFI_HAL
-static bool setWifiEnabled (bool newState);
-#endif // USE_RDK_WIFI_HAL
 std::string gDhcpServerIP;
 static bool getDhcpServerIP();
 
@@ -568,7 +565,7 @@ void netSrvMgr_start()
 #if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
     launch_pni_controller();
 #else
-    setWifiEnabled (true); // enable WiFi by default for XCAMs
+    WiFiNetworkMgr::getInstance()->setWifiEnabled (true); // enable WiFi by default for XCAMs
 #endif // ifndef ENABLE_XCAM_SUPPORT and XHB1 and XHC3
 #endif // USE_RDK_WIFI_HAL
 
@@ -957,7 +954,7 @@ void _eventHandler (const char *owner, IARM_EventId_t eventId, void *data, size_
 #ifdef USE_RDK_WIFI_HAL
     case IARM_BUS_NETWORK_MANAGER_EVENT_WIFI_INTERFACE_STATE:
     {
-        setWifiEnabled (param->isInterfaceEnabled);
+        WiFiNetworkMgr::getInstance()->setWifiEnabled (param->isInterfaceEnabled);
         break;
     }
 #endif // USE_RDK_WIFI_HAL
@@ -1310,7 +1307,7 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
         {
             unmark("wifi_disallowed", persist); // remove marker file (if present) that says "WIFI is disallowed"
             setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), true);
-            setWifiEnabled(true);
+            WiFiNetworkMgr::getInstance()->setWifiEnabled(true);
             launch_pni_controller();
             return true;
         }
@@ -1318,7 +1315,7 @@ bool setInterfaceEnabled (const char* interface, bool enabled, bool persist)
         {
             mark("wifi_disallowed", persist); // touch marker file that says "WIFI is disallowed"
             setInterfaceState (getenvOrDefault("WIFI_INTERFACE", ""), false);
-            setWifiEnabled(false);
+            WiFiNetworkMgr::getInstance()->setWifiEnabled(false);
             launch_pni_controller();
             return true;
         }
@@ -1944,34 +1941,3 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
 #endif
 
 #endif // ifndef ENABLE_XCAM_SUPPORT and XHB1 and XHC3
-
-#ifdef USE_RDK_WIFI_HAL
-// TODO: move this into WifiSrvMgr.cpp as WiFiNetworkMgr::setWifiEnabled(bool newState) ?
-bool setWifiEnabled (bool newState)
-{
-    static bool bWiFiEnabled = false; // TODO: assumes WiFi is disabled when netsrvmgr starts. correct assumption?
-
-    LOG_ENTRY_EXIT;
-
-    LOG_INFO("WiFi state: current [%d] requested [%d]", bWiFiEnabled, newState);
-
-    if (!bWiFiEnabled == !newState)
-    {
-        LOG_INFO("Already in requested state. Nothing to do.");
-        return true;
-    }
-
-    bWiFiEnabled = newState; // change WiFi state
-    if (bWiFiEnabled)
-    {
-        WiFiNetworkMgr::getInstance()->Start();
-        LOG_INFO("TELEMETRY_NETWORK_MANAGER_ENABLE_WIFI.");
-    }
-    else
-    {
-        WiFiNetworkMgr::getInstance()->Stop();
-        LOG_INFO("TELEMETRY_NETWORK_MANAGER_DISABLE_WIFI.");
-    }
-    return true;
-}
-#endif // USE_RDK_WIFI_HAL

@@ -111,6 +111,14 @@ struct { option number; char* name; } options[] =
         { Exit, "Exit" }
 };
 
+static bool user_answers_yes_to(char* question)
+{
+    char answer;
+    std::cout << "\n" << question << " (y/n) ";
+    std::cin >> answer;
+    return answer == 'y' || answer == 'Y';
+}
+
 static void WIFI_MGR_API_getAvailableSSIDsWithName()
 {
 #ifdef ENABLE_IARM
@@ -302,7 +310,7 @@ static void WIFI_MGR_API_setEnabled()
     printf("[%s] Entering...\r\n", __FUNCTION__);
     memset(&param, 0, sizeof(param));
 
-    param.data.setwifiadapter.enable = true;
+    param.data.setwifiadapter.enable = user_answers_yes_to("Press Y/y for setEnabled(true), anything else for setEnabled(false)");
     retVal = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME, IARM_BUS_WIFI_MGR_API_setEnabled, (void *)&param, sizeof(param));
 
     if(retVal == IARM_RESULT_SUCCESS)    {
@@ -396,14 +404,6 @@ static void WIFI_MGR_API_initiateWPSPairing()
     printf("\n***********************************\n");
     printf("[%s] Exiting..\r\n", __FUNCTION__);
 #endif
-}
-
-static bool user_answers_yes_to(char* question)
-{
-    char answer;
-    std::cout << "\n" << question << " (y/n) ";
-    std::cin >> answer;
-    return answer == 'y' || answer == 'Y';
 }
 
 static void WIFI_MGR_API_initiateWPSPairing2()
@@ -1008,8 +1008,7 @@ int main()
             WIFI_MGR_API_getCurrentState();
             break;
         case Test_setEnabled:
-            printf( "\'setEnabled\' Not Applicable any more..!!!\n" );
-//			WIFI_MGR_API_setEnabled();
+            WIFI_MGR_API_setEnabled();
             break;
         case Test_getPairedSSID:
             WIFI_MGR_API_getPairedSSID();
