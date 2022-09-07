@@ -132,7 +132,7 @@ configure_interface()
         [ -n "$pid_ll_services" ] && kill "$pid_ll_services"    # kill any previously started instance
         restart_link_local_services "$1" & pid_ll_services="$!" # restart link local services in background
     fi
-    [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_DISABLE_CONNECTIVITY_TEST" == "true" ] || test_gateway_connectivity "$1" 1 15
+    [ "$PNI_ENABLED" != "true" ] || [ "$CONFIG_DISABLE_CONNECTIVITY_TEST" == "true" ] || test_connectivity "$1" 2000 15
 }
 
 restart_link_local_services()
@@ -146,27 +146,17 @@ ip route add 224.0.0.0/4 dev "$MOCA_INTERFACE"
     systemctl restart xcal-device.service
 }
 
-# usage: test_gateway_connectivity <interface> <timeout seconds> <max tries>
-test_gateway_connectivity()
+# usage: test_connectivity <interface> <timeout_ms> <max_tries>
+test_connectivity()
 {
-    log "$1: BEGIN (timeout=${2}s, max tries=$3)"
-    i=0
-    connectivity=false
-    while true; do
-        IPV4_GATEWAY=$(ip -4 r s 0.0.0.0/0 | grep 'default via' | head -n1 | cut -d" " -f3)
-        [ -n "$IPV4_GATEWAY" ] && timeout "$2" ping -c1 "$IPV4_GATEWAY" &> /dev/null && connectivity=true
-        IPV6_GATEWAY=$(ip -6 r s :00/0 | grep 'default via' | head -n1 | cut -d" " -f3)
-        [ -n "$IPV6_GATEWAY" ] && timeout "$2" ping6 -c1 "$IPV6_GATEWAY" &> /dev/null && connectivity=true
-        i=$((i+1))
-        if [ "$connectivity" == "true" ]; then
-            log "$1: PASS (timeout=${2}s, tries=$i)"
-            return 0
-        elif [ "$i" -ge "$3" ]; then
-            log "$1: FAIL (timeout=${2}s, tries=$i)"
-            return 1
-        fi
-        sleep 1
-    done
+    log "$1: BEGIN (timeout=${2}ms, max tries=$3)"
+    if /usr/bin/test_connectivity "$2" "$3"; then
+        log "$1: PASS"
+        return 0
+    else
+        log "$1: FAIL"
+        return 1
+    fi
 }
 
 set_interface_state()

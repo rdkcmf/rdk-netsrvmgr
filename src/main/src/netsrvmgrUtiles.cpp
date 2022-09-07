@@ -72,17 +72,6 @@
         strcpy(dest, source);
 #endif
 
-EntryExitLogger::EntryExitLogger (const char* func, const int line) :
-        func (func), line (line)
-{
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Entry\n", func, line);
-}
-
-EntryExitLogger::~EntryExitLogger ()
-{
-    RDK_LOG(RDK_LOG_TRACE1, LOG_NMGR, "[%s:%d] Exit \n", func, line);
-}
-
 #ifdef USE_TELEMETRY_2_0
 
 void telemetry_init(char* name)

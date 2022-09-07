@@ -259,6 +259,7 @@ AC_SUBST(IARM_CFLAGS)
 AC_SUBST(IARM_LFLAGS)
 AC_SUBST(WIFI_CLIENT_ROAMING)
 
+AM_CONDITIONAL([CAMERA_DEVICE], [test "x$XCAM_SUPPORT" = "xtrue" || test "x$XHB1" == "xtrue" || test "x$XHC3" == "xtrue"])
 
 #PKG_CHECK_MODULES([DBUS], [dbus-1])
 

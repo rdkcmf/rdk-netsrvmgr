@@ -93,16 +93,28 @@ bin_PROGRAMS = netsrvmgr
 netsrvmgr_SOURCES = $(top_srcdir)/src/main/src/netSrvMgrMain.cpp \
 			$(top_srcdir)/src/main/src/NetworkMedium.cpp \
 			$(top_srcdir)/src/main/src/netsrvmgrUtiles.cpp
-			
-if !XCAM_SUPPORT
+
+netsrvmgr_LDADD =
+
+if !CAMERA_DEVICE
 netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/StunClient.cpp
 AM_CXXFLAGS += -DENABLE_STUN_CLIENT
+
+lib_LTLIBRARIES = libconnectivitytest.la
+libconnectivitytest_la_SOURCES = $(top_srcdir)/src/main/src/connectivity.cpp
+libconnectivitytest_la_LIBADD = -lrdkloggers -lcurl
+
+bin_PROGRAMS += test_connectivity
+test_connectivity_SOURCES = $(top_srcdir)/src/main/src/test_connectivity.cpp
+test_connectivity_LDADD = libconnectivitytest.la
+
+netsrvmgr_LDADD += libconnectivitytest.la
 endif
 
 if LOSTFOUND
 netsrvmgr_SOURCES += $(top_srcdir)/src/main/src/netSrvCurl.cpp
 endif
-netsrvmgr_LDADD = 
+
 if RDKWIFIHAL
 netsrvmgr_LDADD += $(top_builddir)/src/services/wifi/libwifiservices.la
 endif

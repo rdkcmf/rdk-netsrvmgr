@@ -41,7 +41,7 @@ extern "C" {
 #endif
 }
 
-#include "rdk_debug.h"
+#include "logging.h"
 #include "NetworkMedium.h"
 #ifdef ENABLE_IARM
 #include "irMgr.h"
@@ -55,7 +55,6 @@ extern "C" {
  */
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"
 
-#define LOG_NMGR "LOG.RDK.NETSRVMGR"
 #define WIFI_CONFIG "WiFiMgr_Config"
 
 #define MAX_TIMEOUT_ON_DISCONNECT       "MAX_TIMEOUT_ON_DISCONNECT"
