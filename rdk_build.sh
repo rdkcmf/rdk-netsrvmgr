@@ -136,10 +136,11 @@ function configure()
 	if  [ "$XCAM_MODEL" == "XHB1" ]; then
 		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=yes --enable-xhc3=no --enable-debug=yes"
 	elif [ "$XCAM_MODEL" == "XHC3" ]; then
-		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=no --enable-xhc3=yes --enable-debug=yes"
+		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no  --enable-rtmessage=yes --enable-xcam-support=no --enable-xhb1=no --enable-breakpad=yes --enable-xhc3=yes --enable-debug=yes"
 	else
 		configure_options="$configure_options --enable-shared --with-pic --enable-iarm=no --enable-lost-found --enable-rdk-wifi-hal --enable-route-support=no --enable-xcam-support=yes --enable-rtmessage=yes --enable-breakpad=yes --enable-xhb1=no --enable-xhc3=no --enable-debug=yes"
 	fi
+
         generic_options="$configure_options"
 
         export ac_cv_func_malloc_0_nonnull=yes
