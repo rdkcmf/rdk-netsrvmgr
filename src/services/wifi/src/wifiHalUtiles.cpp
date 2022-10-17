@@ -1258,7 +1258,11 @@ void wifi_status_action (wifiStatusCode_t connCode, char *ap_SSID, unsigned shor
                 if (!sameSSid)
                 {
                     LOG_INFO("TELEMETRY_WIFI_CONNECTION_STATUS:wifi_addr_reset.sh");
+#ifdef YOCTO_BUILD
+                    v_secure_system("/bin/sh /lib/rdk/wifi_addr_reset.sh");
+#else
                     system("/bin/sh /lib/rdk/wifi_addr_reset.sh");
+#endif
                 }
                 else
 #endif
