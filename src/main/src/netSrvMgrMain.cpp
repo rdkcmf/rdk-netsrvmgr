@@ -443,7 +443,6 @@ int main(int argc, char *argv[])
 
     if(false == read_ConfigProps()) {
         confProp.wifiProps.max_timeout = MAX_TIME_OUT_PERIOD;
-        confProp.wifiProps.statsParam_PollInterval = MAX_TIME_OUT_PERIOD;
 #ifdef ENABLE_LOST_FOUND
         confProp.wifiProps.bEnableLostFound = false;
         confProp.wifiProps.lnfRetryInSecs = MAX_TIME_OUT_PERIOD;
@@ -642,10 +641,6 @@ static bool read_ConfigProps()
                     if(0 == strncasecmp(MAX_TIMEOUT_ON_DISCONNECT, keys[key], strlen(keys[key])))
                     {
                         confProp.wifiProps.max_timeout = atoi(value);
-                    }
-                    if(0 == strncasecmp(STATS_POLL_INTERVAL, keys[key], strlen(keys[key])))
-                    {
-                        confProp.wifiProps.statsParam_PollInterval = atoi(value);
                     }
 #ifdef ENABLE_LOST_FOUND
                     if((0 == strncasecmp(ENABLE_LOST_FOUND_RUN, keys[key], strlen(keys[key]))) && (!netSrvMgrUtiles::checkInterfaceActive(ethIfName)))

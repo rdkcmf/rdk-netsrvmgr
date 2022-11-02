@@ -58,7 +58,6 @@ extern "C" {
 #define WIFI_CONFIG "WiFiMgr_Config"
 
 #define MAX_TIMEOUT_ON_DISCONNECT       "MAX_TIMEOUT_ON_DISCONNECT"
-#define STATS_POLL_INTERVAL          	"STATS_POLL_INTERVAL"
 #define ENABLE_LOST_FOUND_RUN           "ENABLE_LOST_FOUND"
 #define LAF_CONNECT_RETRY_INTERVAL      "LAF_CONNECT_RETRY_INTERVAL"
 #define LAF_CONNECT_START_INTERVAL 	"LAF_CONNECT_START_INTERVAL"
@@ -116,7 +115,6 @@ typedef enum _WiFiResult
 typedef struct  _wifiMgrConfigProps
 {
     unsigned short max_timeout;
-    unsigned short statsParam_PollInterval;
     bool bEnableLostFound;
     unsigned short lnfRetryInSecs;
     unsigned short lnfStartInSecs;

@@ -29,6 +29,8 @@
 #include <libIARMCore.h>
 
 #include "xdiscovery.h"
+
+#include "rfcapi.h"     // for RFC queries
 #endif
 
 #ifdef ENABLE_LOST_FOUND
@@ -52,6 +54,7 @@ extern "C" {
 #endif
 
 #include <sys/stat.h>
+#include <stdlib.h>
 
 #define WIFI_HAL_VERSION_SIZE   6
 #define MAX_WIFI_STATUS_STRING 32
@@ -1939,10 +1942,31 @@ bool isWiFiCapable()
 
 #ifdef USE_RDK_WIFI_HAL
 
+unsigned int getWifiStatsLogInterval()
+{
+    unsigned int wifi_stats_log_interval = 300;
+#if !defined(ENABLE_XCAM_SUPPORT) && !defined(XHB1) && !defined(XHC3)
+    const char *parameter_name = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WiFi.WiFiStatsLogInterval";
+    RFC_ParamData_t parameter = { 0 };
+    if (WDMP_SUCCESS == getRFCParameter("netsrvmgr", parameter_name, &parameter))
+    {
+        LOG_INFO("getRFCParameter(%s) returned %s", parameter_name, parameter.value);
+        long parameter_value = strtol(parameter.value, NULL, 10);
+        if (parameter_value >= 120 && parameter_value <= 3600)
+            wifi_stats_log_interval = parameter_value;
+    }
+    else
+        LOG_ERR("getRFCParameter(%s) failed", parameter_name);
+#endif
+    LOG_INFO("Returning %u", wifi_stats_log_interval);
+    return wifi_stats_log_interval;
+}
+
 void *wifiConnStatusThread(void* arg)
 {
+    LOG_ENTRY_EXIT;
+
     int ret = 0;
-    LOG_TRACE("[%s] Enter", MODULE_NAME);
     wifi_sta_stats_t stats;
     WiFiStatusCode_t wifiStatusCode;
     char wifiStatusAsString[MAX_WIFI_STATUS_STRING];
@@ -1954,6 +1978,7 @@ void *wifiConnStatusThread(void* arg)
     pthread_mutex_unlock(&mutexGo);
 
     LOG_DBG("[%s] ***** Monitor activated by signal ***** ", MODULE_NAME);
+    const int WIFI_STATS_LOG_INTERVAL = getWifiStatsLogInterval();
 
     while (!bShutdownWifi) {
         wifiStatusCode = get_WiFiStatusCode();
@@ -1991,7 +2016,7 @@ void *wifiConnStatusThread(void* arg)
 
         pthread_mutex_lock(&mutexGo);
         clock_gettime(CLOCK_REALTIME, &condGoTimeout);
-        condGoTimeout.tv_sec += confProp.wifiProps.statsParam_PollInterval;
+        condGoTimeout.tv_sec += WIFI_STATS_LOG_INTERVAL;
         ret = 0;
         while (!bShutdownWifi && ret != ETIMEDOUT) {
             ret = pthread_cond_timedwait(&condGo, &mutexGo, &condGoTimeout);
@@ -1999,7 +2024,6 @@ void *wifiConnStatusThread(void* arg)
         pthread_mutex_unlock(&mutexGo);
     }
 
-    LOG_TRACE("[%s] Exit", MODULE_NAME );
     return NULL;
 }
 
