@@ -929,7 +929,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
     param->status = false;
     int ssidIndex = 1;
     SsidSecurity securityMode;
-    securityMode=param->data.connect.security_mode;
+    securityMode = param->data.connect.security_mode;
     char *ssid = param->data.connect.ssid;
     short ssid_len = strlen(param->data.connect.ssid);
     char *pass = param->data.connect.passphrase;
@@ -947,7 +947,7 @@ IARM_Result_t WiFiNetworkMgr::connect(void *arg)
         {
             /*Now try to connect using saved SSID & PSK */
 #ifdef USE_RDK_WIFI_HAL
-            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, securityMode, NULL,savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
+            connect_withSSID(ssidIndex, savedWiFiConnList.ssidSession.ssid, savedWiFiConnList.ssidSession.security_mode, NULL,savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.passphrase,SAVE_SSID,eapIden,carootcert,clientcert,privatekey,WIFI_CON_MANUAL);
 #endif
             param->status = true;
         }
@@ -1020,11 +1020,12 @@ IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
     IARM_Bus_WiFiSrvMgr_Param_t *param = (IARM_Bus_WiFiSrvMgr_Param_t *)arg;
     bool retval = false;
     param->status = false;
+    SsidSecurity securityMode;
+    securityMode = param->data.connect.security_mode;
     char *ssid = param->data.connect.ssid;
     short ssid_len = strlen(param->data.connect.ssid);
     char *psk = param->data.connect.passphrase;
     short psk_len = strlen (param->data.connect.passphrase);
-
 
     /* Saves the ssid and passphrase for future sessions.
      * If an SSID was previously saved, the new SSID and passphrase will overwrite the existing one.
@@ -1036,8 +1037,10 @@ IARM_Result_t WiFiNetworkMgr::saveSSID(void* arg)
         strncpy(savedWiFiConnList.ssidSession.ssid, ssid, ssid_len+1);
         strncpy(savedWiFiConnList.ssidSession.passphrase, psk, psk_len+1);
         savedWiFiConnList.conn_type = SSID_SECLECTION_CONNECT;
+        savedWiFiConnList.ssidSession.security_mode = (SsidSecurity)securityMode;
         retval = true;
-        LOG_DBG("[%s] %s to file, SSID (%s) & Passphrase (%s).", MODULE_NAME, retval? "Successfully Saved": "Failed to Save", ssid, psk);
+        LOG_INFO("[%s] %s to file, SSID (%s) & Passphrase (%s) SecurityMode (%d).", MODULE_NAME, retval? "Successfully Saved": "Failed to Save",
+           savedWiFiConnList.ssidSession.ssid, savedWiFiConnList.ssidSession.passphrase, savedWiFiConnList.ssidSession.security_mode);
         param->status = retval;
     }
     else
