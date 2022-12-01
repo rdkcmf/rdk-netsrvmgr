@@ -1749,8 +1749,6 @@ bool getPublicIP (IARM_BUS_NetSrvMgr_Iface_StunRequest_t* param)
         return false;
     }
 
-    if (!param->ipv6)
-        interface += ":0";
     LOG_INFO("interface value: %s", interface.c_str());
     std::string     iface   (param->interface[0]     ? interface          : confProp.stunProps.interface);
 

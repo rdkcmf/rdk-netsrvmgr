@@ -1,6 +1,7 @@
 #include "StunClient.h"
 #include "NetworkMgrMain.h"
 #include "netsrvmgrUtiles.h"
+#include "netsrvmgrIarm.h"
 #include <assert.h>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -477,17 +478,34 @@ void client::create_udp_socket(int inet_family)
   #endif
 
   if (!m_interface.empty()) {
-    sockaddr_storage local_addr = details::get_interface_address(m_interface, inet_family);
+    int ret;
+    IARM_BUS_NetSrvMgr_Iface_Settings_t param;
+    if (!netSrvMgrUtiles::getInterfaceConfig(m_interface.c_str(), inet_family, param.ipaddress, param.netmask)) {
+      LOG_ERR("stb %d ipaddress not found.", inet_family);
+      return;
+    }
 
-    verbose("binding to local interface %s/%s\n", m_interface.c_str(),
-      sockaddr_to_string(local_addr).c_str());
-
-    int ret = ::bind(soc, reinterpret_cast<sockaddr const *>(&local_addr), details::socket_length(local_addr));
+    verbose("interface:%s, ipaddres:%s, netmask:%s\n", m_interface.c_str(), param.ipaddress, param.netmask);
+    struct sockaddr_in serv_addr;
+    struct sockaddr_in6 serv_ipv6;
+    struct in_addr addrptr;
+    if(inet_family == AF_INET) {
+        inet_aton(param.ipaddress, &addrptr);
+        serv_addr.sin_family  = inet_family;
+        serv_addr.sin_port = htons(m_server.port);
+        serv_addr.sin_addr = addrptr;
+        ret = ::bind(soc, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    } else if(inet_family == AF_INET6) {
+        inet_pton(AF_INET6, param.ipaddress, &serv_ipv6.sin6_addr);
+        serv_ipv6.sin6_family  = inet_family;
+        serv_ipv6.sin6_port = htons(m_server.port);
+        ret = ::bind(soc, (struct sockaddr *)&serv_ipv6, sizeof(serv_ipv6));
+    }
     if (ret < 0) {
       int err = errno;
       close(soc);
       details::throw_error("failed to bind socket to local address '%s'. %s",
-          sockaddr_to_string(local_addr).c_str(), strerror(err));
+         param.ipaddress, strerror(err));
     }
     else {
       if (m_verbose) {
@@ -511,6 +529,9 @@ void client::create_udp_socket(int inet_family)
 message * client::send_message(sockaddr_storage const & remote_addr, message const & req,
   std::chrono::milliseconds wait_time, int * local_iface_index)
 {
+  if (m_fd < 0)
+      return nullptr;
+
   buffer bytes = req.encode();
 
   STUN_TRACE("remote_addr:%s\n", sockaddr_to_string(remote_addr).c_str());
