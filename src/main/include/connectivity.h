@@ -10,12 +10,10 @@
  * - this file must list endpoints separated by whitespace or newline
  * - if this file is empty or has only spaces/tabs, defaults will be populated
  */
-std::vector<std::string> get_connectivity_test_endpoints();
+int get_connectivity_test_endpoints(std::vector<std::string>& endpoints);
 
 bool set_connectivity_test_endpoints(const std::vector<std::string>& endpoints);
 
-int test_connectivity(long timeout_ms);
-
-int test_connectivity(long timeout_ms, const std::vector<std::string> &endpoints);
+bool test_connectivity(long timeout_ms);
 
 #endif /* CONNECTIVITY_H_ */

@@ -10,13 +10,12 @@
 #include <time.h>
 #include <curl/curl.h>
 
-std::vector<std::string> get_connectivity_test_endpoints()
+int get_connectivity_test_endpoints(std::vector<std::string>& endpoints)
 {
     static const int MAX_CONNECTIVITY_TEST_ENDPOINTS = 5;
 
     LOG_ENTRY_EXIT;
 
-    std::vector<std::string> endpoints;
     const char* filename = "/opt/persistent/connectivity_test_endpoints";
 
     std::ifstream ifs(filename);
@@ -27,12 +26,15 @@ std::vector<std::string> get_connectivity_test_endpoints()
         ifs.close();
     }
 
-    if (endpoints.size() == 0)
+    if (endpoints.size() < 2) //minimum two endpoints should be there
     {
-        LOG_WARN("no endpoints found. writing default endpoints to %s", filename);
+        LOG_WARN("%d endpoints not sufficient. adding default endpoints to %s", endpoints.size(), filename);
+
         if (access("/lib/systemd/system/xre-receiver.service", F_OK) == 0)
         {
             endpoints.push_back("xre.ccp.xcal.tv:10601");
+            endpoints.push_back("google.com");
+            endpoints.push_back("espn.com");
         }
         else
         {
@@ -48,7 +50,7 @@ std::vector<std::string> get_connectivity_test_endpoints()
         endpoints_str.append(endpoint).append(" ");
     LOG_INFO("endpoints = %s", endpoints_str.c_str());
 
-    return endpoints;
+    return endpoints.size();
 }
 
 bool set_connectivity_test_endpoints(const std::vector<std::string>& endpoints)
@@ -80,12 +82,6 @@ bool set_connectivity_test_endpoints(const std::vector<std::string>& endpoints)
     return true;
 }
 
-int test_connectivity(long timeout_ms)
-{
-    LOG_ENTRY_EXIT;
-    return test_connectivity(timeout_ms, get_connectivity_test_endpoints());
-}
-
 static long current_time ()
 {
     struct timespec ts;
@@ -93,10 +89,12 @@ static long current_time ()
     return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
 }
 
-int test_connectivity(long timeout_ms, const std::vector<std::string> &endpoints)
+bool test_connectivity(long timeout_ms)
 {
     LOG_ENTRY_EXIT;
 
+    std::vector<std::string> endpoints;
+    int endpoints_count = get_connectivity_test_endpoints(endpoints);
     long deadline = current_time() + timeout_ms, time_now = 0, time_earlier = 0;
 
     CURLM *curl_multi_handle = curl_multi_init();
@@ -154,7 +152,7 @@ int test_connectivity(long timeout_ms, const std::vector<std::string> &endpoints
         }
         time_earlier = time_now;
         time_now = current_time();
-        if (connectivity > 0 || handles == 0 || time_now >= deadline)
+        if (handles == 0 || time_now >= deadline)
             break;
 #if LIBCURL_VERSION_NUM < 0x074200
         if (CURLM_OK != (mc = curl_multi_wait(curl_multi_handle, NULL, 0, deadline - time_now, &numfds)))
@@ -178,8 +176,8 @@ int test_connectivity(long timeout_ms, const std::vector<std::string> &endpoints
         }
 #endif
     }
-    LOG_INFO("connectivity = %d, handles = %d, deadline = %ld, time_now = %ld, time_earlier = %ld",
-        connectivity, handles, deadline, time_now, time_earlier);
+    LOG_INFO("connectivity = %d, endpoints count = %d, handles = %d, deadline = %ld, time_now = %ld, time_earlier = %ld",
+        connectivity, endpoints_count, handles, deadline, time_now, time_earlier);
 
     for (const auto& curl_easy_handle : curl_easy_handles)
     {
@@ -190,5 +188,7 @@ int test_connectivity(long timeout_ms, const std::vector<std::string> &endpoints
     }
     curl_multi_cleanup(curl_multi_handle);
 
-    return connectivity;
+    if (connectivity >= endpoints_count - 1) // checking ~90% endpoints connectivity
+        return true;
+    return false;
 }

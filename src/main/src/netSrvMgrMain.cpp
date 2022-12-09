@@ -1074,7 +1074,7 @@ IARM_Result_t isConnectedToInternet(void *arg)
     LOG_ENTRY_EXIT;
     long timeout_ms = 2000; // using timeout = 2s ( < default IARM call timeout of 5s)
     LOG_INFO("test_connectivity: : BEGIN timeout = %ldms", timeout_ms);
-    bool connectivity = (test_connectivity(timeout_ms) > 0);
+    bool connectivity = test_connectivity(timeout_ms);
     LOG_INFO("test_connectivity: : %s", connectivity ? "PASS" : "FAIL");
     *((bool*) arg) = connectivity;
     return IARM_RESULT_SUCCESS;
