@@ -67,8 +67,8 @@ if  [ "$XCAM_MODEL" != "XHB1" ] && [ "$XCAM_MODEL" != "XHC3" ]; then
 source $RDK_SCRIPTS_PATH/soc/build/soc_env.sh
 fi
 
-if  [ "$XCAM_MODEL" == "XHB1" ] || [ "$XCAM_MODEL" == "XHC3" ]; then
-  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson -I${RDK_SOURCE_PATH}/../opensource/include"
+if  [ "$XCAM_MODEL" == "XHB1" ] || [ "$XCAM_MODEL" == "XHC3" ] || [ "$XCAM_MODEL" == "SCHC2" ]; then
+  export CFLAGS="-I$RDK_FSROOT_PATH/usr/include -I${RDK_SOURCE_PATH}/../opensource/include/cjson -I${RDK_SOURCE_PATH}/../opensource/include -I$RDK_FSROOT_PATH/usr/include/rtmessage"
   export CXXFLAGS=$CFLAGS
   export LDFLAGS="-L$RDK_FSROOT_PATH/usr/lib -L$PROJ_INSTALL/usr/lib"
 fi
